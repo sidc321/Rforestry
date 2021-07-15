@@ -11,6 +11,7 @@
   aggregation = "average",
   seed = as.integer(runif(1) * 10000),
   nthread = 0,
+  corrected = FALSE,
   exact = NULL,
   trees = NULL,
   ...
@@ -57,6 +58,9 @@ point.}
 \item{nthread}{The number of threads with which to run the predictions with.
 This will default to the number of threads with which the forest was trained
 with.}
+
+\item{corrected}{This is an indicator of whether or not we want to do a bias
+correction with a linear model based on the bias of the training set.}
 
 \item{exact}{This specifies whether the forest predictions should be aggregated
 in a reproducible ordering. Due to the non-associativity of floating point

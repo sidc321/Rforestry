@@ -1362,6 +1362,8 @@ multilayerForestry <- function(x,
 #' @param nthread The number of threads with which to run the predictions with.
 #'   This will default to the number of threads with which the forest was trained
 #'   with.
+#' @param corrected This is an indicator of whether or not we want to do a bias
+#'   correction with a linear model based on the bias of the training set.
 #' @param exact This specifies whether the forest predictions should be aggregated
 #'   in a reproducible ordering. Due to the non-associativity of floating point
 #'   addition, when we predict in parallel, predictions will be aggregated in
@@ -1385,6 +1387,7 @@ predict.forestry <- function(object,
                              aggregation = "average",
                              seed = as.integer(runif(1) * 10000),
                              nthread = 0,
+                             corrected = FALSE,
                              exact = NULL,
                              trees = NULL,
                              ...) {
@@ -1544,6 +1547,32 @@ predict.forestry <- function(object,
     coef_names <- colnames(newdata)[object@linFeats + 1]
     coef_names <- c(coef_names, "Intercept")
     colnames(rcppPrediction$coef) <- coef_names
+  }
+
+  if (corrected) {
+    # Get OOB predictions for training set
+    oob_preds <- tryCatch({
+      rcpp_OBBPredictionsInterface(object@forest,NULL,FALSE,TRUE)},
+      error = function(err) {
+      print(err)
+      return(NULL)
+    })
+    adjust_lm <- lm(Y ~ Y_hat, data = data.frame(Y = object@processed_dta$y,
+                                                 Y_hat = oob_preds))
+
+    # Predict with leave one out if we are predicting in sample
+    if (aggregation == "oob" || aggregation == "doubleOOB") {
+      loo_coefs <- lm.influence(adjust_lm)$coefficients
+      loo_coefs <- apply(loo_coefs, 1, function(x){return(unname(x) + unname(adjust_lm$coefficients))})
+      preds_adjusted <- unname(loo_coefs[1,]) + unname(loo_coefs[2,])*rcppPrediction
+      rcppPrediction <- preds_adjusted
+
+    # Otherwise we use the coefficients of the regression
+    } else {
+      preds_adjusted <- rcppPrediction$prediction * unname(adjust_lm$coefficients[2]) + unname(adjust_lm$coefficients[1])
+      rcppPrediction$prediction <- preds_adjusted
+    }
+
   }
 
   if (aggregation == "average") {
