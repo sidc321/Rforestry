@@ -1683,7 +1683,9 @@ getOOB <- function(object,
 
     rcppOOB <- tryCatch({
       preds <- predict(object, aggregation = "oob")
-      mse <- mean((preds - object@processed_dta$y)^2)
+      # Only calc mse on non missing predictions
+      mse <- mean((preds[which(!is.nan(preds))] -
+                     object@processed_dta$y[which(!is.nan(preds))])^2)
       return(mse)
     }, error = function(err) {
       print(err)
@@ -1854,8 +1856,7 @@ getVI <- function(object,
     }
 
     rcppVI <- tryCatch({
-      return(1)
-      #return(rcpp_VariableImportanceInterface(object@forest))
+      return(rcpp_VariableImportanceInterface(object@forest))
     }, error = function(err) {
       print(err)
       return(NA)

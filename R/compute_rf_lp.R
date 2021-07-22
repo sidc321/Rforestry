@@ -48,7 +48,7 @@ compute_lp <- function(object, newdata, feature, p){
   # Compute distances
   y_weights <- predict(object = object,
                        newdata = newdata,
-                       aggregation = "weightMatrix")$weightMatrix
+                       weightMatrix = TRUE)$weightMatrix
 
   if (is.factor(newdata[1, feature])) {
     # Get categorical feature mapping

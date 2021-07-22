@@ -11,7 +11,7 @@ test_that("Tests that computing confidence intervals is going well", {
                  seed = 3242)
 
   context("test the bootstrapped prediction intervals")
-  preds <- getCI(rf, newdata = x_test, level = .95, method = "OOB-bootstrap")
+  preds <- getCI(rf, newdata = x_test, level = .99, method = "OOB-bootstrap")
 
   coverage <- length(which(y_test < preds$CI.upper & y_test > preds$CI.lower)) / length(y_test)
 
