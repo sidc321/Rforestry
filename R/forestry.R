@@ -1681,7 +1681,9 @@ getOOB <- function(object,
     }
 
     rcppOOB <- tryCatch({
-      return(rcpp_OBBPredictInterface(object@forest))
+      preds <- predict(object, aggregation = "oob")
+      mse <- mean((preds - object@processed_dta$y)^2)
+      return(mse)
     }, error = function(err) {
       print(err)
       return(NA)
@@ -1803,17 +1805,17 @@ getOOBpreds <- function(object,
                                       object@categoricalFeatureCols,
                                       object@categoricalFeatureMapping)
 
-    existing_df = TRUE
   } else {
-    existing_df = FALSE
-    processed_x = NULL
+    # Else we take the data the forest was trained with
+    processed_x <- object@processed_dta$processed_x
   }
 
   rcppOOBpreds <- tryCatch({
-    return(rcpp_OBBPredictionsInterface(object@forest,
-                                        processed_x,
-                                        existing_df,
-                                        doubleOOB))
+    rcppPrediction <- rcpp_OBBPredictionsInterface(object@forest,
+                                                   processed_x,
+                                                   TRUE,
+                                                   doubleOOB)
+    return(rcppPrediction$predictions)
   }, error = function(err) {
     print(err)
     return(NA)
