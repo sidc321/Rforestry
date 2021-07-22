@@ -468,6 +468,7 @@ Rcpp::List rcpp_cppPredictInterface(
   int seed,
   int nthread,
   bool exact,
+  bool returnWeightMatrix,
   bool use_weights,
   Rcpp::NumericVector tree_weights
 ){
@@ -520,24 +521,6 @@ Rcpp::List rcpp_cppPredictInterface(
                                                        false,
                                                        NULL);
 
-    } else if (aggregation == "weightMatrix") {
-      size_t nrow = featureData[0].size(); // number of features to be predicted
-      size_t ncol = (*testFullForest).getNtrain(); // number of train data
-      weightMatrix.resize(nrow, ncol); // initialize the space for the matrix
-      weightMatrix.zeros(nrow, ncol);  // set it all to 0
-
-      // In this version, we pass NULL for terminalNodes, and the created weight
-      // matrix for weightMatrix. This speeds stuff up considerably if we want
-      // to run just weightMatrix without terminal nodes (especially on large datasets)
-      testForestPrediction = (*testFullForest).predict(&featureData,
-                                                       &weightMatrix,
-                                                       NULL,
-                                                       NULL,
-                                                       seed,
-                                                       threads_to_use,
-                                                       exact,
-                                                       false,
-                                                       NULL);
     } else if (aggregation == "terminalNodes") {
       // In this case, we return both the terminal nodes, and the weightMatrix
       size_t nrow = featureData[0].size(); // number of features to be predicted
@@ -566,6 +549,24 @@ Rcpp::List rcpp_cppPredictInterface(
                                                        exact,
                                                        false,
                                                        NULL);
+    } else if (returnWeightMatrix) {
+      size_t nrow = featureData[0].size(); // number of features to be predicted
+      size_t ncol = (*testFullForest).getNtrain(); // number of train data
+      weightMatrix.resize(nrow, ncol); // initialize the space for the matrix
+      weightMatrix.zeros(nrow, ncol);  // set it all to 0
+
+      // In this version, we pass NULL for terminalNodes, and the created weight
+      // matrix for weightMatrix. This speeds stuff up considerably if we want
+      // to run just weightMatrix without terminal nodes (especially on large datasets)
+      testForestPrediction = (*testFullForest).predict(&featureData,
+                              &weightMatrix,
+                              NULL,
+                              NULL,
+                              seed,
+                              threads_to_use,
+                              exact,
+                              false,
+                              NULL);
     } else {
       testForestPrediction = (*testFullForest).predict(&featureData,
                                                        NULL,

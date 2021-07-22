@@ -22,14 +22,14 @@ test_that("Tests that random forest is working correctly", {
   )
 
   # Test predict
-  full_predictions <- predict(forest, x[1:10,], aggregation = 'weightMatrix')
+  full_predictions <- predict(forest, x[1:10,], weightMatrix = TRUE)
   y_pred <- predict(forest, x[1:10,])
   expect_equal(full_predictions$predictions, y_pred, tolerance = 1e-12)
 
   expect_equal(full_predictions$weightMatrix %*% as.matrix(y),
                as.matrix(y_pred), tolerance = 1e-12)
 
-  full_predictions <- predict(forest, x, aggregation = 'weightMatrix')
+  full_predictions <- predict(forest, x, weightMatrix = TRUE)
   y_pred <- predict(forest, x)
   expect_equal(full_predictions$predictions, y_pred, tolerance = 1e-12)
 

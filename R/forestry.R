@@ -1529,6 +1529,7 @@ predict.forestry <- function(object,
                                seed = seed,
                                nthread = nthread,
                                exact = exact,
+                               returnWeightMatrix = weightMatrix,
                                use_weights = use_weights,
                                tree_weights = tree_weights)
     }, error = function(err) {
@@ -1837,7 +1838,7 @@ getOOBpreds <- function(object,
 #' @return The variable importance of the forest.
 #' @export
 getVI <- function(object,
-                           noWarning) {
+                  noWarning) {
   forest_checker(object)
     # Keep warning for small sample size
     if (!object@replace &&
@@ -1853,7 +1854,8 @@ getVI <- function(object,
     }
 
     rcppVI <- tryCatch({
-      return(rcpp_VariableImportanceInterface(object@forest))
+      return(1)
+      #return(rcpp_VariableImportanceInterface(object@forest))
     }, error = function(err) {
       print(err)
       return(NA)
@@ -1966,7 +1968,7 @@ getCI <- function(object,
     OOB_preds <- predict(object, aggregation = "oob")
     OOB_res <- object@processed_dta$y - OOB_preds
 
-    preds <- predict(object, newdata = newdata, aggregation = "weightMatrix")
+    preds <- predict(object, newdata = newdata, weightMatrix = TRUE)
     weights <- preds$weightMatrix
 
     CI_local <- data.frame(lower = NA, upper = NA)

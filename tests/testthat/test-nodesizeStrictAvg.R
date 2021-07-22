@@ -24,7 +24,7 @@ test_that("Test if nodesizeStrictSpl is working correctly", {
 
   forest <- make_savable(forest)
   # Test OOB
-  p <- predict(forest, newdata = x[1,], aggregation = "weightMatrix")
+  p <- predict(forest, newdata = x[1,], weightMatrix = TRUE)
 
   # We expect at least 5 observations were used for the prediction as we have set
   # nodesizeStrictAvg = 5
@@ -54,7 +54,7 @@ test_that("Test if nodesizeStrictSpl is working correctly", {
 
   forest <- make_savable(forest)
   # Test OOB
-  p <- predict(forest, newdata = x[1,], aggregation = "weightMatrix")
+  p <- predict(forest, newdata = x[1,], weightMatrix = TRUE)
 
   # We expect at least 10 observations were used for the prediction as we have set
   # nodesizeStrictAvg = 10
@@ -82,7 +82,7 @@ test_that("Test if nodesizeStrictSpl is working correctly", {
 
   forest <- make_savable(forest)
   # Test OOB
-  p <- predict(forest, newdata = x[1,], aggregation = "weightMatrix")
+  p <- predict(forest, newdata = x[1,], weightMatrix = TRUE)
 
   # We expect at least 10 observations were used for the prediction as we have set
   # nodesizeStrictAvg = 10
