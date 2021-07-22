@@ -1406,7 +1406,7 @@ void forestryTree::getShuffledOOBPrediction(
     std::vector<int>* currentTreeTerminalNodes = nullptr;
     arma::Mat<double> currentTreeWeightMatrix;
 
-    size_t nrow = 1//OOBIndex.size(); // number of features to be predicted
+    size_t nrow = 1;//OOBIndex.size(); // number of features to be predicted
     size_t ncol = trainingData->getNumRows(); // number of train data
     currentTreeWeightMatrix.resize(nrow, ncol); // initialize the space for the matrix
     currentTreeWeightMatrix.zeros(nrow, ncol);// set it all to 0
