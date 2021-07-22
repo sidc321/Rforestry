@@ -1329,9 +1329,7 @@ multilayerForestry <- function(x,
 #' @param object A `forestry` object.
 #' @param newdata A data frame of testing predictors.
 #' @param aggregation How the individual tree predictions are aggregated:
-#'   `average` returns the mean of all trees in the forest; `weightMatrix`
-#'   returns a list consisting of "weightMatrix", the adaptive nearest neighbor
-#'   weights used to construct the predictions; `terminalNodes` also returns
+#'   `average` returns the mean of all trees in the forest; `terminalNodes` also returns
 #'   the weightMatrix, as well as "terminalNodes", a matrix where
 #'   the ith entry of the jth column is the index of the leaf node to which the
 #'   ith observation is assigned in the jth tree; and "sparse", a matrix
@@ -1377,6 +1375,10 @@ multilayerForestry <- function(x,
 #'   predict(..., trees = c(1,2,2)) = (predict(..., trees = c(1)) +
 #'                                      2*predict(..., trees = c(2))) / 3.
 #'   note we must have exact = TRUE, and aggregation = "average" to use tree indices.
+#' @param weightMatrix An indicator of whether or not we should also return a
+#'   matrix of the weights given to each training observation when making each
+#'   prediction. When getting the weight matrix, aggregation must be one of
+#'   `average`, `oob`, and `doubleOOB`.
 #' @param ... additional arguments.
 #' @return A vector of predicted responses.
 #' @export
@@ -1387,6 +1389,7 @@ predict.forestry <- function(object,
                              nthread = 0,
                              exact = NULL,
                              trees = NULL,
+                             weightMatrix = FALSE,
                              ...) {
 
   if (is.null(newdata) && !(aggregation == "oob" || aggregation == "doubleOOB")) {
@@ -1455,8 +1458,8 @@ predict.forestry <- function(object,
     if (is.null(newdata)) {
       rcppPrediction <- tryCatch({
         rcpp_OBBPredictionsInterface(object@forest,
-                                     NULL,  # Give null for the dataframe
-                                     FALSE, # Tell predict we don't have an existing dataframe
+                                     object@processed_dta$processed_x,  # If we don't provide a dataframe, provide the forest DF
+                                     TRUE, # Tell predict we don't have an existing dataframe
                                      FALSE
         )
       }, error = function(err) {
@@ -1497,8 +1500,8 @@ predict.forestry <- function(object,
     if (is.null(newdata)) {
       rcppPrediction <- tryCatch({
         rcpp_OBBPredictionsInterface(object@forest,
-                                     NULL,  # Give null for the dataframe
-                                     FALSE, # Tell predict we don't have an existing dataframe
+                                     object@processed_dta$processed_x,  # Give null for the dataframe
+                                     TRUE, # Tell predict we don't have an existing dataframe
                                      TRUE
         )
       }, error = function(err) {
@@ -1546,14 +1549,18 @@ predict.forestry <- function(object,
     colnames(rcppPrediction$coef) <- coef_names
   }
 
-  if (aggregation == "average") {
+  if (aggregation == "average" && weightMatrix) {
+    return(rcppPrediction)
+  } else if (aggregation == "oob" && weightMatrix) {
+    return(rcppPrediction)
+  } else if (aggregation == "doubleOOB" && weightMatrix) {
+    return(rcppPrediction)
+  } else if (aggregation == "average") {
     return(rcppPrediction$prediction)
   } else if (aggregation == "oob") {
-    return(rcppPrediction)
+    return(rcppPrediction$prediction)
   } else if (aggregation == "doubleOOB") {
-    return(rcppPrediction)
-  } else if (aggregation == "weightMatrix") {
-    return(rcppPrediction)
+    return(rcppPrediction$prediction)
   } else if (aggregation == "coefs") {
     return(rcppPrediction)
   } else if (aggregation == "terminalNodes") {

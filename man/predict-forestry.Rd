@@ -13,6 +13,7 @@
   nthread = 0,
   exact = NULL,
   trees = NULL,
+  weightMatrix = FALSE,
   ...
 )
 }
@@ -22,9 +23,7 @@
 \item{newdata}{A data frame of testing predictors.}
 
 \item{aggregation}{How the individual tree predictions are aggregated:
-`average` returns the mean of all trees in the forest; `weightMatrix`
-returns a list consisting of "weightMatrix", the adaptive nearest neighbor
-weights used to construct the predictions; `terminalNodes` also returns
+`average` returns the mean of all trees in the forest; `terminalNodes` also returns
 the weightMatrix, as well as "terminalNodes", a matrix where
 the ith entry of the jth column is the index of the leaf node to which the
 ith observation is assigned in the jth tree; and "sparse", a matrix
@@ -74,6 +73,11 @@ this will predict the weighted average prediction of only trees 1 and 2 weighted
 predict(..., trees = c(1,2,2)) = (predict(..., trees = c(1)) +
                                    2*predict(..., trees = c(2))) / 3.
 note we must have exact = TRUE, and aggregation = "average" to use tree indices.}
+
+\item{weightMatrix}{An indicator of whether or not we should also return a
+matrix of the weights given to each training observation when making each
+prediction. When getting the weight matrix, aggregation must be one of
+`average`, `oob`, and `doubleOOB`.}
 
 \item{...}{additional arguments.}
 }
