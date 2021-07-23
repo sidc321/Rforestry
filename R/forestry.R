@@ -2005,6 +2005,51 @@ getCI <- function(object,
 }
 
 
+# -- Get the observations used for prediction ----------------------------------
+#' predictInfo-forestry
+#' @rdname predictInfo-forestry
+#' @description Get the observations which are used to predict for a set of new
+#'  observations using either all trees (for out of sample observations), or
+#'  tree for which the observation is out of averaging set or out of sample entirely.
+#' @param object A `forestry` object.
+#' @param newdata Data on which we want to do predictions. Must be the same length
+#'  as the training set if we are doing `oob` or `doubleOOB` aggregation.
+#' @aggregation Specifies which aggregation version is used to predict for the
+#' observation, must be one of `average`,`oob`, and `doubleOOB`.
+#' @return A list with four entries. `weightMatrix` is a matrix specifying the
+#'  weight given to training observatio i when prediction on observation j.
+#'  `avgIndices` gives the indices which are in the averaging set for each new
+#'  observation. `avgWeights` gives the weights corresponding to each averaging
+#'  observation returned in `avgIndices`. `obsInfo` gives the full observation vectors
+#'  which were used to predict for an observation, as well as the weight given
+#'  each observation.
+#' @export
+predictInfo <- function(object,
+                        newdata,
+                        aggregation = "average")
+{
+
+  if (!(aggregation %in% c("oob", "doubleOOB","average"))) {
+    stop("We can only use aggregation as oob or doubleOOB")
+  }
+  p <- predict(object, newdata = newdata,
+               exact=TRUE,aggregation = aggregation,weightMatrix = TRUE)
+
+  # Get the averaging indices used for each observation
+  acive_indices <- apply(p$weightMatrix, MARGIN = 1, function(x){return(which(x != 0))})
+  # Get the relative weight given to each averaging observation outcome
+  weights <- apply(p$weightMatrix, MARGIN = 1, function(x){return(x[which(x != 0)])})
+  # Get the observations which correspond to the averaging indices used to predict each outcome
+  observations <- apply(p$weightMatrix, MARGIN = 1, function(y){return(cbind(newdata[which(y != 0),],
+                                                                             "Weight" = y[which(y != 0)]))})
+  # Want observations by descending weight
+  obs_sorted <- lapply(observations, function(x){return(x[order(x$Weight,decreasing=TRUE),])})
+
+  return(list("weightMatrix" = p$weightMatrix,
+              "avgIndices" = acive_indices,
+              "avgWeights" = weights,
+              "obsInfo" = observations))
+}
 
 # -- Add More Trees ------------------------------------------------------------
 #' addTrees-forestry
