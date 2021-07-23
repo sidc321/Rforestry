@@ -1368,9 +1368,13 @@ void forestryTree::getOOBPrediction(
     outputOOBPrediction[OOBIndex[i]] += currentTreePrediction[i];
     outputOOBCount[OOBIndex[i]] += 1;
 
-    for (size_t j = 0; j < ncol; j++) {
-      (*weightMatrix)(OOBIndex[i], j) += curWeightMatrix(i, j);
+    // Check weight matrix before we updte
+    if (weightMatrix) {
+      for (size_t j = 0; j < ncol; j++) {
+        (*weightMatrix)(OOBIndex[i], j) += curWeightMatrix(i, j);
+      }
     }
+
   }
 }
 
@@ -1404,12 +1408,11 @@ void forestryTree::getShuffledOOBPrediction(
     std::vector<double> currentTreePrediction(1);
     std::vector< std::vector<double> > currentTreeCoefficients(1);
     std::vector<int>* currentTreeTerminalNodes = nullptr;
-    arma::Mat<double> currentTreeWeightMatrix;
-
-    size_t nrow = 1;//OOBIndex.size(); // number of features to be predicted
+    arma::Mat<double> curWeightMatrix;
+    size_t nrow = OOBIndex.size(); // number of features to be predicted
     size_t ncol = trainingData->getNumRows(); // number of train data
-    currentTreeWeightMatrix.resize(nrow, ncol); // initialize the space for the matrix
-    currentTreeWeightMatrix.zeros(nrow, ncol);// set it all to 0
+    curWeightMatrix.resize(nrow, ncol); // initialize the space for the matrix
+    curWeightMatrix.zeros(nrow, ncol);// set it all to 0
 
     std::vector<double> OOBSampleObservation((*trainingData).getNumColumns());
     (*trainingData).getShuffledObservationData(OOBSampleObservation,
@@ -1430,7 +1433,7 @@ void forestryTree::getShuffledOOBPrediction(
       currentTreeCoefficients,
       &OOBSampleObservation_,
       trainingData,
-      &currentTreeWeightMatrix,
+      &curWeightMatrix,
       false,
       44,
       nodesizeStrictAvg
