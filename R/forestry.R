@@ -1993,6 +1993,99 @@ getCI <- function(object,
 }
 
 
+# -- Perform bias corrected predictions ----------------------------------------
+#' bcPredict-forestry
+#' @rdname bcPredict-forestry
+#' @description Perform predictions given the forest using a bias correction based on
+#'   the out of bag predictions on the training set. By default we use a final linear
+#'   correction based on the leave-one-out hat matrix after doing `nrounds` nonlinear
+#'   corrections.
+#' @param object A `forestry` object.
+#' @param newdata Dataframe on which to predict.
+#' @param feats A vector of feature indices which should be included in the bias
+#'   correction. By default only the outcome and predicted outcomes are used.
+#' @param nrounds The number of nonlinear bias correction steps which should be
+#'   taken. By default this is zero, so just a single linear correction is used.
+#' @param linear A flag indicating whether or not we want to do a final linear
+#'   bias correction after doing the nonlinear corrections. Default is TRUE.
+#' @return A vector of the bias corrected predictions
+#' @export
+bcPredict <- function(object,
+                      newdata,
+                      feats=NULL,
+                      nrounds=0,
+                      linear=TRUE)
+
+{
+  # Check allowed settings for the bias correction
+  if (!linear & (nrounds < 1)) {
+    stop("We must do at least one round of bias corrections, with either linear = TRUE or nrounds > 0")
+  }
+
+  if (nrounds < 0 || nrounds %% 1 != 0) {
+    stop("ntree must be a non negative integer.")
+  }
+
+  if (!is.null(feats)) {
+    if (max(feats) > ncol(object@processed_dta$processed_x) ||
+        min(feats) < 1||
+        any(feats %% 1 != 0)) {
+      stop("feats must be a positive integer between 1 and ncol(x)")
+    }
+  }
+
+
+  # First get out of bag preds
+  oob.preds <- predict(object = object, aggregation = "oob")
+
+
+  if (is.null(feats)) {
+    adjust.data <- data.frame(Y = object@processed_dta$y, Y.hat = oob.preds)
+  } else {
+    adjust.data <- data.frame(object@processed_dta$processed_x[,feats],
+                              Y = object@processed_dta$y,
+                              Y.hat = oob.preds)
+  }
+
+
+  if (nrounds > 0) {
+    library(dplyr)
+    for (round_i in 1:nrounds) {
+      fit.i <- forestry(x = adjust.data %>% dplyr::select(-Y.hat),
+                        y = adjust.data %>% dplyr::pull(Y.hat))
+      pred.i <- predict(fit.i, adjust.data %>% dplyr::select(-Y.hat),
+                        aggregation = "oob")
+
+      # Adjust the predicted Y hats
+      adjust.data[, ncol(adjust.data)] <- pred.i
+      names(adjust.data)[ncol(adjust.data)] <- "Y.hat"
+    }
+  }
+
+
+
+  if (!linear) {
+    return(adjust.data[,ncol(adjust.data)])
+  } else {
+    # Now do linear adjustment
+    adjust.lm <- lm(Y ~ ., data = adjust.data)
+
+    # Get LOO coefficients
+    loo.coefs <- lm.influence(adjust.lm)$coefficients
+    for (j in 1:ncol(loo.coefs)){
+      loo.coefs[,j] <- loo.coefs[,j] + unname(adjust.lm$coefficients[j])
+    }
+
+    design.matrix <- data.frame(Int = 1, adjust.data[,-(ncol(adjust.data)-1)])
+
+    prod.matrix <- as.matrix(design.matrix) * as.matrix(loo.coefs)
+
+    preds.adjusted <- rowSums(prod.matrix)
+
+    return(preds.adjusted)
+  }
+}
+
 
 # -- Add More Trees ------------------------------------------------------------
 #' addTrees-forestry
