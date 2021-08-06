@@ -1551,7 +1551,7 @@ predict.forestry <- function(object,
   }
 
   if (aggregation == "average" && weightMatrix) {
-    return(rcppPrediction)
+    return(rcppPrediction[c(1,2)])
   } else if (aggregation == "oob" && weightMatrix) {
     return(rcppPrediction)
   } else if (aggregation == "doubleOOB" && weightMatrix) {
