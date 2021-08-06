@@ -11,6 +11,9 @@ predictInfo(object, newdata, aggregation = "average")
 
 \item{newdata}{Data on which we want to do predictions. Must be the same length
 as the training set if we are doing `oob` or `doubleOOB` aggregation.}
+
+\item{aggregation}{Specifies which aggregation version is used to predict for the
+observation, must be one of `average`,`oob`, and `doubleOOB`.}
 }
 \value{
 A list with four entries. `weightMatrix` is a matrix specifying the

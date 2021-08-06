@@ -2014,7 +2014,7 @@ getCI <- function(object,
 #' @param object A `forestry` object.
 #' @param newdata Data on which we want to do predictions. Must be the same length
 #'  as the training set if we are doing `oob` or `doubleOOB` aggregation.
-#' @aggregation Specifies which aggregation version is used to predict for the
+#' @param aggregation Specifies which aggregation version is used to predict for the
 #' observation, must be one of `average`,`oob`, and `doubleOOB`.
 #' @return A list with four entries. `weightMatrix` is a matrix specifying the
 #'  weight given to training observatio i when prediction on observation j.
