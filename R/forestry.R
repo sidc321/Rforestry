@@ -2014,7 +2014,8 @@ bcPredict <- function(object,
                       newdata,
                       feats=NULL,
                       nrounds=0,
-                      linear=TRUE)
+                      linear=TRUE,
+                      double=FALSE)
 
 {
   # Check allowed settings for the bias correction
@@ -2034,9 +2035,14 @@ bcPredict <- function(object,
     }
   }
 
+  if (double) {
+    agg = "doubleOOB"
+  } else {
+    agg = "oob"
+  }
 
   # First get out of bag preds
-  oob.preds <- predict(object = object, aggregation = "oob")
+  oob.preds <- predict(object = object, aggregation = agg)
 
 
   if (is.null(feats)) {
@@ -2052,9 +2058,10 @@ bcPredict <- function(object,
     library(dplyr)
     for (round_i in 1:nrounds) {
       fit.i <- forestry(x = adjust.data %>% dplyr::select(-Y.hat),
-                        y = adjust.data %>% dplyr::pull(Y.hat))
+                        y = adjust.data %>% dplyr::pull(Y.hat),
+                        OOBhonest = TRUE)
       pred.i <- predict(fit.i, adjust.data %>% dplyr::select(-Y.hat),
-                        aggregation = "oob")
+                        aggregation = agg)
 
       # Adjust the predicted Y hats
       adjust.data[, ncol(adjust.data)] <- pred.i
@@ -2076,10 +2083,9 @@ bcPredict <- function(object,
       loo.coefs[,j] <- loo.coefs[,j] + unname(adjust.lm$coefficients[j])
     }
 
+    # Calculate the predictions with the LOO coefficients
     design.matrix <- data.frame(Int = 1, adjust.data[,-(ncol(adjust.data)-1)])
-
     prod.matrix <- as.matrix(design.matrix) * as.matrix(loo.coefs)
-
     preds.adjusted <- rowSums(prod.matrix)
 
     return(preds.adjusted)
