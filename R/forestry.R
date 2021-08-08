@@ -2015,7 +2015,8 @@ bcPredict <- function(object,
                       feats=NULL,
                       nrounds=0,
                       linear=TRUE,
-                      double=FALSE)
+                      double=FALSE,
+                      simple=FALSE)
 
 {
   # Check allowed settings for the bias correction
@@ -2057,10 +2058,10 @@ bcPredict <- function(object,
   if (nrounds > 0) {
     library(dplyr)
     for (round_i in 1:nrounds) {
-      fit.i <- forestry(x = adjust.data %>% dplyr::select(-Y.hat),
-                        y = adjust.data %>% dplyr::pull(Y.hat),
+      fit.i <- forestry(x = adjust.data %>% dplyr::select(Y.hat),
+                        y = adjust.data %>% dplyr::pull(Y),
                         OOBhonest = TRUE)
-      pred.i <- predict(fit.i, adjust.data %>% dplyr::select(-Y.hat),
+      pred.i <- predict(fit.i, adjust.data %>% dplyr::select(Y.hat),
                         aggregation = agg)
 
       # Adjust the predicted Y hats
@@ -2075,18 +2076,50 @@ bcPredict <- function(object,
     return(adjust.data[,ncol(adjust.data)])
   } else {
     # Now do linear adjustment
-    adjust.lm <- lm(Y ~ ., data = adjust.data)
+    if (simple) {
+      adjust.lm <- lm(Y ~ ., data = adjust.data)
 
-    # Get LOO coefficients
-    loo.coefs <- lm.influence(adjust.lm)$coefficients
-    for (j in 1:ncol(loo.coefs)){
-      loo.coefs[,j] <- loo.coefs[,j] + unname(adjust.lm$coefficients[j])
+      # Get LOO coefficients
+      loo.coefs <- lm.influence(adjust.lm)$coefficients
+      for (j in 1:ncol(loo.coefs)){
+        loo.coefs[,j] <- loo.coefs[,j] + unname(adjust.lm$coefficients[j])
+      }
+
+      # Calculate the predictions with the LOO coefficients
+      design.matrix <- data.frame(Int = 1, adjust.data[,-(ncol(adjust.data)-1)])
+      prod.matrix <- as.matrix(design.matrix) * as.matrix(loo.coefs)
+      preds.adjusted <- rowSums(prod.matrix)
+    } else {
+      # split Yhat into quantiles
+      q_num <- 2
+      Y.hat <- adjust.data$Y.hat
+      Y <- adjust.data$Y
+
+      quants <- quantile(Y.hat, probs = seq(0,1,length.out = q_num))
+
+      # Split into the five different nodes
+      q_indices <- rep(0, length(Y.hat))
+
+      for (i in 1:length(Y.hat)) {
+        # Get the
+        q_idx <- unname(which(Y.hat[i] < quants)[1])-1
+        q_indices[i]<- q_idx
+      }
+
+
+      new_pred <- rep(0, length(Y.hat))
+      fits <- list()
+
+      # Now make the different fits
+      for ( i in 1:(q_num-1)) {
+        bias <- mean(Y[which(q_indices == i)]-Y.hat[which(q_indices == i)])
+        fit_i <- lm(Y ~ Y.hat, data = data.frame(Y = Y[which(q_indices == i)],
+                                                 Y.hat = Y.hat[which(q_indices == i)]))
+        print(bias)
+        new_pred[which(q_indices == i)] <- predict(fit_i, data.frame( Y.hat = Y.hat[which(q_indices == i)] ))
+      }
+      preds.adjusted <- new_pred
     }
-
-    # Calculate the predictions with the LOO coefficients
-    design.matrix <- data.frame(Int = 1, adjust.data[,-(ncol(adjust.data)-1)])
-    prod.matrix <- as.matrix(design.matrix) * as.matrix(loo.coefs)
-    preds.adjusted <- rowSums(prod.matrix)
 
     return(preds.adjusted)
   }
