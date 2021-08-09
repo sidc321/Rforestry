@@ -4,7 +4,17 @@
 \alias{bcPredict}
 \title{bcPredict-forestry}
 \usage{
-bcPredict(object, newdata, feats, nrounds, linear)
+bcPredict(
+  object,
+  newdata,
+  feats = NULL,
+  nrounds = 0,
+  linear = TRUE,
+  double = FALSE,
+  simple = FALSE,
+  verbose = FALSE,
+  num_quants = 5
+)
 }
 \arguments{
 \item{object}{A `forestry` object.}
@@ -19,6 +29,17 @@ taken. By default this is zero, so just a single linear correction is used.}
 
 \item{linear}{A flag indicating whether or not we want to do a final linear
 bias correction after doing the nonlinear corrections. Default is TRUE.}
+
+\item{double}{flag indicating if one should use doubleOOB for the initial
+predictions rather than "oob." Defalt is FALSE.}
+
+\item{simple}{flag indicating whether we should do a simple linear adjustment
+or do different adjustments by quantiles. Default is FALSE.}
+
+\item{verbose}{Flag which displays the bias of each qunatile.}
+
+\item{num_quants}{Number of quantiles to use when doing quantile specific bias
+correction.}
 }
 \value{
 A vector of the bias corrected predictions

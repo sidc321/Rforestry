@@ -2008,6 +2008,13 @@ getCI <- function(object,
 #'   taken. By default this is zero, so just a single linear correction is used.
 #' @param linear A flag indicating whether or not we want to do a final linear
 #'   bias correction after doing the nonlinear corrections. Default is TRUE.
+#' @param double flag indicating if one should use doubleOOB for the initial
+#'   predictions rather than "oob." Defalt is FALSE.
+#' @param simple flag indicating whether we should do a simple linear adjustment
+#'  or do different adjustments by quantiles. Default is FALSE.
+#' @param verbose Flag which displays the bias of each qunatile.
+#' @param num_quants Number of quantiles to use when doing quantile specific bias
+#'  correction.
 #' @return A vector of the bias corrected predictions
 #' @export
 bcPredict <- function(object,
@@ -2016,7 +2023,9 @@ bcPredict <- function(object,
                       nrounds=0,
                       linear=TRUE,
                       double=FALSE,
-                      simple=FALSE)
+                      simple=FALSE,
+                      verbose=FALSE,
+                      num_quants=5)
 
 {
   # Check allowed settings for the bias correction
@@ -2070,54 +2079,79 @@ bcPredict <- function(object,
     }
   }
 
+  # extremes <- c(range(adjust.data$Y.hat), range(y))
+  # ggplot(aes(x =X, y=Y), data=data.frame(Y = y, X=adjust.data$Y.hat))+
+  #   geom_point()+
+  #   geom_abline(intercept = 0, slope = 1)+
+  #   ylim(min(extremes), max(extremes))+
+  #   xlim(min(extremes), max(extremes))+
+  #   labs(y = "True Y", x = "Predicted Y")
+  #
+  # sqrt(mean((adjust.data$Y.hat - y)^2))
 
+  # Given a dataframe with Y and Y.hat at least, fits an OLS and gives the LOO
+  # predictions on the sample
+  loo_pred_helper <- function(df) {
+    adjust.lm <- lm(Y ~ ., data = df)
+
+    # Get LOO coefficients
+    loo.coefs <- lm.influence(adjust.lm)$coefficients
+    for (j in 1:ncol(loo.coefs)){
+      loo.coefs[,j] <- loo.coefs[,j] + unname(adjust.lm$coefficients[j])
+    }
+
+    # Calculate the predictions with the LOO coefficients
+    design.matrix <- data.frame(Int = 1, df[,-(ncol(df)-1)])
+    prod.matrix <- as.matrix(design.matrix) * as.matrix(loo.coefs)
+    preds.adjusted <- rowSums(prod.matrix)
+    return(preds.adjusted)
+  }
 
   if (!linear) {
     return(adjust.data[,ncol(adjust.data)])
   } else {
     # Now do linear adjustment
     if (simple) {
-      adjust.lm <- lm(Y ~ ., data = adjust.data)
 
-      # Get LOO coefficients
-      loo.coefs <- lm.influence(adjust.lm)$coefficients
-      for (j in 1:ncol(loo.coefs)){
-        loo.coefs[,j] <- loo.coefs[,j] + unname(adjust.lm$coefficients[j])
-      }
+      # adjust the predictions
+      preds.adjusted <- loo_pred_helper(adjust.data)
 
-      # Calculate the predictions with the LOO coefficients
-      design.matrix <- data.frame(Int = 1, adjust.data[,-(ncol(adjust.data)-1)])
-      prod.matrix <- as.matrix(design.matrix) * as.matrix(loo.coefs)
-      preds.adjusted <- rowSums(prod.matrix)
+      # extremes <- c(range(preds.adjusted), range(y))
+      # ggplot(aes(x =X, y=Y), data=data.frame(Y = y, X=preds.adjusted))+
+      #   geom_point()+
+      #   geom_abline(intercept = 0, slope = 1)+
+      #   ylim(min(extremes), max(extremes))+
+      #   xlim(min(extremes), max(extremes))+
+      #   labs(y = "True Y", x = "Predicted Y")
+
+      # sqrt(mean((preds.adjusted - y)^2))
     } else {
       # split Yhat into quantiles
-      q_num <- 2
+      q_num <- num_quants+1
       Y.hat <- adjust.data$Y.hat
       Y <- adjust.data$Y
 
-      quants <- quantile(Y.hat, probs = seq(0,1,length.out = q_num))
+      # Get the cuts of the different quantiles
+      cuts <- cut(Y.hat,
+                  quantile(Y.hat, probs=seq(0,1,length.out = q_num) ) ,
+                  include.lowest=TRUE)
 
-      # Split into the five different nodes
-      q_indices <- rep(0, length(Y.hat))
-
-      for (i in 1:length(Y.hat)) {
-        # Get the
-        q_idx <- unname(which(Y.hat[i] < quants)[1])-1
-        q_indices[i]<- q_idx
-      }
-
-
+      q_indices <- as.numeric(cuts)
       new_pred <- rep(0, length(Y.hat))
-      fits <- list()
 
-      # Now make the different fits
-      for ( i in 1:(q_num-1)) {
-        bias <- mean(Y[which(q_indices == i)]-Y.hat[which(q_indices == i)])
-        fit_i <- lm(Y ~ Y.hat, data = data.frame(Y = Y[which(q_indices == i)],
-                                                 Y.hat = Y.hat[which(q_indices == i)]))
-        print(bias)
-        new_pred[which(q_indices == i)] <- predict(fit_i, data.frame( Y.hat = Y.hat[which(q_indices == i)] ))
+      # Fit a different LM in each quantile
+      fits <- lapply(1:max(q_indices), function(i) {lm(Y ~., adjust.data[which(q_indices == i),])})
+
+      for ( i in 1:max(q_indices) ) {
+        idx <- which(q_indices == i)
+        if ( verbose ) {
+          print(paste0("Quantile: ",i, " ", levels(cuts)[i]))
+          bias <- mean(Y[idx] - Y.hat[idx])
+          print(bias)
+        }
+        new_pred[idx] <- loo_pred_helper(adjust.data[idx,])
       }
+
       preds.adjusted <- new_pred
     }
 
