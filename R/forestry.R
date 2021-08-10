@@ -2025,6 +2025,7 @@ bcPredict <- function(object,
                       double=FALSE,
                       simple=FALSE,
                       verbose=FALSE,
+                      use_residuals=FALSE,
                       num_quants=5)
 
 {
@@ -2067,11 +2068,24 @@ bcPredict <- function(object,
   if (nrounds > 0) {
     library(dplyr)
     for (round_i in 1:nrounds) {
-      fit.i <- forestry(x = adjust.data %>% dplyr::select(Y.hat),
-                        y = adjust.data %>% dplyr::pull(Y),
+      # Set right outcome to regress for regression step
+      if(use_residuals) {
+        y_reg <- adjust.data %>% dplyr::pull(Y) - adjust.data %>% dplyr::pull(Y.hat)
+      } else {
+        y_reg <- adjust.data %>% dplyr::pull(Y)
+      }
+
+      fit.i <- forestry(x = adjust.data %>% dplyr::select(-Y),
+                        y = y_reg,
                         OOBhonest = TRUE)
-      pred.i <- predict(fit.i, adjust.data %>% dplyr::select(Y.hat),
+      pred.i <- predict(fit.i, adjust.data %>% dplyr::select(-Y),
                         aggregation = agg)
+
+      # If we predicted some residuals, we now have to add the old Y.hat to them
+      # to get the new Y.hat
+      if (use_residuals) {
+        pred.i <- pred.i + (adjust.data %>% dplyr::pull(Y.hat))
+      }
 
       # Adjust the predicted Y hats
       adjust.data[, ncol(adjust.data)] <- pred.i
