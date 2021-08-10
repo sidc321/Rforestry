@@ -2013,6 +2013,11 @@ getCI <- function(object,
 #' @param simple flag indicating whether we should do a simple linear adjustment
 #'  or do different adjustments by quantiles. Default is FALSE.
 #' @param verbose Flag which displays the bias of each qunatile.
+#' @param use_residuals flag indicating if we should use the residuals to fit the
+#'  bias correction steps. Defualt is FALSE which means that we will use Y
+#'  rather than Y-Y.hat as the regression outcome in the bias correction steps.
+#' @param adaptive flag to indicate whether we use adaptiveForestry or not in the
+#'  regression step.
 #' @param num_quants Number of quantiles to use when doing quantile specific bias
 #'  correction.
 #' @return A vector of the bias corrected predictions
@@ -2026,6 +2031,7 @@ bcPredict <- function(object,
                       simple=FALSE,
                       verbose=FALSE,
                       use_residuals=FALSE,
+                      adaptive=FALSE,
                       num_quants=5)
 
 {
@@ -2075,11 +2081,23 @@ bcPredict <- function(object,
         y_reg <- adjust.data %>% dplyr::pull(Y)
       }
 
-      fit.i <- forestry(x = adjust.data %>% dplyr::select(-Y),
-                        y = y_reg,
-                        OOBhonest = TRUE)
-      pred.i <- predict(fit.i, adjust.data %>% dplyr::select(-Y),
-                        aggregation = agg)
+      if (adaptive) {
+        fit.i <- adaptiveForestry(x = adjust.data %>% dplyr::select(-Y),
+                                  y = y_reg,
+                                  OOBhonest = TRUE,
+                                  ntree.first = 100,
+                                  ntree.second = 500)
+        pred.i <- predict(fit.i, adjust.data %>% dplyr::select(-Y),
+                          aggregation = agg, weighting=1)
+      } else {
+        fit.i <- forestry(x = adjust.data %>% dplyr::select(-Y),
+                          y = y_reg,
+                          OOBhonest = TRUE)
+        pred.i <- predict(fit.i, adjust.data %>% dplyr::select(-Y),
+                          aggregation = agg)
+      }
+
+
 
       # If we predicted some residuals, we now have to add the old Y.hat to them
       # to get the new Y.hat
