@@ -1460,7 +1460,8 @@ predict.forestry <- function(object,
         rcpp_OBBPredictionsInterface(object@forest,
                                      object@processed_dta$processed_x,  # If we don't provide a dataframe, provide the forest DF
                                      TRUE, # Tell predict we don't have an existing dataframe
-                                     FALSE
+                                     FALSE,
+                                     weightMatrix
         )
       }, error = function(err) {
         print(err)
@@ -1471,7 +1472,8 @@ predict.forestry <- function(object,
         rcpp_OBBPredictionsInterface(object@forest,
                                      processed_x,
                                      TRUE, # Give dataframe flag
-                                     FALSE
+                                     FALSE,
+                                     weightMatrix
         )
       }, error = function(err) {
         print(err)
@@ -1502,7 +1504,8 @@ predict.forestry <- function(object,
         rcpp_OBBPredictionsInterface(object@forest,
                                      object@processed_dta$processed_x,  # Give null for the dataframe
                                      TRUE, # Tell predict we don't have an existing dataframe
-                                     TRUE
+                                     TRUE,
+                                     weightMatrix
         )
       }, error = function(err) {
         print(err)
@@ -1513,7 +1516,8 @@ predict.forestry <- function(object,
         rcpp_OBBPredictionsInterface(object@forest,
                                      processed_x,
                                      TRUE, # Give dataframe flag
-                                     TRUE
+                                     TRUE,
+                                     weightMatrix
         )
       }, error = function(err) {
         print(err)
@@ -1817,7 +1821,8 @@ getOOBpreds <- function(object,
     rcppPrediction <- rcpp_OBBPredictionsInterface(object@forest,
                                                    processed_x,
                                                    TRUE,
-                                                   doubleOOB)
+                                                   doubleOOB,
+                                                   FALSE)
     return(rcppPrediction$predictions)
   }, error = function(err) {
     print(err)

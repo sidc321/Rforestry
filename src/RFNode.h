@@ -52,7 +52,8 @@ public:
     bool linear,
     double lambda,
     unsigned int seed,
-    size_t nodesizeStrictAvg
+    size_t nodesizeStrictAvg,
+    std::vector<size_t>* OOBIndex = NULL
   );
 
   void write_node_info(

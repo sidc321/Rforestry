@@ -160,7 +160,8 @@ void RFNode::predict(
   bool linear,
   double lambda,
   unsigned int seed,
-  size_t nodesizeStrictAvg
+  size_t nodesizeStrictAvg,
+  std::vector<size_t>* OOBIndex
 ) {
 
   // If the node is a leaf, aggregate all its averaging data samples
@@ -208,9 +209,15 @@ void RFNode::predict(
           std::vector<size_t>::iterator it = (*updateIndex).begin();
           it != (*updateIndex).end();
           ++it ) {
+        // Set the row which we update in the weightMatrix
+        //
+        size_t idx = *it;
+        if (OOBIndex) {
+          idx = (*OOBIndex)[*it];
+        }
+
         for (size_t i = 0; i<idx_in_leaf.size(); i++) {
-          (*weightMatrix)(*it, idx_in_leaf[i] - 1) =
-          (*weightMatrix)(*it, idx_in_leaf[i] - 1) +
+          (*weightMatrix)(idx, idx_in_leaf[i] - 1) +=
           (double) 1.0 / ((double) idx_in_leaf.size());
         }
       }
@@ -372,9 +379,16 @@ void RFNode::predict(
               std::vector<size_t>::iterator it = (*leftPartitionIndex).begin();
               it != (*leftPartitionIndex).end();
               ++it ) {
+
+            // Set the row which we update in the weightMatrix
+            //
+            size_t idx = *it;
+            if (OOBIndex) {
+              idx = (*OOBIndex)[*it];
+            }
+
             for (size_t i = 0; i<idx_in_leaf.size(); i++) {
-              (*weightMatrix)(*it, idx_in_leaf[i] - 1) =
-                (*weightMatrix)(*it, idx_in_leaf[i] - 1) +
+              (*weightMatrix)(idx, idx_in_leaf[i] - 1) +=
                 (double) 1.0 / ((double) idx_in_leaf.size());
             }
           }
@@ -405,7 +419,8 @@ void RFNode::predict(
             linear,
             lambda,
             seed,
-            nodesizeStrictAvg
+            nodesizeStrictAvg,
+            OOBIndex
         );
       }
 
@@ -445,9 +460,15 @@ void RFNode::predict(
               std::vector<size_t>::iterator it = (*rightPartitionIndex).begin();
               it != (*rightPartitionIndex).end();
               ++it ) {
+            // Set the row which we update in the weightMatrix
+            //
+            size_t idx = *it;
+            if (OOBIndex) {
+              idx = (*OOBIndex)[*it];
+            }
+
             for (size_t i = 0; i<idx_in_leaf.size(); i++) {
-              (*weightMatrix)(*it, idx_in_leaf[i] - 1) =
-                (*weightMatrix)(*it, idx_in_leaf[i] - 1) +
+              (*weightMatrix)(idx, idx_in_leaf[i] - 1) +=
                 (double) 1.0 / ((double) idx_in_leaf.size());
             }
           }
@@ -477,7 +498,8 @@ void RFNode::predict(
           linear,
           lambda,
           seed,
-          nodesizeStrictAvg
+          nodesizeStrictAvg,
+          OOBIndex
         );
       }
     }

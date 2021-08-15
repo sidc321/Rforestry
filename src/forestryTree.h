@@ -62,7 +62,8 @@ public:
     arma::Mat<double>* weightMatrix = NULL,
     bool linear = false,
     unsigned int seed = 44,
-    size_t nodesizeStrictAvg = 1
+    size_t nodesizeStrictAvg = 1,
+    std::vector<size_t>* OOBIndex = NULL
   );
 
   std::unique_ptr<tree_info> getTreeInfo(

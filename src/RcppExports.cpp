@@ -178,8 +178,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // rcpp_OBBPredictionsInterface
-Rcpp::List rcpp_OBBPredictionsInterface(SEXP forest, Rcpp::List x, bool existing_df, bool doubleOOB);
-RcppExport SEXP _Rforestry_rcpp_OBBPredictionsInterface(SEXP forestSEXP, SEXP xSEXP, SEXP existing_dfSEXP, SEXP doubleOOBSEXP) {
+Rcpp::List rcpp_OBBPredictionsInterface(SEXP forest, Rcpp::List x, bool existing_df, bool doubleOOB, bool returnWeightMatrix);
+RcppExport SEXP _Rforestry_rcpp_OBBPredictionsInterface(SEXP forestSEXP, SEXP xSEXP, SEXP existing_dfSEXP, SEXP doubleOOBSEXP, SEXP returnWeightMatrixSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -187,7 +187,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::List >::type x(xSEXP);
     Rcpp::traits::input_parameter< bool >::type existing_df(existing_dfSEXP);
     Rcpp::traits::input_parameter< bool >::type doubleOOB(doubleOOBSEXP);
-    rcpp_result_gen = Rcpp::wrap(rcpp_OBBPredictionsInterface(forest, x, existing_df, doubleOOB));
+    Rcpp::traits::input_parameter< bool >::type returnWeightMatrix(returnWeightMatrixSEXP);
+    rcpp_result_gen = Rcpp::wrap(rcpp_OBBPredictionsInterface(forest, x, existing_df, doubleOOB, returnWeightMatrix));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -385,7 +386,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_Rforestry_rcpp_cppPredictInterface", (DL_FUNC) &_Rforestry_rcpp_cppPredictInterface, 9},
     {"_Rforestry_rcpp_cppMultilayerPredictInterface", (DL_FUNC) &_Rforestry_rcpp_cppMultilayerPredictInterface, 6},
     {"_Rforestry_rcpp_OBBPredictInterface", (DL_FUNC) &_Rforestry_rcpp_OBBPredictInterface, 1},
-    {"_Rforestry_rcpp_OBBPredictionsInterface", (DL_FUNC) &_Rforestry_rcpp_OBBPredictionsInterface, 4},
+    {"_Rforestry_rcpp_OBBPredictionsInterface", (DL_FUNC) &_Rforestry_rcpp_OBBPredictionsInterface, 5},
     {"_Rforestry_rcpp_VariableImportanceInterface", (DL_FUNC) &_Rforestry_rcpp_VariableImportanceInterface, 1},
     {"_Rforestry_rcpp_getObservationSizeInterface", (DL_FUNC) &_Rforestry_rcpp_getObservationSizeInterface, 1},
     {"_Rforestry_rcpp_AddTreeInterface", (DL_FUNC) &_Rforestry_rcpp_AddTreeInterface, 2},

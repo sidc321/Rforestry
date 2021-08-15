@@ -229,7 +229,8 @@ void forestryTree::predict(
     arma::Mat<double>* weightMatrix,
     bool linear,
     unsigned int seed,
-    size_t nodesizeStrictAvg
+    size_t nodesizeStrictAvg,
+    std::vector<size_t>* OOBIndex
 ){
   // If we are estimating the average in each leaf:
   struct rangeGenerator {
@@ -251,7 +252,8 @@ void forestryTree::predict(
                        linear,
                        getOverfitPenalty(),
                        seed,
-                       nodesizeStrictAvg);
+                       nodesizeStrictAvg,
+                       OOBIndex);
   //Rcpp::Rcout << "Seed is" << seed << ".\n";
 }
 
@@ -1330,14 +1332,6 @@ void forestryTree::getOOBPrediction(
 
   std::vector< std::vector<double> > xnew(trainingData->getNumColumns());
 
-
-  arma::Mat<double> curWeightMatrix;
-  size_t nrow = OOBIndex.size(); // number of features to be predicted
-  size_t ncol = trainingData->getNumRows(); // number of train data
-  curWeightMatrix.resize(nrow, ncol); // initialize the space for the matrix
-  curWeightMatrix.zeros(nrow, ncol);// set it all to 0
-
-
   for (size_t k = 0; k < trainingData->getNumColumns(); k++)
     {
       // Populate all values of the Kth feature
@@ -1357,11 +1351,20 @@ void forestryTree::getOOBPrediction(
     currentTreeCoefficients,
     &xnew,
     trainingData,
-    &curWeightMatrix,
+    weightMatrix,
     false,
     44,
-    nodesizeStrictAvg
+    nodesizeStrictAvg,
+    &OOBIndex
   );
+
+
+  // arma::Mat<double> curWeightMatrix;
+  // size_t nrow = OOBIndex.size(); // number of features to be predicted
+  // size_t ncol = trainingData->getNumRows(); // number of train data
+  // curWeightMatrix.resize(nrow, ncol); // initialize the space for the matrix
+  // curWeightMatrix.zeros(nrow, ncol);// set it all to 0
+
 
   for (size_t i = 0; i < OOBIndex.size(); i++) {
     // Update the global OOB vector
@@ -1369,12 +1372,11 @@ void forestryTree::getOOBPrediction(
     outputOOBCount[OOBIndex[i]] += 1;
 
     // Check weight matrix before we updte
-    if (weightMatrix) {
-      for (size_t j = 0; j < ncol; j++) {
-        (*weightMatrix)(OOBIndex[i], j) += curWeightMatrix(i, j);
-      }
-    }
-
+    // if (weightMatrix) {
+    //   for (size_t j = 0; j < ncol; j++) {
+    //     (*weightMatrix)(OOBIndex[i], j) += curWeightMatrix(i, j);
+    //   }
+    // }
   }
 }
 

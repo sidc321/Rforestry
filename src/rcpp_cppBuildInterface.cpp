@@ -691,7 +691,8 @@ Rcpp::List rcpp_OBBPredictionsInterface(
     SEXP forest,
     Rcpp::List x,
     bool existing_df,
-    bool doubleOOB
+    bool doubleOOB,
+    bool returnWeightMatrix
 ){
   // Then we predict with the feature.new data
   if (existing_df) {
@@ -703,18 +704,29 @@ Rcpp::List rcpp_OBBPredictionsInterface(
 
       arma::Mat<double> weightMatrix;
 
-      size_t nrow = featureData[0].size(); // number of features to be predicted
-      size_t ncol = (*testFullForest).getNtrain(); // number of train data
-      weightMatrix.resize(nrow, ncol); // initialize the space for the matrix
-      weightMatrix.zeros(nrow, ncol);// set it all to 0
+      if (returnWeightMatrix) {
+        size_t nrow = featureData[0].size(); // number of features to be predicted
+        size_t ncol = (*testFullForest).getNtrain(); // number of train data
+        weightMatrix.resize(nrow, ncol); // initialize the space for the matrix
+        weightMatrix.zeros(nrow, ncol);// set it all to 0
 
-      std::vector<double> OOBpreds = (*testFullForest).predictOOB(&featureData,
-                                                                  &weightMatrix,
-                                                                  doubleOOB);
-      Rcpp::NumericVector wrapped_preds = Rcpp::wrap(OOBpreds);
+        std::vector<double> OOBpreds = (*testFullForest).predictOOB(&featureData,
+                                        &weightMatrix,
+                                        doubleOOB);
+        Rcpp::NumericVector wrapped_preds = Rcpp::wrap(OOBpreds);
 
-      return Rcpp::List::create(Rcpp::Named("predictions") = wrapped_preds,
-                                Rcpp::Named("weightMatrix") = weightMatrix);
+        return Rcpp::List::create(Rcpp::Named("predictions") = wrapped_preds,
+                                  Rcpp::Named("weightMatrix") = weightMatrix);
+      } else {
+        // If we don't need weightMatrix, don't return it
+        std::vector<double> OOBpreds = (*testFullForest).predictOOB(&featureData,
+                                        NULL,
+                                        doubleOOB);
+        Rcpp::NumericVector wrapped_preds = Rcpp::wrap(OOBpreds);
+
+        return Rcpp::List::create(Rcpp::Named("predictions") = wrapped_preds);
+      }
+
     } catch(std::runtime_error const& err) {
       forward_exception_to_r(err);
     } catch(...) {
