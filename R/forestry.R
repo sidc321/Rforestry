@@ -365,7 +365,8 @@ setClass(
     overfitPenalty = "numeric",
     doubleTree = "logical",
     groupsMapping = "list",
-    groups = "numeric"
+    groups = "numeric",
+    minTreesPerGroup = "numeric"
   )
 )
 
@@ -411,7 +412,8 @@ setClass(
     gammas = "numeric",
     doubleTree = "logical",
     groupsMapping = "list",
-    groups = "numeric"
+    groups = "numeric",
+    minTreesPerGroup = "numeric"
   )
 )
 
@@ -507,13 +509,21 @@ setClass(
 #'   1,0,-1 which 1 indicating an increasing monotonic relationship, -1 indicating
 #'   a decreasing monotonic relationship, and 0 indicating no constraint.
 #'   Constraints supplied for categorical variable will be ignored.
-#' @param groups A vector of factors specifying the group membership of each training ovbservation.
+#' @param groups A vector of factors specifying the group membership of each training observation.
 #'   these groups are used in the aggregation when doing out of bag predictions in
 #'   order to predict with only trees where the entire group was not used for aggregation.
 #'   This allows the user to specify custom subgroups which will be used to create
 #'   predictions which do not use any data from a common group to make predictions for
 #'   any observation in the group. This can be used to create general custom
 #'   resampling schemes, and provide predictions consistent with the Out-of-Group set.
+#' @minTreesPerGroup The number of trees which we make sure have been created leaving
+#'   out each group. This is 0 by default, so we will not give any special treatment to
+#'   the groups when sampling, however if this is set to a positive integer, we
+#'   modify the bootstrap sampling scheme to ensure that exactly that many trees
+#'   have the group left out. We do this by, for each group, creating minTreesPerGroup
+#'   trees which are built on observations sampled from the set of training observations
+#'   which are not in the current group. This means we create |groups|* minTreesPerGroup
+#'   trees for the forest, which overrides ntree.
 #' @param monotoneAvg This is a boolean flag that indicates whether or not monotonic
 #'   constraints should be enforced on the averaging set in addition to the splitting set.
 #'   This flag is meaningless unless both honesty and monotonic constraints are in use.
@@ -602,6 +612,7 @@ forestry <- function(x,
                      linFeats = 0:(ncol(x)-1),
                      monotonicConstraints = rep(0, ncol(x)),
                      groups = NULL,
+                     minTreesPerGroup = 0,
                      monotoneAvg = FALSE,
                      overfitPenalty = 1,
                      doubleTree = FALSE,
@@ -695,6 +706,14 @@ forestry <- function(x,
 
   if (!is.null(groups)) {
     groupVector <- as.integer(groups)
+
+    # Print warning if the group number and minTreesPerGroup results in a large
+    # forest
+    if (minTreesPerGroup>0 && length(levels(groups))*minTreesPerGroup > 2000) {
+      warning(paste0("Using ",length(levels(groups))," groups with ",
+                     minTreesPerGroup," trees per group will train ",
+                     length(levels(groups))*minTreesPerGroup," trees in the forest."))
+    }
   } else {
     groupVector <- rep(0, nrow(x))
   }
@@ -826,7 +845,8 @@ forestry <- function(x,
           overfitPenalty = overfitPenalty,
           doubleTree = doubleTree,
           groupsMapping = groupsMapping,
-          groups = groupVector
+          groups = groupVector,
+          minTreesPerGroup = minTreesPerGroup,
         )
       )
     },
@@ -931,7 +951,8 @@ forestry <- function(x,
           overfitPenalty = overfitPenalty,
           doubleTree = doubleTree,
           groupsMapping = groupsMapping,
-          groups = groupVector
+          groups = groupVector,
+          minTreesPerGroup = minTreesPerGroup
         )
       )
     }, error = function(err) {
@@ -987,6 +1008,7 @@ multilayerForestry <- function(x,
                      linFeats = 0:(ncol(x)-1),
                      monotonicConstraints = rep(0, ncol(x)),
                      groups = NULL,
+                     minTreesPerGroup = 0,
                      monotoneAvg = FALSE,
                      featureWeights = rep(1, ncol(x)),
                      deepFeatureWeights = featureWeights,
@@ -1211,7 +1233,8 @@ multilayerForestry <- function(x,
           doubleTree = doubleTree,
           groupsMapping = groupsMapping,
           gammas = gammas,
-          groups = groupVector
+          groups = groupVector,
+          minTreesPerGroup = minTreesPerGroup
         )
       )
     },
@@ -1308,7 +1331,8 @@ multilayerForestry <- function(x,
           doubleTree = doubleTree,
           groupsMapping = reuseforestry@groupsMapping,
           gammas = reuseforestry@gammas,
-          groups = groupVector
+          groups = groupVector,
+          minTreesPerGroup = minTreesPerGroup
         )
       )
     }, error = function(err) {

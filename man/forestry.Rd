@@ -36,6 +36,7 @@ forestry(
   linFeats = 0:(ncol(x) - 1),
   monotonicConstraints = rep(0, ncol(x)),
   groups = NULL,
+  minTreesPerGroup = 0,
   monotoneAvg = FALSE,
   overfitPenalty = 1,
   doubleTree = FALSE,
@@ -154,7 +155,7 @@ features and the outcome. Supplied as a vector of length p with entries in
 a decreasing monotonic relationship, and 0 indicating no constraint.
 Constraints supplied for categorical variable will be ignored.}
 
-\item{groups}{A vector of factors specifying the group membership of each training ovbservation.
+\item{groups}{A vector of factors specifying the group membership of each training observation.
 these groups are used in the aggregation when doing out of bag predictions in
 order to predict with only trees where the entire group was not used for aggregation.
 This allows the user to specify custom subgroups which will be used to create
