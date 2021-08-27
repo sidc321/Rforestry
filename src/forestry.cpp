@@ -15,7 +15,7 @@ forestry::forestry():
   _splitRatio(0),_OOBhonest(0),_mtry(0), _minNodeSizeSpt(0), _minNodeSizeAvg(0),
   _minNodeSizeToSplitSpt(0), _minNodeSizeToSplitAvg(0), _minSplitGain(0),
   _maxDepth(0), _interactionDepth(0), _forest(nullptr), _seed(0), _verbose(0),
-  _nthread(0), _OOBError(0), _splitMiddle(0), _doubleTree(0){};
+  _nthread(0), _OOBError(0), _splitMiddle(0),_minTreesPerGroup(0), _doubleTree(0){};
 
 forestry::~forestry(){
 //  for (std::vector<forestryTree*>::iterator it = (*_forest).begin();
@@ -47,6 +47,7 @@ forestry::forestry(
   bool verbose,
   bool splitMiddle,
   size_t maxObs,
+  size_t minTreesPerGroup,
   bool hasNas,
   bool linear,
   double overfitPenalty,
@@ -76,6 +77,7 @@ forestry::forestry(
   this->_linear = linear;
   this->_overfitPenalty = overfitPenalty;
   this->_doubleTree = doubleTree;
+  this->_minTreesPerGroup = minTreesPerGroup;
 
   if (splitRatio > 1 || splitRatio < 0) {
     throw std::runtime_error("splitRatio shoule be between 0 and 1.");
