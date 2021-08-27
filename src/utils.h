@@ -26,6 +26,11 @@ double square(
     double x
 );
 
+void group_out_sample(
+    size_t groupIdx,
+    std::vector<size_t>& groupMemberships,
+    std::vector<size_t>& outputIdx
+);
 
 struct tree_info {
   std::vector< int > var_id;

@@ -278,7 +278,6 @@ void forestry::addTrees(size_t ntree) {
               AvgIndices = OOBIndex;
             }
 
-
             // Now set the splitting indices and averaging indices
             splitSampleIndex_ = sampleIndex;
             averageSampleIndex_ = AvgIndices;
