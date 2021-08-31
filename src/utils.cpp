@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <random>
 
 void print_vector(
     std::vector<unsigned int> v
@@ -53,7 +54,8 @@ double square(
 void group_out_sample(
     size_t groupIdx,
     std::vector<size_t>& groupMemberships,
-    std::vector<size_t>& outputIdx
+    std::vector<size_t>& outputIdx,
+    std::mt19937_64& random_number_generator
 ) {
 
   std::vector<size_t> out_of_group_indices;

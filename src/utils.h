@@ -29,7 +29,8 @@ double square(
 void group_out_sample(
     size_t groupIdx,
     std::vector<size_t>& groupMemberships,
-    std::vector<size_t>& outputIdx
+    std::vector<size_t>& outputIdx,
+    std::mt19937_64& random_number_generator
 );
 
 struct tree_info {
