@@ -2087,16 +2087,16 @@ predictInfo <- function(object,
 #' @return A vector of the bias corrected predictions
 #' @export
 correctedPredict <- function(object,
-                      newdata,
-                      feats=NULL,
-                      nrounds=0,
-                      linear=TRUE,
-                      double=FALSE,
-                      simple=FALSE,
-                      verbose=FALSE,
-                      use_residuals=FALSE,
-                      adaptive=FALSE,
-                      num_quants=5)
+                             newdata,
+                             feats=NULL,
+                             nrounds=0,
+                             linear=TRUE,
+                             double=FALSE,
+                             simple=FALSE,
+                             verbose=FALSE,
+                             use_residuals=FALSE,
+                             adaptive=FALSE,
+                             num_quants=5)
 
 {
   # Check allowed settings for the bias correction
