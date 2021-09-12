@@ -2082,6 +2082,10 @@ predictInfo <- function(object,
 #'  rather than Y-Y.hat as the regression outcome in the bias correction steps.
 #' @param adaptive flag to indicate whether we use adaptiveForestry or not in the
 #'  regression step.
+#' @param monotone flag to indicate whether or not we should use monotonicity
+#'  in the regression of Y on Y hat (when doing forest correction steps).
+#'  If TRUE, will constrain the corrected prediction for Y to be monotone in the
+#'  original prediction of Y. Default is FALSE.
 #' @param num_quants Number of quantiles to use when doing quantile specific bias
 #'  correction.
 #' @return A vector of the bias corrected predictions
@@ -2096,6 +2100,7 @@ correctedPredict <- function(object,
                              verbose=FALSE,
                              use_residuals=FALSE,
                              adaptive=FALSE,
+                             monotone=FALSE,
                              num_quants=5)
 
 {
@@ -2154,9 +2159,17 @@ correctedPredict <- function(object,
         pred.i <- predict(fit.i, adjust.data %>% dplyr::select(-Y),
                           aggregation = agg, weighting=1)
       } else {
-        fit.i <- forestry(x = adjust.data %>% dplyr::select(-Y),
-                          y = y_reg,
-                          OOBhonest = TRUE)
+        if (monotone) {
+          fit.i <- forestry(x = adjust.data %>% dplyr::select(-Y),
+                            y = y_reg,
+                            monotoneAvg = TRUE,
+                            monotonicConstraints = c(rep(0,ncol(adjust.data)-2),1),
+                            OOBhonest = TRUE)
+        } else {
+          fit.i <- forestry(x = adjust.data %>% dplyr::select(-Y),
+                            y = y_reg,
+                            OOBhonest = TRUE)
+        }
         pred.i <- predict(fit.i, adjust.data %>% dplyr::select(-Y),
                           aggregation = agg)
       }

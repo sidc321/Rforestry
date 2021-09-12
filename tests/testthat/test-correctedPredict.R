@@ -60,6 +60,20 @@ test_that('Bias corrections', {
 
   expect_gt(rmse, rmse.bc2)
   extremes <- c(range(pred.bc2), range(y))
+
+  # Finally do some bias corrected predictions with monotone prediction --------
+  pred.bc3 <- correctedPredict(forest,
+                               newdata = x,
+                               nrounds = 5,
+                               monotone = TRUE)
+
+  rmse.bc3 <- sqrt(mean((pred.bc3 - y)^2))
+
+  expect_equal(length(pred.bc3), 1000)
+
+
+  expect_gt(rmse, rmse.bc3)
+
   # We can see it is very regularized here
   # library(ggplot2)
   # ggplot(aes(x =X, y=Y), data=data.frame(Y = y, X=pred.bc2))+

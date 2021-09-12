@@ -15,6 +15,7 @@ correctedPredict(
   verbose = FALSE,
   use_residuals = FALSE,
   adaptive = FALSE,
+  monotone = FALSE,
   num_quants = 5
 )
 }
@@ -46,6 +47,11 @@ rather than Y-Y.hat as the regression outcome in the bias correction steps.}
 
 \item{adaptive}{flag to indicate whether we use adaptiveForestry or not in the
 regression step.}
+
+\item{monotone}{flag to indicate whether or not we should use monotonicity
+in the regression of Y on Y hat (when doing forest correction steps).
+If TRUE, will constrain the corrected prediction for Y to be monotone in the
+original prediction of Y. Default is FALSE.}
 
 \item{num_quants}{Number of quantiles to use when doing quantile specific bias
 correction.}
