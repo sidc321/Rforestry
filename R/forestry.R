@@ -2056,6 +2056,206 @@ predictInfo <- function(object,
               "obsInfo" = observations))
 }
 
+
+# -- Perform bias corrected predictions ----------------------------------------
+#' correctedPredict-forestry
+#' @rdname correctedPredict-forestry
+#' @description Perform predictions given the forest using a bias correction based on
+#'   the out of bag predictions on the training set. By default we use a final linear
+#'   correction based on the leave-one-out hat matrix after doing `nrounds` nonlinear
+#'   corrections.
+#' @param object A `forestry` object.
+#' @param newdata Dataframe on which to predict.
+#' @param feats A vector of feature indices which should be included in the bias
+#'   correction. By default only the outcome and predicted outcomes are used.
+#' @param nrounds The number of nonlinear bias correction steps which should be
+#'   taken. By default this is zero, so just a single linear correction is used.
+#' @param linear A flag indicating whether or not we want to do a final linear
+#'   bias correction after doing the nonlinear corrections. Default is TRUE.
+#' @param double flag indicating if one should use doubleOOB for the initial
+#'   predictions rather than "oob." Defalt is FALSE.
+#' @param simple flag indicating whether we should do a simple linear adjustment
+#'  or do different adjustments by quantiles. Default is FALSE.
+#' @param verbose Flag which displays the bias of each qunatile.
+#' @param use_residuals flag indicating if we should use the residuals to fit the
+#'  bias correction steps. Defualt is FALSE which means that we will use Y
+#'  rather than Y-Y.hat as the regression outcome in the bias correction steps.
+#' @param adaptive flag to indicate whether we use adaptiveForestry or not in the
+#'  regression step.
+#' @param num_quants Number of quantiles to use when doing quantile specific bias
+#'  correction.
+#' @return A vector of the bias corrected predictions
+#' @export
+correctedPredict <- function(object,
+                      newdata,
+                      feats=NULL,
+                      nrounds=0,
+                      linear=TRUE,
+                      double=FALSE,
+                      simple=FALSE,
+                      verbose=FALSE,
+                      use_residuals=FALSE,
+                      adaptive=FALSE,
+                      num_quants=5)
+
+{
+  # Check allowed settings for the bias correction
+  if (!linear & (nrounds < 1)) {
+    stop("We must do at least one round of bias corrections, with either linear = TRUE or nrounds > 0")
+  }
+
+  if (nrounds < 0 || nrounds %% 1 != 0) {
+    stop("ntree must be a non negative integer.")
+  }
+
+  if (!is.null(feats)) {
+    if (max(feats) > ncol(object@processed_dta$processed_x) ||
+        min(feats) < 1||
+        any(feats %% 1 != 0)) {
+      stop("feats must be a positive integer between 1 and ncol(x)")
+    }
+  }
+
+  if (double) {
+    agg = "doubleOOB"
+  } else {
+    agg = "oob"
+  }
+
+  # First get out of bag preds
+  oob.preds <- predict(object = object, aggregation = agg)
+
+
+  if (is.null(feats)) {
+    adjust.data <- data.frame(Y = object@processed_dta$y, Y.hat = oob.preds)
+  } else {
+    adjust.data <- data.frame(object@processed_dta$processed_x[,feats],
+                              Y = object@processed_dta$y,
+                              Y.hat = oob.preds)
+  }
+
+
+  if (nrounds > 0) {
+    library(dplyr)
+    for (round_i in 1:nrounds) {
+      # Set right outcome to regress for regression step
+      if(use_residuals) {
+        y_reg <- adjust.data %>% dplyr::pull(Y) - adjust.data %>% dplyr::pull(Y.hat)
+      } else {
+        y_reg <- adjust.data %>% dplyr::pull(Y)
+      }
+
+      if (adaptive) {
+        fit.i <- adaptiveForestry(x = adjust.data %>% dplyr::select(-Y),
+                                  y = y_reg,
+                                  OOBhonest = TRUE,
+                                  ntree.first = 100,
+                                  ntree.second = 500)
+        pred.i <- predict(fit.i, adjust.data %>% dplyr::select(-Y),
+                          aggregation = agg, weighting=1)
+      } else {
+        fit.i <- forestry(x = adjust.data %>% dplyr::select(-Y),
+                          y = y_reg,
+                          OOBhonest = TRUE)
+        pred.i <- predict(fit.i, adjust.data %>% dplyr::select(-Y),
+                          aggregation = agg)
+      }
+
+
+
+      # If we predicted some residuals, we now have to add the old Y.hat to them
+      # to get the new Y.hat
+      if (use_residuals) {
+        pred.i <- pred.i + (adjust.data %>% dplyr::pull(Y.hat))
+      }
+
+      # Adjust the predicted Y hats
+      adjust.data[, ncol(adjust.data)] <- pred.i
+      names(adjust.data)[ncol(adjust.data)] <- "Y.hat"
+    }
+  }
+
+  # extremes <- c(range(adjust.data$Y.hat), range(y))
+  # ggplot(aes(x =X, y=Y), data=data.frame(Y = y, X=adjust.data$Y.hat))+
+  #   geom_point()+
+  #   geom_abline(intercept = 0, slope = 1)+
+  #   ylim(min(extremes), max(extremes))+
+  #   xlim(min(extremes), max(extremes))+
+  #   labs(y = "True Y", x = "Predicted Y")
+  #
+  # sqrt(mean((adjust.data$Y.hat - y)^2))
+
+  # Given a dataframe with Y and Y.hat at least, fits an OLS and gives the LOO
+  # predictions on the sample
+  loo_pred_helper <- function(df) {
+    adjust.lm <- lm(Y ~ ., data = df)
+
+    # Get LOO coefficients
+    loo.coefs <- lm.influence(adjust.lm)$coefficients
+    for (j in 1:ncol(loo.coefs)){
+      loo.coefs[,j] <- loo.coefs[,j] + unname(adjust.lm$coefficients[j])
+    }
+
+    # Calculate the predictions with the LOO coefficients
+    design.matrix <- data.frame(Int = 1, df[,-(ncol(df)-1)])
+    prod.matrix <- as.matrix(design.matrix) * as.matrix(loo.coefs)
+    preds.adjusted <- rowSums(prod.matrix)
+    return(preds.adjusted)
+  }
+
+  if (!linear) {
+    return(adjust.data[,ncol(adjust.data)])
+  } else {
+    # Now do linear adjustment
+    if (simple) {
+
+      # adjust the predictions
+      preds.adjusted <- loo_pred_helper(adjust.data)
+
+      # extremes <- c(range(preds.adjusted), range(y))
+      # ggplot(aes(x =X, y=Y), data=data.frame(Y = y, X=preds.adjusted))+
+      #   geom_point()+
+      #   geom_abline(intercept = 0, slope = 1)+
+      #   ylim(min(extremes), max(extremes))+
+      #   xlim(min(extremes), max(extremes))+
+      #   labs(y = "True Y", x = "Predicted Y")
+
+      # sqrt(mean((preds.adjusted - y)^2))
+    } else {
+      # split Yhat into quantiles
+      q_num <- num_quants+1
+      Y.hat <- adjust.data$Y.hat
+      Y <- adjust.data$Y
+
+      # Get the cuts of the different quantiles
+      cuts <- cut(Y.hat,
+                  quantile(Y.hat, probs=seq(0,1,length.out = q_num) ) ,
+                  include.lowest=TRUE)
+
+      q_indices <- as.numeric(cuts)
+      new_pred <- rep(0, length(Y.hat))
+
+      # Fit a different LM in each quantile
+      fits <- lapply(1:max(q_indices), function(i) {lm(Y ~., adjust.data[which(q_indices == i),])})
+
+      for ( i in 1:max(q_indices) ) {
+        idx <- which(q_indices == i)
+        if ( verbose ) {
+          print(paste0("Quantile: ",i, " ", levels(cuts)[i]))
+          bias <- mean(Y[idx] - Y.hat[idx])
+          print(bias)
+        }
+        new_pred[idx] <- loo_pred_helper(adjust.data[idx,])
+      }
+
+      preds.adjusted <- new_pred
+    }
+
+    return(preds.adjusted)
+  }
+}
+
+
 # -- Add More Trees ------------------------------------------------------------
 #' addTrees-forestry
 #' @rdname addTrees-forestry
