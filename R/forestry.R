@@ -2141,7 +2141,6 @@ correctedPredict <- function(object,
 
 
   if (nrounds > 0) {
-    library(dplyr)
     for (round_i in 1:nrounds) {
       # Set right outcome to regress for regression step
       if(use_residuals) {
