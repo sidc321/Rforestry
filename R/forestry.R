@@ -2557,7 +2557,7 @@ CppToR_translator <- function(object) {
       print(err)
       return(NA)
     })
-  }
+}
 
 
 # -- relink forest CPP ptr -----------------------------------------------------

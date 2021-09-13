@@ -138,3 +138,38 @@ mean((oob_preds -  iris[,1])^2)
 getOOB(rf)
 ```
 
+## Saving + Loading a model
+
+In order to save a trained model, we include two functions in order to save and load
+a model we have built.
+The following code shows how to use saveForestry and loadForestry to save and load
+a forestry model.
+
+```R
+library(Rforestry)
+
+# Train a forest
+forest <- forestry(x = iris[,-1],
+                   y = iris[,1],
+                   nthread = 2,
+                   ntree = 500,
+                   OOBhonest=TRUE)
+               
+# Get predictions before save the forest
+y_pred_before <- predict(forest, iris[,-1])
+
+# Save the forest
+saveForestry(forest, filename = file.path("forest.Rda"))
+
+# Delete the forest
+rm(forest)
+
+# Load the forest
+forest_after <- loadForestry(file.path("forest.Rda"))
+
+# Predict after loading the forest
+y_pred_after <- predict(forest_after, iris[,-1])
+
+```
+
+
