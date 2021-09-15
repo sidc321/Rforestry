@@ -2075,19 +2075,19 @@ predictInfo <- function(object,
 #' @param double flag indicating if one should use doubleOOB for the initial
 #'   predictions rather than "oob." Defalt is FALSE.
 #' @param simple flag indicating whether we should do a simple linear adjustment
-#'  or do different adjustments by quantiles. Default is FALSE.
-#' @param verbose Flag which displays the bias of each qunatile.
+#'  or do different adjustments by quantiles. Default is TRUE.
+#' @param verbose flag which displays the bias of each qunatile.
 #' @param use_residuals flag indicating if we should use the residuals to fit the
 #'  bias correction steps. Defualt is FALSE which means that we will use Y
 #'  rather than Y-Y.hat as the regression outcome in the bias correction steps.
 #' @param adaptive flag to indicate whether we use adaptiveForestry or not in the
-#'  regression step.
+#'  regression step. Default is FALSE.
 #' @param monotone flag to indicate whether or not we should use monotonicity
 #'  in the regression of Y on Y hat (when doing forest correction steps).
 #'  If TRUE, will constrain the corrected prediction for Y to be monotone in the
 #'  original prediction of Y. Default is FALSE.
 #' @param num_quants Number of quantiles to use when doing quantile specific bias
-#'  correction.
+#'  correction. Will only be used if simple = FALSE. Default is 5.
 #' @return A vector of the bias corrected predictions
 #' @export
 correctedPredict <- function(object,
@@ -2096,7 +2096,7 @@ correctedPredict <- function(object,
                              nrounds=0,
                              linear=TRUE,
                              double=FALSE,
-                             simple=FALSE,
+                             simple=TRUE,
                              verbose=FALSE,
                              use_residuals=FALSE,
                              adaptive=FALSE,
