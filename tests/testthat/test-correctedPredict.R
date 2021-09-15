@@ -11,7 +11,9 @@ test_that('Bias corrections', {
 
 
   forest <- forestry(x =x,
-                     y = y[,1])
+                     y = y[,1],
+                     OOBhonest = TRUE,
+                     doubleBootstrap = TRUE)
 
   preds <- predict(forest, newdata = x, aggregation = "oob")
 
@@ -28,9 +30,29 @@ test_that('Bias corrections', {
   #   labs(y = "True Y", x = "Predicted Y")
 
   # Now do bias corrected predictions
+
+  # Run many different settings for the bias correction
   pred.bc <- correctedPredict(forest,
                               newdata = x,
+                              simple = FALSE,
                               nrounds = 0)
+  rmse.bc <- sqrt(mean((pred.bc - y)^2))
+
+  pred.bc <- correctedPredict(forest,
+                              newdata = x,
+                              nrounds = 1)
+  rmse.bc <- sqrt(mean((pred.bc - y)^2))
+
+  pred.bc <- correctedPredict(forest,
+                              newdata = x,
+                              monotone = TRUE,
+                              simple=FALSE,
+                              nrounds = 1)
+  rmse.bc <- sqrt(mean((pred.bc - y)^2))
+
+  pred.bc <- correctedPredict(forest,
+                              nrounds = 0)
+
 
   rmse.bc <- sqrt(mean((pred.bc - y)^2))
 
@@ -39,6 +61,7 @@ test_that('Bias corrections', {
 
   expect_gt(rmse, rmse.bc)
   extremes <- c(range(pred.bc), range(y))
+
   # We can see it is very regularized here
   # library(ggplot2)
   # ggplot(aes(x =X, y=Y), data=data.frame(Y = y, X=pred.bc))+
@@ -50,7 +73,6 @@ test_that('Bias corrections', {
 
   # Now do some bias corrected predictions with the forest ---------------------
   pred.bc2 <- correctedPredict(forest,
-                               newdata = x,
                                nrounds = 5)
 
   rmse.bc2 <- sqrt(mean((pred.bc2 - y)^2))
@@ -63,7 +85,6 @@ test_that('Bias corrections', {
 
   # Finally do some bias corrected predictions with monotone prediction --------
   pred.bc3 <- correctedPredict(forest,
-                               newdata = x,
                                nrounds = 5,
                                monotone = TRUE)
 
@@ -73,6 +94,66 @@ test_that('Bias corrections', {
 
 
   expect_gt(rmse, rmse.bc3)
+
+
+  # Now try the predict on an out of sample design matrix ----------------------
+  x_new <- matrix(rnorm(n * p), ncol = p)
+  y_new <- as.matrix(x) %*% beta
+
+
+
+  pred.bc <- correctedPredict(forest,
+                              newdata = x_new,
+                              simple = FALSE,
+                              nrounds = 0)
+
+  rmse.bc <- sqrt(mean((pred.bc - y_new)^2))
+
+  # extremes <- c(range(pred.bc), range(y_new))
+  # library(ggplot2)
+  # ggplot(aes(x =X, y=Y), data=data.frame(Y = y, X=pred.bc))+
+  #   geom_point()+
+  #   geom_abline(intercept = 0, slope = 1)+
+  #   ylim(min(extremes), max(extremes))+
+  #   xlim(min(extremes), max(extremes))+
+  #   labs(y = "True Y", x = "Predicted Y")
+
+  pred.bc <- correctedPredict(forest,
+                              newdata = x_new,
+                              nrounds = 1)
+  rmse.bc <- sqrt(mean((pred.bc - y_new)^2))
+
+  pred.bc <- correctedPredict(forest,
+                              newdata = x_new,
+                              monotone = TRUE,
+                              simple= FALSE,
+                              nrounds = 1)
+  rmse.bc <- sqrt(mean((pred.bc - y_new)^2))
+
+  pred.bc <- correctedPredict(forest,
+                              newdata = x_new,
+                              nrounds = 0)
+
+  rmse.bc <- sqrt(mean((pred.bc - y_new)^2))
+
+
+
+
+  pred.bcnew <- correctedPredict(forest,
+                                 newdata = x_new,
+                                 double = TRUE,
+                                 nrounds = 0)
+
+  rmse.bcnew <- sqrt(mean((pred.bcnew - y_new)^2))
+
+  pred.old <- predict(forest,
+                      newdata = x_new)
+
+  rmse.old <- sqrt(mean((pred.old - y_new)^2))
+
+
+  #expect_gt(rmse.old, rmse.bcnew)
+
 
   # We can see it is very regularized here
   # library(ggplot2)

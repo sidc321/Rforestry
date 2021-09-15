@@ -6,7 +6,7 @@
 \usage{
 correctedPredict(
   object,
-  newdata,
+  newdata = NULL,
   feats = NULL,
   nrounds = 0,
   linear = TRUE,
@@ -22,7 +22,8 @@ correctedPredict(
 \arguments{
 \item{object}{A `forestry` object.}
 
-\item{newdata}{Dataframe on which to predict.}
+\item{newdata}{Dataframe on which to predict. If this is left NULL, we
+predict on the in sample data.}
 
 \item{feats}{A vector of feature indices which should be included in the bias
 correction. By default only the outcome and predicted outcomes are used.}
