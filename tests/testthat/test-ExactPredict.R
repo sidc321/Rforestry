@@ -14,6 +14,18 @@ test_that("Tests that exact prediction flag is working", {
 
   skip_if_not_mac()
 
+  context("Test that exact predictions work with aggregation = oob and doubleOOB")
+
+  rf <- forestry(x,y,OOBhonest = TRUE)
+
+  p1 <- predict(rf, aggregation = "oob")
+  p2 <- predict(rf, aggregation = "oob")
+  expect_equal(all.equal(p1,p2,tolerance = 1e-12),TRUE)
+
+  p3 <- predict(rf, aggregation = "doubleOOB")
+  p4 <- predict(rf, aggregation = "doubleOOB")
+  expect_equal(all.equal(p1,p2,tolerance = 1e-12),TRUE)
+
   # Test predict
   exact_predictions <- predict(forest,
                                x[c(5, 100, 104,105),],

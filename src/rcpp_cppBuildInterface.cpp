@@ -692,7 +692,8 @@ Rcpp::List rcpp_OBBPredictionsInterface(
     Rcpp::List x,
     bool existing_df,
     bool doubleOOB,
-    bool returnWeightMatrix
+    bool returnWeightMatrix,
+    bool exact
 ){
   // Then we predict with the feature.new data
   if (existing_df) {
@@ -712,7 +713,8 @@ Rcpp::List rcpp_OBBPredictionsInterface(
 
         std::vector<double> OOBpreds = (*testFullForest).predictOOB(&featureData,
                                         &weightMatrix,
-                                        doubleOOB);
+                                        doubleOOB,
+                                        exact);
         Rcpp::NumericVector wrapped_preds = Rcpp::wrap(OOBpreds);
 
         return Rcpp::List::create(Rcpp::Named("predictions") = wrapped_preds,
@@ -721,7 +723,8 @@ Rcpp::List rcpp_OBBPredictionsInterface(
         // If we don't need weightMatrix, don't return it
         std::vector<double> OOBpreds = (*testFullForest).predictOOB(&featureData,
                                         NULL,
-                                        doubleOOB);
+                                        doubleOOB,
+                                        exact);
         Rcpp::NumericVector wrapped_preds = Rcpp::wrap(OOBpreds);
 
         return Rcpp::List::create(Rcpp::Named("predictions") = wrapped_preds);

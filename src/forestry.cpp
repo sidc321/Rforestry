@@ -683,7 +683,8 @@ std::unique_ptr< std::vector<double> > forestry::predict(
 std::vector<double> forestry::predictOOB(
     std::vector< std::vector<double> >* xNew,
     arma::Mat<double>* weightMatrix,
-    bool doubleOOB
+    bool doubleOOB,
+    bool exact
 ) {
 
   size_t numObservations = getTrainingData()->getNumRows();
@@ -694,6 +695,10 @@ std::vector<double> forestry::predictOOB(
     outputOOBPrediction[i] = 0;
     outputOOBCount[i] = 0;
   }
+
+  // Only needed if exact = TRUE, vector for storing each tree's predictions
+  std::vector< std::vector<double> > tree_preds;
+  std::vector<size_t> tree_seeds;
 
     #if DOPARELLEL
       size_t nthreadToUse = getNthread();
@@ -737,13 +742,25 @@ std::vector<double> forestry::predictOOB(
                       xNew,
                       weightMatrix
                   );
-    #if DOPARELLEL
+                  #if DOPARELLEL
                   std::lock_guard<std::mutex> lock(threadLock);
-    #endif
-                  for (size_t j=0; j < numObservations; j++) {
-                    outputOOBPrediction[j] += outputOOBPrediction_iteration[j];
-                    outputOOBCount[j] += outputOOBCount_iteration[j];
+                  #endif
+
+                  // based on tree seeds when tree seeds might be uninitialized
+                  tree_seeds.push_back(currentTree->getSeed());
+
+                  if (exact) {
+                    tree_preds.push_back(outputOOBPrediction_iteration);
+                    for (size_t j=0; j < numObservations; j++) {
+                      outputOOBCount[j] += outputOOBCount_iteration[j];
+                    }
+                  } else {
+                    for (size_t j=0; j < numObservations; j++) {
+                      outputOOBPrediction[j] += outputOOBPrediction_iteration[j];
+                      outputOOBCount[j] += outputOOBCount_iteration[j];
+                    }
                   }
+
                 } catch (std::runtime_error &err) {
                   // Rcpp::Rcerr << err.what() << std::endl;
                 }
@@ -766,22 +783,64 @@ std::vector<double> forestry::predictOOB(
     #endif
 
   double OOB_MSE = 0;
-  for (size_t j=0; j<numObservations; j++){
-    double trueValue = getTrainingData()->getOutcomePoint(j);
-    if (outputOOBCount[j] != 0) {
-      OOB_MSE +=
-        pow(trueValue - outputOOBPrediction[j] / outputOOBCount[j], 2);
-      outputOOBPrediction[j] = outputOOBPrediction[j] / outputOOBCount[j];
-      //Also divide the weightMatrix
-      if (weightMatrix) {
-        for (size_t i = 0; i < numObservations; i++) {
-          (*weightMatrix)(j,i) = (*weightMatrix)(j,i) / outputOOBCount[j];
+
+  if (exact) {
+    std::vector<size_t> indices(tree_seeds.size());
+    std::iota(indices.begin(), indices.end(), 0);
+    //Order the indices by the seeds of the corresponding trees
+    std::sort(indices.begin(), indices.end(),
+              [&](size_t a, size_t b) -> bool {
+                return tree_seeds[a] > tree_seeds[b];
+              });
+
+
+    // Now aggregate using the new index ordering
+    for (std::vector<size_t>::iterator iter = indices.begin();
+         iter != indices.end();
+         ++iter)
+    {
+      size_t cur_index = *iter;
+
+      // Aggregate all predictions for current tree
+      for (size_t j = 0; j < numObservations; j++) {
+        if (outputOOBCount[j] != 0) {
+          outputOOBPrediction[j] += tree_preds[cur_index][j] / outputOOBCount[j];
+
+        } else {
+          outputOOBPrediction[j] = std::numeric_limits<double>::quiet_NaN();
         }
       }
-    } else {
-      outputOOBPrediction[j] = std::numeric_limits<double>::quiet_NaN();
+    }
+    //Also divide the weightMatrix
+    if (weightMatrix) {
+      for (size_t j=0; j<numObservations; j++){
+        if (outputOOBCount[j] != 0) {
+          for (size_t i = 0; i < numObservations; i++) {
+            (*weightMatrix)(j,i) = (*weightMatrix)(j,i) / outputOOBCount[j];
+          }
+        }
+      }
+    }
+
+  } else {
+    for (size_t j=0; j<numObservations; j++){
+      double trueValue = getTrainingData()->getOutcomePoint(j);
+      if (outputOOBCount[j] != 0) {
+        OOB_MSE +=
+          pow(trueValue - outputOOBPrediction[j] / outputOOBCount[j], 2);
+        outputOOBPrediction[j] = outputOOBPrediction[j] / outputOOBCount[j];
+        //Also divide the weightMatrix
+        if (weightMatrix) {
+          for (size_t i = 0; i < numObservations; i++) {
+            (*weightMatrix)(j,i) = (*weightMatrix)(j,i) / outputOOBCount[j];
+          }
+        }
+      } else {
+        outputOOBPrediction[j] = std::numeric_limits<double>::quiet_NaN();
+      }
     }
   }
+
   return outputOOBPrediction;
 }
 

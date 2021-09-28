@@ -60,7 +60,8 @@ public:
   std::vector<double> predictOOB(
     std::vector< std::vector<double> >* xNew,
     arma::Mat<double>* weightMatrix,
-    bool doubleOOB
+    bool doubleOOB,
+    bool exact
   );
 
   void fillinTreeInfo(

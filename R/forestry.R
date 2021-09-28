@@ -1415,7 +1415,7 @@ predict.forestry <- function(object,
 
   # Set exact aggregation method if nobs < 100,000 and average aggregation
   if (is.null(exact)) {
-    if (nrow(newdata) > 1e5 || aggregation != "average") {
+    if (!is.null(newdata) && nrow(newdata) > 1e5) {
       exact = FALSE
     } else {
       exact = TRUE
@@ -1461,7 +1461,8 @@ predict.forestry <- function(object,
                                      object@processed_dta$processed_x,  # If we don't provide a dataframe, provide the forest DF
                                      TRUE, # Tell predict we don't have an existing dataframe
                                      FALSE,
-                                     weightMatrix
+                                     weightMatrix,
+                                     exact
         )
       }, error = function(err) {
         print(err)
@@ -1473,7 +1474,8 @@ predict.forestry <- function(object,
                                      processed_x,
                                      TRUE, # Give dataframe flag
                                      FALSE,
-                                     weightMatrix
+                                     weightMatrix,
+                                     exact
         )
       }, error = function(err) {
         print(err)
@@ -1505,7 +1507,8 @@ predict.forestry <- function(object,
                                      object@processed_dta$processed_x,  # Give null for the dataframe
                                      TRUE, # Tell predict we don't have an existing dataframe
                                      TRUE,
-                                     weightMatrix
+                                     weightMatrix,
+                                     exact
         )
       }, error = function(err) {
         print(err)
@@ -1517,7 +1520,8 @@ predict.forestry <- function(object,
                                      processed_x,
                                      TRUE, # Give dataframe flag
                                      TRUE,
-                                     weightMatrix
+                                     weightMatrix,
+                                     exact
         )
       }, error = function(err) {
         print(err)
@@ -1822,7 +1826,8 @@ getOOBpreds <- function(object,
                                                    processed_x,
                                                    TRUE,
                                                    doubleOOB,
-                                                   FALSE)
+                                                   FALSE,
+                                                   TRUE)
     return(rcppPrediction$predictions)
   }, error = function(err) {
     print(err)
