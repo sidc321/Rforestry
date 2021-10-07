@@ -1118,9 +1118,19 @@ Rcpp::List rcpp_reconstructree(
       new std::vector<unsigned int>
   );
 
+  // Reserve space for each of the vectors equal to R_forest.size()
+  var_ids->reserve(R_forest.size());
+  split_vals->reserve(R_forest.size());
+  leafAveidxs->reserve(R_forest.size());
+  leafSplidxs->reserve(R_forest.size());
+  averagingSampleIndex->reserve(R_forest.size());
+  splittingSampleIndex->reserve(R_forest.size());
+  naLeftCounts->reserve(R_forest.size());
+  naRightCounts->reserve(R_forest.size());
+  tree_seeds->reserve(R_forest.size());
 
 
-
+  // Now actually populate the vectors
   for(int i=0; i!=R_forest.size(); i++){
     var_ids->push_back(
         Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[0])
