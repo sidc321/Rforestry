@@ -26,7 +26,6 @@ training_data_checker(
   linFeats,
   monotonicConstraints,
   groups,
-  minTreesPerGroup,
   featureWeights,
   deepFeatureWeights,
   observationWeights,

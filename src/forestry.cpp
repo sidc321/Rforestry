@@ -131,12 +131,15 @@ void forestry::addTrees(size_t ntree) {
 
   const unsigned int newStartingTreeNumber = (unsigned int) getNtree();
   unsigned int newEndingTreeNumber;
-  size_t numToGrow;
+  size_t numToGrow, groupToGrow;
 
   if (getMinTreesPerGroup() > 0) {
     numToGrow =
       (unsigned int) getMinTreesPerGroup() * ((*std::max_element(getTrainingData()->getGroups()->begin(),
                                                                  getTrainingData()->getGroups()->end())));
+    // Want to grow max(ntree, |groups|*minTreePerGroup) total trees
+    groupToGrow = numToGrow;
+    numToGrow = std::max(numToGrow, ntree);
   } else {
     numToGrow = ntree;
   }
@@ -192,7 +195,7 @@ void forestry::addTrees(size_t ntree) {
           // If the forest is to be constructed with minTreesPerGroup, we want to
           // use that sampling method instead of the sampling methods we have
           size_t currentGroup;
-          if (getMinTreesPerGroup() > 0) {
+          if ((getMinTreesPerGroup() > 0) && (i < groupToGrow)) {
 
             // Get the current group
             currentGroup = (((size_t) i) / ((size_t) getMinTreesPerGroup())) + 1;

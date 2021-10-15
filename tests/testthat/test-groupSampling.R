@@ -9,6 +9,7 @@ test_that("Tests sampling with groups", {
   rf <- forestry(x = x,
                  y = y,
                  groups = iris$Species,
+                 ntree = 500,
                  minTreesPerGroup = 1)
 
   rf <- make_savable(rf)
@@ -16,13 +17,13 @@ test_that("Tests sampling with groups", {
   # Test that a tree has been grown leaving out each species
   # Note that because we sort by seed after training the forest
   # so the first trees in R_forest have left out the last group etc
-  idx1 <- rf@R_forest[[1]]$splittingSampleIndex
+  idx1 <- rf@R_forest[[498]]$splittingSampleIndex
   expect_equal(all(!((101:150) %in% idx1)), TRUE)
 
-  idx2 <- rf@R_forest[[2]]$splittingSampleIndex
+  idx2 <- rf@R_forest[[499]]$splittingSampleIndex
   expect_equal(all(!((51:100) %in% idx2)), TRUE)
 
-  idx3 <- rf@R_forest[[3]]$splittingSampleIndex
+  idx3 <- rf@R_forest[[500]]$splittingSampleIndex
   expect_equal(all(!((1:50) %in% idx3)), TRUE)
 
 
@@ -30,6 +31,7 @@ test_that("Tests sampling with groups", {
   rf <- forestry(x = x,
                  y = y,
                  groups = iris$Species,
+                 ntree = 30,
                  minTreesPerGroup = 10)
 
   rf <- make_savable(rf)
@@ -55,6 +57,7 @@ test_that("Tests sampling with groups", {
                  y = y,
                  groups = iris$Species,
                  minTreesPerGroup = 1,
+                 ntree=3,
                  OOBhonest = TRUE)
 
   rf <- make_savable(rf)
