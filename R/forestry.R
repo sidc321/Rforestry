@@ -365,7 +365,10 @@ setClass(
     overfitPenalty = "numeric",
     doubleTree = "logical",
     groupsMapping = "list",
-    groups = "numeric"
+    groups = "numeric",
+    scale = "logical",
+    colMeans = "numeric",
+    colSd = "numeric"
   )
 )
 
@@ -411,7 +414,10 @@ setClass(
     gammas = "numeric",
     doubleTree = "logical",
     groupsMapping = "list",
-    groups = "numeric"
+    groups = "numeric",
+    scale = "logical",
+    colMeans = "numeric",
+    colSd = "numeric"
   )
 )
 
@@ -520,6 +526,9 @@ setClass(
 #'   The default is FALSE.
 #' @param overfitPenalty Value to determine how much to penalize the magnitude
 #'   of coefficients in ridge regression when using linear splits.
+#' @param scale A parameter which indicates whether or not we want to scale and center
+#'   the covariates and outcome before doing the regression. This can help with
+#'   stability, so by default is TRUE.
 #' @return A `forestry` object.
 #' @examples
 #' set.seed(292315)
@@ -604,6 +613,7 @@ forestry <- function(x,
                      groups = NULL,
                      monotoneAvg = FALSE,
                      overfitPenalty = 1,
+                     scale = FALSE,
                      doubleTree = FALSE,
                      reuseforestry = NULL,
                      savable = TRUE,
@@ -629,6 +639,10 @@ forestry <- function(x,
   x <- as.data.frame(x)
   # Preprocess the data
   hasNas <- any(is.na(x))
+
+  # Create vectors with the column means and SD's for scaling
+  colMeans <- rep(0, ncol(x)+1)
+  colSd <- rep(0, ncol(x)+1)
 
   #Translating interactionVariables to featureWeights syntax
   if(is.null(featureWeights)) {
@@ -716,6 +730,30 @@ forestry <- function(x,
       monotonicConstraints[categoricalFeatureCols_cpp] <- 0
       categoricalFeatureCols_cpp <- categoricalFeatureCols_cpp - 1
     }
+
+    if (scale) {
+      # Center and scale continous features and outcome
+      for (col_idx in  1:ncol(processed_x)) {
+        if ((col_idx-1) %in% categoricalFeatureCols_cpp) {
+          next
+        } else {
+          colMeans[col_idx] <- mean(processed_x[,col_idx], na.rm = TRUE)
+          colSd[col_idx] <- sd(processed_x[,col_idx], na.rm = TRUE)
+
+          if (colSd[col_idx] != 0) {
+            processed_x[,col_idx] <- ( processed_x[,col_idx] - colMeans[col_idx]) / colSd[col_idx]
+          } else {
+            processed_x[,col_idx] <- ( processed_x[,col_idx] - colMeans[col_idx])
+          }
+        }
+      }
+
+      # Center and scale Y
+      colMeans[ncol(processed_x)+1] <- mean(y, na.rm = TRUE)
+      colSd[ncol(processed_x)+1] <- sd(y, na.rm = TRUE)
+      y <- (y-colMeans[ncol(processed_x)+1]) / colSd[ncol(processed_x)+1]
+    }
+
     # Create rcpp object
     # Create a forest object
     forest <- tryCatch({
@@ -826,7 +864,10 @@ forestry <- function(x,
           overfitPenalty = overfitPenalty,
           doubleTree = doubleTree,
           groupsMapping = groupsMapping,
-          groups = groupVector
+          groups = groupVector,
+          colMeans = colMeans,
+          colSd = colSd,
+          scale = scale
         )
       )
     },
@@ -849,6 +890,29 @@ forestry <- function(x,
 
     categoricalFeatureMapping <-
       reuseforestry@categoricalFeatureMapping
+
+    if (scale) {
+      # Center and scale continous features and outcome
+      for (col_idx in  1:ncol(processed_x)) {
+        if ((col_idx-1) %in% categoricalFeatureCols_cpp) {
+          next
+        } else {
+          colMeans[col_idx] <- mean(processed_x[,col_idx], na.rm = TRUE)
+          colSd[col_idx] <- sd(processed_x[,col_idx], na.rm = TRUE)
+
+          if (colSd[col_idx] != 0) {
+            processed_x[,col_idx] <- ( processed_x[,col_idx] - colMeans[col_idx]) / colSd[col_idx]
+          } else {
+            processed_x[,col_idx] <- ( processed_x[,col_idx] - colMeans[col_idx])
+          }
+        }
+      }
+
+      # Center and scale Y
+      colMeans[ncol(processed_x)+1] <- mean(y, na.rm = TRUE)
+      colSd[ncol(processed_x)+1] <- sd(y, na.rm = TRUE)
+      y <- (y-colMeans[ncol(processed_x)+1]) / colSd[ncol(processed_x)+1]
+    }
 
     # Create rcpp object
     # Create a forest object
@@ -931,7 +995,10 @@ forestry <- function(x,
           overfitPenalty = overfitPenalty,
           doubleTree = doubleTree,
           groupsMapping = groupsMapping,
-          groups = groupVector
+          groups = groupVector,
+          colMeans = colMeans,
+          colSd = colSd,
+          scale = scale
         )
       )
     }, error = function(err) {
@@ -992,6 +1059,7 @@ multilayerForestry <- function(x,
                      deepFeatureWeights = featureWeights,
                      observationWeights = NULL,
                      overfitPenalty = 1,
+                     scale = FALSE,
                      doubleTree = FALSE,
                      reuseforestry = NULL,
                      savable = TRUE,
@@ -1072,6 +1140,10 @@ multilayerForestry <- function(x,
   nObservations <- length(y)
   numColumns <- ncol(x)
 
+  # Create vectors with the column means and SD's for scaling
+  colMeans <- rep(0, ncol(x)+1)
+  colSd <- rep(0, ncol(x)+1)
+
   groupsMapping <- list()
   if (!is.null(groups)) {
     groupsMapping <- list("groupValue" = levels(groups),
@@ -1098,6 +1170,29 @@ multilayerForestry <- function(x,
     } else {
       monotonicConstraints[categoricalFeatureCols_cpp] <- 0
       categoricalFeatureCols_cpp <- categoricalFeatureCols_cpp - 1
+    }
+
+    if (scale) {
+      # Center and scale continous features and outcome
+      for (col_idx in  1:ncol(processed_x)) {
+        if ((col_idx-1) %in% categoricalFeatureCols_cpp) {
+          next
+        } else {
+          colMeans[col_idx] <- mean(processed_x[,col_idx], na.rm = TRUE)
+          colSd[col_idx] <- sd(processed_x[,col_idx], na.rm = TRUE)
+
+          if (colSd[col_idx] != 0) {
+            processed_x[,col_idx] <- ( processed_x[,col_idx] - colMeans[col_idx]) / colSd[col_idx]
+          } else {
+            processed_x[,col_idx] <- ( processed_x[,col_idx] - colMeans[col_idx])
+          }
+        }
+      }
+
+      # Center and scale Y
+      colMeans[ncol(processed_x)+1] <- mean(y, na.rm = TRUE)
+      colSd[ncol(processed_x)+1] <- sd(y, na.rm = TRUE)
+      y <- (y-colMeans[ncol(processed_x)+1]) / colSd[ncol(processed_x)+1]
     }
 
     # Create rcpp object
@@ -1211,7 +1306,10 @@ multilayerForestry <- function(x,
           doubleTree = doubleTree,
           groupsMapping = groupsMapping,
           gammas = gammas,
-          groups = groupVector
+          groups = groupVector,
+          colMeans = colMeans,
+          colSd = colSd,
+          scale = scale
         )
       )
     },
@@ -1232,6 +1330,29 @@ multilayerForestry <- function(x,
 
     categoricalFeatureMapping <-
       reuseforestry@categoricalFeatureMapping
+
+    if (scale) {
+      # Center and scale continous features and outcome
+      for (col_idx in  1:ncol(processed_x)) {
+        if ((col_idx-1) %in% categoricalFeatureCols_cpp) {
+          next
+        } else {
+          colMeans[col_idx] <- mean(processed_x[,col_idx], na.rm = TRUE)
+          colSd[col_idx] <- sd(processed_x[,col_idx], na.rm = TRUE)
+
+          if (colSd[col_idx] != 0) {
+            processed_x[,col_idx] <- ( processed_x[,col_idx] - colMeans[col_idx]) / colSd[col_idx]
+          } else {
+            processed_x[,col_idx] <- ( processed_x[,col_idx] - colMeans[col_idx])
+          }
+        }
+      }
+
+      # Center and scale Y
+      colMeans[ncol(processed_x)+1] <- mean(y, na.rm = TRUE)
+      colSd[ncol(processed_x)+1] <- sd(y, na.rm = TRUE)
+      y <- (y-colMeans[ncol(processed_x)+1]) / colSd[ncol(processed_x)+1]
+    }
 
     # Create rcpp object
     # Create a forest object
@@ -1308,7 +1429,10 @@ multilayerForestry <- function(x,
           doubleTree = doubleTree,
           groupsMapping = reuseforestry@groupsMapping,
           gammas = reuseforestry@gammas,
-          groups = groupVector
+          groups = groupVector,
+          colMeans = colMeans,
+          colSd = colSd,
+          scale = scale
         )
       )
     }, error = function(err) {
@@ -1411,6 +1535,16 @@ predict.forestry <- function(object,
                                       object@categoricalFeatureCols,
                                       object@categoricalFeatureMapping)
 
+    if (object@scale) {
+      # Cycle through all continuous features and center / scale
+      for (feat_idx in 1:ncol(processed_x)) {
+        if (feat_idx %in% (unname(object@processed_dta$categoricalFeatureCols_cpp)+1)) {
+          next
+        } else {
+          processed_x[,feat_idx] <- (processed_x[,feat_idx] -object@colMeans[feat_idx])/object@colSd[feat_idx]
+        }
+      }
+    }
   }
 
   # Set exact aggregation method if nobs < 100,000 and average aggregation
@@ -1556,6 +1690,12 @@ predict.forestry <- function(object,
     coef_names <- colnames(newdata)[object@linFeats + 1]
     coef_names <- c(coef_names, "Intercept")
     colnames(rcppPrediction$coef) <- coef_names
+  }
+
+  # If we have scaled the observations, we want to rescale the predictions
+  if (object@scale) {
+    rcppPrediction$prediction <- rcppPrediction$prediction*object@colSd[length(object@colSd)] +
+      object@colMeans[length(object@colMeans)]
   }
 
   if (aggregation == "average" && weightMatrix) {
