@@ -135,3 +135,62 @@ preprocess_testing <- function(x,
   # Return transformed data and encoding information
   return(x)
 }
+
+
+#' @title scale_center
+#' @description Given a dataframe, scale and center the continous features
+#' @param x A dataframe in order to be processed.
+#' @param categoricalFeatureCols A vector of the categorical features, we
+#'   don't want to scale/center these. Should be 1-indexed.
+#' @param colMeans A vector of the means to center each column.
+#' @param colSd A vector of the standard deviations to scale each column with.
+#' @return A scaled and centered  dataset x
+scale_center <- function(
+  x,
+  categoricalFeatureCols,
+  colMeans,
+  colSd
+) {
+  # Center and scale continous features and outcome
+  for (col_idx in 1:ncol(x)) {
+    if (col_idx %in% categoricalFeatureCols) {
+      next
+    } else {
+      if (colSd[col_idx] != 0) {
+        x[,col_idx] <- ( x[,col_idx] - colMeans[col_idx]) / colSd[col_idx]
+      } else {
+        x[,col_idx] <- ( x[,col_idx] - colMeans[col_idx])
+      }
+    }
+  }
+  return(x)
+}
+
+#' @title unscale_uncenter
+#' @description Given a dataframe, un scale and un center the continous features
+#' @param x A dataframe in order to be processed.
+#' @param categoricalFeatureCols A vector of the categorical features, we
+#'   don't want to scale/center these. Should be 1-indexed.
+#' @param colMeans A vector of the means to add to each column.
+#' @param colSd A vector of the standard deviations to rescale each column with.
+#' @return A dataset x in it's original scaling
+scale_center <- function(
+  x,
+  categoricalFeatureCols,
+  colMeans,
+  colSd
+) {
+  # Center and scale continous features and outcome
+  for (col_idx in 1:ncol(x)) {
+    if (col_idx %in% categoricalFeatureCols) {
+      next
+    } else {
+      if (colSd[col_idx] != 0) {
+        x[,col_idx] <- ( x[,col_idx] - colMeans[col_idx]) / colSd[col_idx]
+      } else {
+        x[,col_idx] <- ( x[,col_idx] - colMeans[col_idx])
+      }
+    }
+  }
+  return(x)
+}

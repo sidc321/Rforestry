@@ -732,21 +732,21 @@ forestry <- function(x,
     }
 
     if (scale) {
-      # Center and scale continous features and outcome
-      for (col_idx in  1:ncol(processed_x)) {
+      # Get colMeans and ColSd's
+      for (col_idx in 1:ncol(processed_x)) {
         if ((col_idx-1) %in% categoricalFeatureCols_cpp) {
           next
         } else {
           colMeans[col_idx] <- mean(processed_x[,col_idx], na.rm = TRUE)
           colSd[col_idx] <- sd(processed_x[,col_idx], na.rm = TRUE)
-
-          if (colSd[col_idx] != 0) {
-            processed_x[,col_idx] <- ( processed_x[,col_idx] - colMeans[col_idx]) / colSd[col_idx]
-          } else {
-            processed_x[,col_idx] <- ( processed_x[,col_idx] - colMeans[col_idx])
-          }
         }
       }
+
+      # Scale columns of X
+      processed_x <- scale_center(processed_x,
+                                  (categoricalFeatureCols_cpp+1),
+                                  colMeans,
+                                  colSd)
 
       # Center and scale Y
       colMeans[ncol(processed_x)+1] <- mean(y, na.rm = TRUE)
@@ -899,14 +899,14 @@ forestry <- function(x,
         } else {
           colMeans[col_idx] <- mean(processed_x[,col_idx], na.rm = TRUE)
           colSd[col_idx] <- sd(processed_x[,col_idx], na.rm = TRUE)
-
-          if (colSd[col_idx] != 0) {
-            processed_x[,col_idx] <- ( processed_x[,col_idx] - colMeans[col_idx]) / colSd[col_idx]
-          } else {
-            processed_x[,col_idx] <- ( processed_x[,col_idx] - colMeans[col_idx])
-          }
         }
       }
+
+      # Scale columns of X
+      processed_x <- scale_center(processed_x,
+                                  (categoricalFeatureCols_cpp+1),
+                                  colMeans,
+                                  colSd)
 
       # Center and scale Y
       colMeans[ncol(processed_x)+1] <- mean(y, na.rm = TRUE)
@@ -1180,14 +1180,14 @@ multilayerForestry <- function(x,
         } else {
           colMeans[col_idx] <- mean(processed_x[,col_idx], na.rm = TRUE)
           colSd[col_idx] <- sd(processed_x[,col_idx], na.rm = TRUE)
-
-          if (colSd[col_idx] != 0) {
-            processed_x[,col_idx] <- ( processed_x[,col_idx] - colMeans[col_idx]) / colSd[col_idx]
-          } else {
-            processed_x[,col_idx] <- ( processed_x[,col_idx] - colMeans[col_idx])
-          }
         }
       }
+
+      # Scale columns of X
+      processed_x <- scale_center(processed_x,
+                                  (categoricalFeatureCols_cpp+1),
+                                  colMeans,
+                                  colSd)
 
       # Center and scale Y
       colMeans[ncol(processed_x)+1] <- mean(y, na.rm = TRUE)
@@ -1339,14 +1339,14 @@ multilayerForestry <- function(x,
         } else {
           colMeans[col_idx] <- mean(processed_x[,col_idx], na.rm = TRUE)
           colSd[col_idx] <- sd(processed_x[,col_idx], na.rm = TRUE)
-
-          if (colSd[col_idx] != 0) {
-            processed_x[,col_idx] <- ( processed_x[,col_idx] - colMeans[col_idx]) / colSd[col_idx]
-          } else {
-            processed_x[,col_idx] <- ( processed_x[,col_idx] - colMeans[col_idx])
-          }
         }
       }
+
+      # Scale columns of X
+      processed_x <- scale_center(processed_x,
+                                  (categoricalFeatureCols_cpp+1),
+                                  colMeans,
+                                  colSd)
 
       # Center and scale Y
       colMeans[ncol(processed_x)+1] <- mean(y, na.rm = TRUE)
@@ -1537,13 +1537,10 @@ predict.forestry <- function(object,
 
     if (object@scale) {
       # Cycle through all continuous features and center / scale
-      for (feat_idx in 1:ncol(processed_x)) {
-        if (feat_idx %in% (unname(object@processed_dta$categoricalFeatureCols_cpp)+1)) {
-          next
-        } else {
-          processed_x[,feat_idx] <- (processed_x[,feat_idx] -object@colMeans[feat_idx])/object@colSd[feat_idx]
-        }
-      }
+      processed_x <- scale_center(processed_x,
+                                  (unname(object@processed_dta$categoricalFeatureCols_cpp)+1),
+                                  object@colMeans,
+                                  object@colSd)
     }
   }
 
