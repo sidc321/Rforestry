@@ -39,6 +39,7 @@ adaptiveForestry(
   monotonicConstraints = rep(0, ncol(x)),
   monotoneAvg = FALSE,
   overfitPenalty = 1,
+  scale = FALSE,
   doubleTree = FALSE,
   reuseforestry = NULL,
   savable = TRUE,
@@ -162,6 +163,10 @@ The default is FALSE.}
 
 \item{overfitPenalty}{Value to determine how much to penalize the magnitude
 of coefficients in ridge regression when using linear splits.}
+
+\item{scale}{A parameter which indicates whether or not we want to scale and center
+the covariates and outcome before doing the regression. This can help with
+stability, so by default is TRUE.}
 
 \item{doubleTree}{if the number of tree is doubled as averaging and splitting
 data can be exchanged to create decorrelated trees. (Default = FALSE)}
