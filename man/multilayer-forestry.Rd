@@ -39,7 +39,7 @@ multilayerForestry(
   deepFeatureWeights = featureWeights,
   observationWeights = NULL,
   overfitPenalty = 1,
-  scale = TRUE,
+  scale = FALSE,
   doubleTree = FALSE,
   reuseforestry = NULL,
   savable = TRUE,
