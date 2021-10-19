@@ -613,7 +613,7 @@ forestry <- function(x,
                      groups = NULL,
                      monotoneAvg = FALSE,
                      overfitPenalty = 1,
-                     scale = FALSE,
+                     scale = TRUE,
                      doubleTree = FALSE,
                      reuseforestry = NULL,
                      savable = TRUE,
@@ -1691,7 +1691,7 @@ predict.forestry <- function(object,
 
   # If we have scaled the observations, we want to rescale the predictions
   if (object@scale) {
-    rcppPrediction$prediction <- rcppPrediction$prediction*object@colSd[length(object@colSd)] +
+    rcppPrediction$predictions <- rcppPrediction$predictions*object@colSd[length(object@colSd)] +
       object@colMeans[length(object@colMeans)]
   }
 
@@ -1702,11 +1702,11 @@ predict.forestry <- function(object,
   } else if (aggregation == "doubleOOB" && weightMatrix) {
     return(rcppPrediction)
   } else if (aggregation == "average") {
-    return(rcppPrediction$prediction)
+    return(rcppPrediction$predictions)
   } else if (aggregation == "oob") {
-    return(rcppPrediction$prediction)
+    return(rcppPrediction$predictions)
   } else if (aggregation == "doubleOOB") {
-    return(rcppPrediction$prediction)
+    return(rcppPrediction$predictions)
   } else if (aggregation == "coefs") {
     return(rcppPrediction)
   } else if (aggregation == "terminalNodes") {
@@ -1829,8 +1829,15 @@ getOOB <- function(object,
     rcppOOB <- tryCatch({
       preds <- predict(object, aggregation = "oob")
       # Only calc mse on non missing predictions
+      if (object@scale) {
+        y_true <- object@processed_dta$y[which(!is.nan(preds))]*object@colSd[length(object@colSd)] +
+          object@colMeans[length(object@colMeans)]
+      } else {
+        y_true <- object@processed_dta$y[which(!is.nan(preds))]
+      }
+
       mse <- mean((preds[which(!is.nan(preds))] -
-                     object@processed_dta$y[which(!is.nan(preds))])^2)
+                     y_true)^2)
       return(mse)
     }, error = function(err) {
       print(err)
@@ -1953,6 +1960,13 @@ getOOBpreds <- function(object,
                                       object@categoricalFeatureCols,
                                       object@categoricalFeatureMapping)
 
+    if (object@scale) {
+      # Cycle through all continuous features and center / scale
+      processed_x <- scale_center(processed_x,
+                                  (unname(object@processed_dta$categoricalFeatureCols_cpp)+1),
+                                  object@colMeans,
+                                  object@colSd)
+    }
   } else {
     # Else we take the data the forest was trained with
     processed_x <- object@processed_dta$processed_x
@@ -1965,6 +1979,13 @@ getOOBpreds <- function(object,
                                                    doubleOOB,
                                                    FALSE,
                                                    TRUE)
+
+    # If we have scaled the observations, we want to rescale the predictions
+    if (object@scale) {
+      rcppPrediction$predictions <- rcppPrediction$predictions*object@colSd[length(object@colSd)] +
+        object@colMeans[length(object@colMeans)]
+    }
+
     return(rcppPrediction$predictions)
   }, error = function(err) {
     print(err)
@@ -2099,7 +2120,13 @@ getCI <- function(object,
   } else if (method == "OOB-conformal") {
     # Get double OOB predictions and the residuals
     y_pred <- predict(object, aggregation = "doubleOOB")
-    res <- y_pred - object@processed_dta$y
+    if (object@scale) {
+      res <- y_pred - (object@processed_dta$y*object@colSd[length(object@colSd)] +
+        object@colMeans[length(object@colMeans)])
+    } else {
+      res <- y_pred - object@processed_dta$y
+    }
+
 
     # Get (1-level) / 2 and 1 - (1-level) / 2 quantiles of the residuals
     quantiles <- quantile(res, probs = c((1-level) / 2, 1 - (1-level) / 2))
@@ -2114,7 +2141,13 @@ getCI <- function(object,
     return(predictions)
   } else if (method == "local-conformal") {
     OOB_preds <- predict(object, aggregation = "oob")
-    OOB_res <- object@processed_dta$y - OOB_preds
+    if (object@scale) {
+      OOB_res <- object@processed_dta$y*object@colSd[length(object@colSd)] +
+        object@colMeans[length(object@colMeans)] - OOB_preds
+    } else {
+      OOB_res <- object@processed_dta$y - OOB_preds
+    }
+
 
     preds <- predict(object, newdata = newdata, weightMatrix = TRUE)
     weights <- preds$weightMatrix
@@ -2511,7 +2544,8 @@ autoforestry <- function(x,
       y,
       ntree = 1,
       nodesizeSpl = nrow(x),
-      nodesizeAvg = nrow(x)
+      nodesizeAvg = nrow(x),
+      scale=FALSE
     )
 
   # Number of unique executions of Successive Halving (minus one)
@@ -2598,7 +2632,8 @@ autoforestry <- function(x,
           sampsize = sampsize,
           nthread = nthread,
           middleSplit = allConfigs$middleSplit[j],
-          reuseforestry = dummy_tree
+          reuseforestry = dummy_tree,
+          scale=FALSE
         )
       }, error = function(err) {
         val_models[[j]] <- NULL

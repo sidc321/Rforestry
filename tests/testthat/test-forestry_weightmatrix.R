@@ -18,7 +18,8 @@ test_that("Tests that random forest is working correctly", {
     nthread = 2,
     splitrule = "variance",
     splitratio = 1,
-    nodesizeStrictAvg = 5
+    nodesizeStrictAvg = 5,
+    scale=TRUE
   )
 
   # Test predict

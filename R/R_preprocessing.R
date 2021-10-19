@@ -174,7 +174,7 @@ scale_center <- function(
 #' @param colMeans A vector of the means to add to each column.
 #' @param colSd A vector of the standard deviations to rescale each column with.
 #' @return A dataset x in it's original scaling
-scale_center <- function(
+unscale_uncenter <- function(
   x,
   categoricalFeatureCols,
   colMeans,
@@ -186,9 +186,9 @@ scale_center <- function(
       next
     } else {
       if (colSd[col_idx] != 0) {
-        x[,col_idx] <- ( x[,col_idx] - colMeans[col_idx]) / colSd[col_idx]
+        x[,col_idx] <- ( x[,col_idx]* colSd[col_idx] + colMeans[col_idx])
       } else {
-        x[,col_idx] <- ( x[,col_idx] - colMeans[col_idx])
+        x[,col_idx] <- ( x[,col_idx] + colMeans[col_idx])
       }
     }
   }

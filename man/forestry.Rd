@@ -38,7 +38,7 @@ forestry(
   groups = NULL,
   monotoneAvg = FALSE,
   overfitPenalty = 1,
-  scale = FALSE,
+  scale = TRUE,
   doubleTree = FALSE,
   reuseforestry = NULL,
   savable = TRUE,

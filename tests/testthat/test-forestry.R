@@ -31,7 +31,7 @@ test_that("Tests that random forest is working correctly", {
   skip_if_not_mac()
 
   mean((y_pred - y) ^ 2)
-  expect_equal(mean((y_pred - y) ^ 2), 0.064760523023031, tolerance = 1e-12)
+  expect_equal(mean((y_pred - y) ^ 2), 0.06466401683066609618056, tolerance = 1e-12)
 
   # Test factors with missing obs and unused levels are correctly handled
   x$Species[1:70] <- NA
@@ -41,6 +41,6 @@ test_that("Tests that random forest is working correctly", {
   y_pred <- predict(forest, x, seed = 2)
   # options(digits = 10)
   # print(mean((y_pred - y) ^ 2))
-  expect_equal(mean((y_pred - y) ^ 2), 0.1058253569, tolerance = 1e-6)
+  expect_equal(mean((y_pred - y) ^ 2), 0.1076747001972507000733, tolerance = 1e-6)
 
 })

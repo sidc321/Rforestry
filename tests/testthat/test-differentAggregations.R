@@ -1,4 +1,4 @@
-test_that("Tests that saving RF and laoding it works", {
+test_that("Tests that getOOBpreds and predict(aggregation = oob) both work", {
   library(Rforestry)
 
   rf <- forestry(x = iris[,-1],

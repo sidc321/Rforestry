@@ -7,7 +7,8 @@ test_that("Tests that computing confidence intervals is going well", {
 
   rf <- forestry(x = x,
                  y = y,
-                 OOBhonest = TRUE)
+                 OOBhonest = TRUE,
+                 seed = 237972)
 
   context("test the conformal intervals")
   preds <- getCI(rf, newdata = x_test, level = .95, method = "OOB-conformal")

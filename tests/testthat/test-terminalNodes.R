@@ -13,12 +13,13 @@ test_that("Tests that terminal nodes are correct", {
     y,
     replace = TRUE,
     nthread = 2,
-    maxDepth = 5
+    maxDepth = 5,
+    seed = 2323
   )
 
   skip_if_not_mac()
 
   # Test predict
   full_predictions <- predict(forest, x[c(5, 100, 104),], aggregation = 'terminalNodes')$terminalNodes
-  expect_equal(full_predictions, matrix(c(5,14,14,19), ncol = 1))
+  expect_equal(full_predictions, matrix(c(1,5,9,12), ncol = 1))
 })
