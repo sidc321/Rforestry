@@ -522,7 +522,7 @@ setClass(
 #'   predictions which do not use any data from a common group to make predictions for
 #'   any observation in the group. This can be used to create general custom
 #'   resampling schemes, and provide predictions consistent with the Out-of-Group set.
-#' @minTreesPerGroup The number of trees which we make sure have been created leaving
+#' @param minTreesPerGroup The number of trees which we make sure have been created leaving
 #'   out each group. This is 0 by default, so we will not give any special treatment to
 #'   the groups when sampling, however if this is set to a positive integer, we
 #'   modify the bootstrap sampling scheme to ensure that exactly that many trees

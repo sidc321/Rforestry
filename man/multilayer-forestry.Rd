@@ -154,6 +154,18 @@ predictions which do not use any data from a common group to make predictions fo
 any observation in the group. This can be used to create general custom
 resampling schemes, and provide predictions consistent with the Out-of-Group set.}
 
+\item{minTreesPerGroup}{The number of trees which we make sure have been created leaving
+out each group. This is 0 by default, so we will not give any special treatment to
+the groups when sampling, however if this is set to a positive integer, we
+modify the bootstrap sampling scheme to ensure that exactly that many trees
+have the group left out. We do this by, for each group, creating minTreesPerGroup
+trees which are built on observations sampled from the set of training observations
+which are not in the current group. This means we create at least |groups|* minTreesPerGroup
+trees for the forest. If ntree > |groups|minTreesPerGroup, we create
+max(|groups|minTreesPerGroup,ntree) total trees, in which at least minTreesPerGroup
+are created leaving out each group. For debugging purposes, these groupless
+trees are stored at the end of the R forest, in blocks based on the left out group.}
+
 \item{monotoneAvg}{This is a boolean flag that indicates whether or not monotonic
 constraints should be enforced on the averaging set in addition to the splitting set.
 This flag is meaningless unless both honesty and monotonic constraints are in use.
