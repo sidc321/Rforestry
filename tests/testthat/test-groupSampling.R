@@ -83,4 +83,23 @@ test_that("Tests sampling with groups", {
 
   expect_equal(length(intersect(spl_idx3,avg_idx3)), 0)
 
+  context("Test that ntree parameter is specified correctly")
+
+  # Test that the forest ntree parameter is equal to max(minTreesPerGroup * |groups|, ntree)
+  rf <- forestry(x = x,
+                 y = y,
+                 ntree = 100,
+                 minTreesPerGroup = 10,
+                 groups = iris$Species)
+
+  expect_equal(rf@ntree, 100)
+
+  rf <- forestry(x = x,
+                 y = y,
+                 ntree = 10,
+                 minTreesPerGroup = 10,
+                 groups = iris$Species)
+
+  expect_equal(rf@ntree, 30)
+
 })
