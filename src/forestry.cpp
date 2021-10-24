@@ -15,7 +15,7 @@ forestry::forestry():
   _splitRatio(0),_OOBhonest(0),_mtry(0), _minNodeSizeSpt(0), _minNodeSizeAvg(0),
   _minNodeSizeToSplitSpt(0), _minNodeSizeToSplitAvg(0), _minSplitGain(0),
   _maxDepth(0), _interactionDepth(0), _forest(nullptr), _seed(0), _verbose(0),
-  _nthread(0), _OOBError(0), _splitMiddle(0), _doubleTree(0){};
+  _nthread(0), _OOBError(0), _splitMiddle(0),_minTreesPerGroup(0), _doubleTree(0){};
 
 forestry::~forestry(){
 //  for (std::vector<forestryTree*>::iterator it = (*_forest).begin();
@@ -47,6 +47,7 @@ forestry::forestry(
   bool verbose,
   bool splitMiddle,
   size_t maxObs,
+  size_t minTreesPerGroup,
   bool hasNas,
   bool linear,
   double overfitPenalty,
@@ -76,6 +77,7 @@ forestry::forestry(
   this->_linear = linear;
   this->_overfitPenalty = overfitPenalty;
   this->_doubleTree = doubleTree;
+  this->_minTreesPerGroup = minTreesPerGroup;
 
   if (splitRatio > 1 || splitRatio < 0) {
     throw std::runtime_error("splitRatio shoule be between 0 and 1.");
@@ -128,7 +130,22 @@ forestry::forestry(
 void forestry::addTrees(size_t ntree) {
 
   const unsigned int newStartingTreeNumber = (unsigned int) getNtree();
-  const unsigned int newEndingTreeNumber = newStartingTreeNumber + (unsigned int) ntree;
+  unsigned int newEndingTreeNumber;
+  size_t numToGrow, groupToGrow;
+
+  if (getMinTreesPerGroup() > 0) {
+    numToGrow =
+      (unsigned int) getMinTreesPerGroup() * ((*std::max_element(getTrainingData()->getGroups()->begin(),
+                                                                 getTrainingData()->getGroups()->end())));
+    // Want to grow max(ntree, |groups|*minTreePerGroup) total trees
+    groupToGrow = numToGrow;
+    numToGrow = std::max(numToGrow, ntree);
+  } else {
+    numToGrow = ntree;
+  }
+  newEndingTreeNumber = newStartingTreeNumber + (unsigned int) numToGrow;
+
+  //RcppThread::Rcout << newEndingTreeNumber;
 
   unsigned int nthreadToUse = (unsigned int) getNthread();
   if (nthreadToUse == 0) {
@@ -172,11 +189,28 @@ void forestry::addTrees(size_t ntree) {
           std::mt19937_64 random_number_generator;
           random_number_generator.seed(myseed);
 
-
           // Generate a sample index for each tree
           std::vector<size_t> sampleIndex;
 
-          if (isReplacement()) {
+          // If the forest is to be constructed with minTreesPerGroup, we want to
+          // use that sampling method instead of the sampling methods we have
+          size_t currentGroup;
+          if ((getMinTreesPerGroup() > 0) && (i < groupToGrow)) {
+
+            // Get the current group
+            currentGroup = (((size_t) i) / ((size_t) getMinTreesPerGroup())) + 1;
+
+            //RcppThread::Rcout << currentGroup;
+
+            // Populate sampleIndex with the leave group out function
+            group_out_sample(
+              currentGroup,
+              (*getTrainingData()->getGroups()),
+              sampleIndex,
+              random_number_generator
+            );
+
+          } else if (isReplacement()) {
 
             // Now we generate a weighted distribution using observationWeights
             std::vector<double>* sampleWeights = (this->getTrainingData()->getobservationWeights());
@@ -233,7 +267,15 @@ void forestry::addTrees(size_t ntree) {
 
             std::vector<size_t> allIndex;
             for (size_t i = 0; i < getSampleSize(); i++) {
-              allIndex.push_back(i);
+              // If we are doing leave a group out sampling, we make sure the
+              // allIndex vector doesn't include observations in the currently
+              // left out group
+              if (getMinTreesPerGroup() == 0) {
+                allIndex.push_back(i);
+              } else if ((*(getTrainingData()->getGroups()))[i]
+                           != currentGroup) {
+                allIndex.push_back(i);
+              }
             }
 
             std::vector<size_t> OOBIndex(getSampleSize());
@@ -275,7 +317,6 @@ void forestry::addTrees(size_t ntree) {
             } else {
               AvgIndices = OOBIndex;
             }
-
 
             // Now set the splitting indices and averaging indices
             splitSampleIndex_ = sampleIndex;
@@ -415,10 +456,10 @@ void forestry::addTrees(size_t ntree) {
         }
   #if DOPARELLEL
       },
-      newStartingTreeNumber + t * ntree / nthreadToUse,
+      newStartingTreeNumber + t * numToGrow / nthreadToUse,
       (t + 1) == nthreadToUse ?
         (unsigned int) newEndingTreeNumber :
-           newStartingTreeNumber + (t + 1) * ntree / nthreadToUse,
+           newStartingTreeNumber + (t + 1) * numToGrow / nthreadToUse,
            t
     );
     // this is a problem, we are apparently casting

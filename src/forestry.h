@@ -39,6 +39,7 @@ public:
     bool verbose,
     bool splitMiddle,
     size_t maxObs,
+    size_t minTreesPerGroup,
     bool hasNas,
     bool linear,
     double overfitPenalty,
@@ -206,6 +207,10 @@ public:
     return _maxObs;
   }
 
+  size_t getMinTreesPerGroup() {
+    return _minTreesPerGroup;
+  }
+
   bool gethasNas() {
     return _hasNas;
   }
@@ -247,6 +252,7 @@ private:
   std::unique_ptr< std::vector<double> > _variableImportance;
   bool _splitMiddle;
   size_t _maxObs;
+  size_t _minTreesPerGroup;
   bool _hasNas;
   bool _linear;
   double _overfitPenalty;
