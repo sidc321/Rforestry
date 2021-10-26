@@ -27,26 +27,29 @@ test_that("Test missing data with several other features", {
   set.seed(382)
   # First example we can test three different regions
   x <- rnorm(100)
-  y <- ifelse(x > 0,1, ifelse(x < -1,-1,0)) + rnorm(100, mean = 0, sd = .1)
+  y <- ifelse(x > 1,1, ifelse(x < -1,-1,0)) + rnorm(100, mean = 0, sd = .1)
   x <- data.frame(x)
 
   # plot(x$x, y)
 
   # Only make right observations missing now
-  missing_idx <- sample(which(x$x > 0), size = 10, replace = FALSE)
+  missing_idx <- sample(which(x$x > 1), size = 10, replace = FALSE)
   x$x[missing_idx] <- NA
 
   rf <- forestry(x = x,
                  y = y,
-                 seed=939,
                  monotonicConstraints = c(1),
                  symmetric = TRUE,
+                 scale=FALSE,
+                 seed = 2323,
+                 ntree=1,
                  #OOBhonest = TRUE,
                  #monotoneAvg = TRUE,
                  maxDepth = 1)
 
-  #p <- predict(rf, newdata = x)
-
+  p <- predict(rf, newdata = data.frame(x = rep(NA,5)))
+  p_all <- predict(rf, newdata=x)
+  expect_equal(all.equal(p,rep(max(p_all),5)), TRUE)
   #plot(rf)
 
   # Some problems:

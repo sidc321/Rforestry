@@ -449,7 +449,7 @@ void splitDataIntoThreeParts(
         rightPartitionIndex->push_back(index);
         naRightCount++;
       }
-    } else {
+    } else if (naDirection == 0) {
       for (const auto& index : naIndices) {
         centerPartitionIndex->push_back(index);
         naCenterCount++;
@@ -928,7 +928,7 @@ void forestryTree::recursivePartition(
             std::move(splittingSampleIndex_),
             node_id,
             trinary,
-            1
+            weight
         );
         return;
       }
@@ -1049,12 +1049,6 @@ void forestryTree::recursivePartition(
       monotonic_details_right,
       trinary,
       rWeight
-    );
-
-    // For now we want to give each splitNode the avging sample idx
-    std::vector<size_t> agv_idx_copy(*averagingSampleIndex);
-    std::unique_ptr<std::vector<size_t> > averagingSampleIndex_forsplit(
-        new std::vector<size_t>(agv_idx_copy)
     );
 
     if (trinary) {

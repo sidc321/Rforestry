@@ -277,7 +277,6 @@ void RFNode::predict(
       naSampling = {naLeftCount, naRightCount};
     }
 
-
     std::vector<size_t> naSampling_no_miss;
     if (getTrinary() && !categorical_split) {
       naSampling_no_miss = {
@@ -327,11 +326,13 @@ void RFNode::predict(
             draw = discrete_dist(random_number_generator);
           }
 
+          // Have to push to three indices when we have trinary splits
           if (draw == 0) {
             (*leftPartitionIndex).push_back(*it);
           } else {
             (*rightPartitionIndex).push_back(*it);
           }
+
         } else if (currentValue == getSplitValue()) {
           (*leftPartitionIndex).push_back(*it);
         } else {
@@ -358,13 +359,14 @@ void RFNode::predict(
           // number of observations in left/right child node else send
           // right/left with probability in proportion to NA's which went
           // left/right when splitting
-          if ((naLeftCount == 0) && (naRightCount == 0)) {
-            draw = discrete_dist_nonmissing(random_number_generator);
-          } else {
-            draw = discrete_dist(random_number_generator);
-          }
-
           if (getTrinary()) {
+            if ((naLeftCount == 0) && (naRightCount == 0) && (getNaCenterCount() == 0)) {
+              draw = discrete_dist_nonmissing(random_number_generator);
+            } else {
+              draw = discrete_dist(random_number_generator);
+            }
+
+            // Have to push to three indices when we have trinary splits
             if (draw == 0) {
               (*leftPartitionIndex).push_back(*it);
             } else if (draw == 1) {
@@ -373,6 +375,12 @@ void RFNode::predict(
               (*rightPartitionIndex).push_back(*it);
             }
           } else {
+            if ((naLeftCount == 0) && (naRightCount == 0)) {
+              draw = discrete_dist_nonmissing(random_number_generator);
+            } else {
+              draw = discrete_dist(random_number_generator);
+            }
+            // Now push to index
             if (draw == 0) {
               (*leftPartitionIndex).push_back(*it);
             } else {
@@ -511,6 +519,12 @@ void RFNode::printSubtree(int indentSpace) {
               << getSplitValue()
               << ", # of average samples = "
               << getAverageCount()
+              << ", # NA's l,c,r = "
+              << getNaLeftCount()
+              << " "
+              << getNaCenterCount()
+              << " "
+              << getNaRightCount()
               << std::endl;
 
     R_FlushConsole();

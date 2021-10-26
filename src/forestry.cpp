@@ -127,6 +127,8 @@ forestry::forestry(
                                                          const std::unique_ptr< forestryTree >& b) {
     return a.get()->getSeed() > b.get()->getSeed();
   });
+
+  // (*curr_forest)[0]->printTree();
 }
 
 void forestry::addTrees(size_t ntree) {
