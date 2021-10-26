@@ -182,6 +182,7 @@ SEXP rcpp_cppBuildInterface(
   bool monotoneAvg,
   bool hasNas,
   bool linear,
+  bool symmetric,
   double overfitPenalty,
   bool doubleTree,
   bool existing_dataframe_flag,
@@ -217,6 +218,7 @@ SEXP rcpp_cppBuildInterface(
         (size_t) minTreesPerGroup,
         hasNas,
         linear,
+        symmetric,
         (double) overfitPenalty,
         doubleTree
       );
@@ -348,6 +350,7 @@ SEXP rcpp_cppBuildInterface(
         (size_t) minTreesPerGroup,
         hasNas,
         linear,
+        symmetric,
         (double) overfitPenalty,
         doubleTree
       );
@@ -1089,6 +1092,7 @@ Rcpp::List rcpp_reconstructree(
   bool monotoneAvg,
   bool hasNas,
   bool linear,
+  bool symmetric,
   double overfitPenalty,
   bool doubleTree
 ){
@@ -1281,6 +1285,7 @@ Rcpp::List rcpp_reconstructree(
     (size_t) minTreesPerGroup,
     (bool) hasNas,
     (bool) linear,
+    (bool) symmetric,
     (double) overfitPenalty,
     doubleTree
   );
@@ -1349,6 +1354,7 @@ Rcpp::List rcpp_reconstruct_forests(
     Rcpp::NumericVector gammas,
     bool monotoneAvg,
     bool linear,
+    bool symmetric,
     double overfitPenalty,
     bool doubleTree
 ){
@@ -1581,6 +1587,7 @@ Rcpp::List rcpp_reconstruct_forests(
       (size_t) minTreesPerGroup,
       false,
       (bool) linear,
+      (bool) symmetric,
       (double) overfitPenalty,
       doubleTree
     );

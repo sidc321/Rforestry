@@ -19,7 +19,9 @@ public:
   void setLeafNode(
     std::unique_ptr< std::vector<size_t> > averagingSampleIndex,
     std::unique_ptr< std::vector<size_t> > splittingSampleIndex,
-    size_t nodeId
+    size_t nodeId,
+    bool trinary,
+    double weight
   );
 
   void setSplitNode(
@@ -27,8 +29,10 @@ public:
     double splitValue,
     std::unique_ptr< RFNode > leftChild,
     std::unique_ptr< RFNode > rightChild,
-    std::unique_ptr< std::vector<size_t> > averagingSampleIndex,
+    std::unique_ptr< RFNode > centerChild,
+    bool trinary,
     size_t naLeftCount,
+    size_t naCenterCount,
     size_t naRightCount
   );
 
@@ -97,6 +101,14 @@ public:
     }
   }
 
+  RFNode* getCenterChild() {
+    if (is_leaf()) {
+      throw "Cannot get right child for a leaf.";
+    } else {
+      return _centerChild.get();
+    }
+  }
+
   size_t getSplitCount() {
     return _splitCount;
   }
@@ -110,11 +122,25 @@ public:
   size_t getNaLeftCount() {
     return _naLeftCount;
   }
+
   size_t getNaRightCount() {
     return _naRightCount;
   }
+
+  size_t getNaCenterCount() {
+    return _naCenterCount;
+  }
+
   size_t getNodeId() {
     return _nodeId;
+  }
+
+  double getWeight() {
+    return _weight;
+  }
+
+  bool getTrinary() {
+    return _trinary;
   }
 
   std::vector<size_t>* getAveragingIndex() {
@@ -130,10 +156,14 @@ private:
   std::unique_ptr< std::vector<size_t> > _splittingSampleIndex;
   size_t _splitFeature;
   double _splitValue;
+  bool _trinary;
+  double _weight;
   std::unique_ptr< RFNode > _leftChild;
   std::unique_ptr< RFNode > _rightChild;
+  std::unique_ptr< RFNode > _centerChild;
   size_t _naLeftCount;
   size_t _naRightCount;
+  size_t _naCenterCount;
   size_t _averageCount;
   size_t _splitCount;
   size_t _nodeId;

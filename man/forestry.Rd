@@ -33,6 +33,7 @@ forestry(
   middleSplit = FALSE,
   maxObs = length(y),
   linear = FALSE,
+  symmetric = FALSE,
   linFeats = 0:(ncol(x) - 1),
   monotonicConstraints = rep(0, ncol(x)),
   groups = NULL,
@@ -146,6 +147,10 @@ between two feature values. (Default = FALSE)}
 \item{linear}{Indicator that enables Ridge penalized splits and linear aggregation
 functions in the leaf nodes. This is recommended for data with linear outcomes.
 For implementation details, see: https://arxiv.org/abs/1906.06463. Default is FALSE.}
+
+\item{symmetric}{An indicator for the eperimental feature which imposes symmetric
+structure on the forest through only selecting symmetric splits with symmetric
+aggregation functions. Default is FALSE.}
 
 \item{linFeats}{A vector containing the indices of which features to split
 linearly on when using linear penalized splits (defaults to use all numerical features).}

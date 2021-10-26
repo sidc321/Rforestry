@@ -1,5 +1,5 @@
 test_that("Tests that new version of missing splits is working correctly", {
-library(Rforestry)
+  library(Rforestry)
 
 
   context("test putting all NA's to right")

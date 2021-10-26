@@ -42,6 +42,7 @@ forestryTree::forestryTree(
   size_t maxObs,
   bool hasNas,
   bool linear,
+  bool symmetric,
   double overfitPenalty,
   unsigned int seed
 ){
@@ -63,18 +64,18 @@ forestryTree::forestryTree(
   * @param maxObs    Max number of observations to split on
   */
  /* Sanity Check */
-  // if (minNodeSizeAvg == 0) {
-  //   throw std::runtime_error("minNodeSizeAvg cannot be set to 0.");
-  // }
+  if (minNodeSizeAvg == 0) {
+    throw std::runtime_error("minNodeSizeAvg cannot be set to 0.");
+  }
   if (minNodeSizeSpt == 0) {
     throw std::runtime_error("minNodeSizeSpt cannot be set to 0.");
   }
   if (minNodeSizeToSplitSpt == 0) {
     throw std::runtime_error("minNodeSizeToSplitSpt cannot be set to 0.");
   }
-  // if (minNodeSizeToSplitAvg == 0) {
-  //   throw std::runtime_error("minNodeSizeToSplitAvg cannot be set to 0.");
-  // }
+  if (minNodeSizeToSplitAvg == 0) {
+    throw std::runtime_error("minNodeSizeToSplitAvg cannot be set to 0.");
+  }
   if (minNodeSizeToSplitAvg > (*averagingSampleIndex).size()) {
     std::ostringstream ostr;
     ostr << "minNodeSizeToSplitAvg cannot exceed total elements in the "
@@ -129,7 +130,6 @@ forestryTree::forestryTree(
   /* Node ID's are 1 indexed from left to right */
   this->_nodeCount = 0;
   this->_seed = seed;
-
 
   /* If ridge splitting, initialize RSS components to pass to leaves*/
 
@@ -190,7 +190,9 @@ forestryTree::forestryTree(
     g_ptr,
     s_ptr,
     monotone_splits,
-    monotonic_details
+    monotonic_details,
+    symmetric,
+    0
   );
 }
 
@@ -399,6 +401,170 @@ void splitDataIntoTwoParts(
   }
 }
 
+void splitDataIntoThreeParts(
+    DataFrame* trainingData,
+    std::vector<size_t>* sampleIndex,
+    size_t splitFeature,
+    double splitValue,
+    int naDirection,
+    std::vector<size_t>* leftPartitionIndex,
+    std::vector<size_t>* rightPartitionIndex,
+    std::vector<size_t>* centerPartitionIndex,
+    bool categoical,
+    bool hasNas,
+    size_t &naLeftCount,
+    size_t &naCenterCount,
+    size_t &naRightCount
+){
+
+  if (hasNas) {
+    std::vector<size_t> naIndices;
+    for (
+        std::vector<size_t>::iterator it = (*sampleIndex).begin();
+        it != (*sampleIndex).end();
+        ++it
+    ) {
+      // Non-categorical, split to left (<) and right (>=) according to the
+      double currentFeatureValue = trainingData->getPoint(*it, splitFeature);
+      if (std::isnan(currentFeatureValue)) {
+        naIndices.push_back(*it);
+      } else if ((*trainingData).getPoint(*it, splitFeature) < -splitValue) {
+        (*leftPartitionIndex).push_back(*it);
+      } else if ((*trainingData).getPoint(*it, splitFeature) < splitValue) {
+        (*rightPartitionIndex).push_back(*it);
+      } else{
+        centerPartitionIndex->push_back(*it);
+      }
+    }
+
+    // Now instead of splitting with distance to Y values, we send all NA indices
+    // right, left, or center based on the weights of each partition.
+    if (naDirection == -1) {
+      for (const auto& index : naIndices) {
+        leftPartitionIndex->push_back(index);
+        naLeftCount++;
+      }
+    } else if (naDirection == 1) {
+      for (const auto& index : naIndices) {
+        rightPartitionIndex->push_back(index);
+        naRightCount++;
+      }
+    } else {
+      for (const auto& index : naIndices) {
+        centerPartitionIndex->push_back(index);
+        naCenterCount++;
+      }
+    }
+
+    //Run normal splitting
+  } else {
+    for (
+        std::vector<size_t>::iterator it = (*sampleIndex).begin();
+        it != (*sampleIndex).end();
+        ++it
+    ) {
+      // Non-categorical, split to left (< - splitValue) and right (> splitValue) and center
+      if ((*trainingData).getPoint(*it, splitFeature) < -splitValue) {
+        (*leftPartitionIndex).push_back(*it);
+      } else if ((*trainingData).getPoint(*it, splitFeature) < splitValue) {
+        (*rightPartitionIndex).push_back(*it);
+      } else{
+        centerPartitionIndex->push_back(*it);
+      }
+    }
+  }
+}
+
+void updateMonotoneConstraints(
+    monotonic_info& monotone_details,
+    monotonic_info& monotonic_details_left,
+    monotonic_info& monotonic_details_right,
+    monotonic_info& monotonic_details_center,
+    std::vector<int> monotonic_constraints,
+    double leftMean,
+    double rightMean,
+    double centerMean,
+    size_t bestSplitFeature,
+    bool update_center
+) {
+  int monotone_direction = monotone_details.monotonic_constraints[bestSplitFeature];
+  monotonic_details_left.monotonic_constraints = monotonic_constraints;
+  monotonic_details_right.monotonic_constraints = monotonic_constraints;
+
+  // Also need to pass down the monotone Average Flag
+  monotonic_details_left.monotoneAvg = monotone_details.monotoneAvg;
+  monotonic_details_right.monotoneAvg = monotone_details.monotoneAvg;
+
+  double leftNodeMean = calculateMonotonicBound(leftMean,
+                                                monotone_details);
+  double rightNodeMean = calculateMonotonicBound(rightMean,
+                                                 monotone_details);
+  double centerNodeMean;
+  double leftMidMean;
+  double rightMidMean;
+
+  if (update_center) {
+    centerNodeMean = calculateMonotonicBound(centerMean,
+                                             monotone_details);
+    leftMidMean = (leftNodeMean + centerNodeMean)/2.0;
+    rightMidMean = (rightNodeMean + centerNodeMean)/2.0;
+
+    monotonic_details_center.monotoneAvg = monotone_details.monotoneAvg;
+    monotonic_details_center.monotonic_constraints = monotonic_constraints;
+  }
+
+  double midMean = (leftNodeMean + rightNodeMean )/(2);
+
+  // Pass down the new upper and lower bounds if it is a monotonic split,
+  if (update_center) {
+    if (monotone_direction == -1) {
+      monotonic_details_left.lower_bound = leftMidMean;
+      monotonic_details_right.upper_bound = rightMidMean;
+      monotonic_details_center.upper_bound = leftMidMean;
+      monotonic_details_center.lower_bound = rightMidMean;
+
+      monotonic_details_left.upper_bound = monotone_details.upper_bound;
+      monotonic_details_right.lower_bound = monotone_details.lower_bound;
+    } else if (monotone_direction == 1) {
+      monotonic_details_left.upper_bound = leftMidMean;
+      monotonic_details_right.lower_bound = rightMidMean;
+      monotonic_details_center.upper_bound = rightMidMean;
+      monotonic_details_center.lower_bound = leftMidMean;
+
+      monotonic_details_left.lower_bound =  monotone_details.lower_bound;
+      monotonic_details_right.upper_bound = monotone_details.upper_bound;
+    } else {
+      monotonic_details_left.upper_bound = monotone_details.upper_bound;
+      monotonic_details_left.lower_bound = monotone_details.lower_bound;
+      monotonic_details_right.upper_bound = monotone_details.upper_bound;
+      monotonic_details_right.lower_bound = monotone_details.lower_bound;
+      monotonic_details_center.upper_bound = monotone_details.upper_bound;
+      monotonic_details_center.lower_bound = monotone_details.lower_bound;
+    }
+
+  } else {
+    if (monotone_direction == -1) {
+      monotonic_details_left.lower_bound = midMean;
+      monotonic_details_right.upper_bound = midMean;
+
+      monotonic_details_left.upper_bound = monotone_details.upper_bound;
+      monotonic_details_right.lower_bound = monotone_details.lower_bound;
+    } else if (monotone_direction == 1) {
+      monotonic_details_left.upper_bound = midMean;
+      monotonic_details_right.lower_bound = midMean;
+
+      monotonic_details_left.lower_bound =  monotone_details.lower_bound;
+      monotonic_details_right.upper_bound = monotone_details.upper_bound;
+    } else {
+      // otherwise keep the old ones
+      monotonic_details_left.upper_bound = monotone_details.upper_bound;
+      monotonic_details_left.lower_bound = monotone_details.lower_bound;
+      monotonic_details_right.upper_bound = monotone_details.upper_bound;
+      monotonic_details_right.lower_bound = monotone_details.lower_bound;
+    }
+  }
+}
+
 void splitData(
     DataFrame* trainingData,
     std::vector<size_t>* averagingSampleIndex,
@@ -408,48 +574,87 @@ void splitData(
     int naDirection,
     std::vector<size_t>* averagingLeftPartitionIndex,
     std::vector<size_t>* averagingRightPartitionIndex,
+    std::vector<size_t>* averagingCenterPartitionIndex,
     std::vector<size_t>* splittingLeftPartitionIndex,
     std::vector<size_t>* splittingRightPartitionIndex,
+    std::vector<size_t>* splittingCenterPartitionIndex,
     size_t &naLeftCount,
+    size_t &naCenterCount,
     size_t &naRightCount,
     bool categoical,
-    bool hasNas
+    bool hasNas,
+    bool trinary
 ){
   size_t avgL = 0;
+  size_t avgC = 0;
   size_t avgR = 0;
+
   // averaging data
-  splitDataIntoTwoParts(
-    trainingData,
-    averagingSampleIndex,
-    splitFeature,
-    splitValue,
-    naDirection,
-    averagingLeftPartitionIndex,
-    averagingRightPartitionIndex,
-    categoical,
-    hasNas,
-    avgL,
-    avgR
-  );
+  if (trinary) {
+    splitDataIntoThreeParts(
+      trainingData,
+      averagingSampleIndex,
+      splitFeature,
+      splitValue,
+      naDirection,
+      averagingLeftPartitionIndex,
+      averagingRightPartitionIndex,
+      averagingCenterPartitionIndex,
+      categoical,
+      hasNas,
+      avgL,
+      avgC,
+      avgR
+    );
 
+    // splitting data
+    splitDataIntoThreeParts(
+      trainingData,
+      splittingSampleIndex,
+      splitFeature,
+      splitValue,
+      naDirection,
+      splittingLeftPartitionIndex,
+      splittingRightPartitionIndex,
+      splittingCenterPartitionIndex,
+      categoical,
+      hasNas,
+      naLeftCount,
+      naCenterCount,
+      naRightCount
+    );
 
-  // splitting data
-  splitDataIntoTwoParts(
-    trainingData,
-    splittingSampleIndex,
-    splitFeature,
-    splitValue,
-    naDirection,
-    splittingLeftPartitionIndex,
-    splittingRightPartitionIndex,
-    categoical,
-    hasNas,
-    naLeftCount,
-    naRightCount
-  );
+  } else {
+    splitDataIntoTwoParts(
+      trainingData,
+      averagingSampleIndex,
+      splitFeature,
+      splitValue,
+      naDirection,
+      averagingLeftPartitionIndex,
+      averagingRightPartitionIndex,
+      categoical,
+      hasNas,
+      avgL,
+      avgR
+    );
+
+    // splitting data
+    splitDataIntoTwoParts(
+      trainingData,
+      splittingSampleIndex,
+      splitFeature,
+      splitValue,
+      naDirection,
+      splittingLeftPartitionIndex,
+      splittingRightPartitionIndex,
+      categoical,
+      hasNas,
+      naLeftCount,
+      naRightCount
+    );
+  }
 }
-
-
 
 std::pair<double, double> calculateRSquaredSplit (
     DataFrame* trainingData,
@@ -541,7 +746,9 @@ void forestryTree::recursivePartition(
     std::shared_ptr< arma::Mat<double> > gtotal,
     std::shared_ptr< arma::Mat<double> > stotal,
     bool monotone_splits,
-    monotonic_info monotone_details
+    monotonic_info monotone_details,
+    bool trinary,
+    double weight
 ){
   if ((*averagingSampleIndex).size() < getMinNodeSizeAvg() ||
       (*splittingSampleIndex).size() < getMinNodeSizeSpt() ||
@@ -558,7 +765,9 @@ void forestryTree::recursivePartition(
     (*rootNode).setLeafNode(
         std::move(averagingSampleIndex_),
         std::move(splittingSampleIndex_),
-        node_id
+        node_id,
+        trinary,
+        weight
     );
     return;
   }
@@ -592,8 +801,8 @@ void forestryTree::recursivePartition(
   double bestSplitLoss;
   size_t naLeftCount = 0;
   size_t naRightCount = 0;
+  size_t naCenterCount = 0;
   int bestSplitNaDir = 0;
-
 
   /* Arma mat memory is uninitialized now */
   arma::Mat<double> bestSplitGL;
@@ -627,6 +836,7 @@ void forestryTree::recursivePartition(
     splitMiddle,
     maxObs,
     linear,
+    trinary,
     overfitPenalty,
     gtotal,
     stotal,
@@ -648,7 +858,9 @@ void forestryTree::recursivePartition(
     (*rootNode).setLeafNode(
         std::move(averagingSampleIndex_),
         std::move(splittingSampleIndex_),
-        node_id
+        node_id,
+        trinary,
+        weight
     );
 
   } else {
@@ -658,6 +870,10 @@ void forestryTree::recursivePartition(
     std::vector<size_t> splittingLeftPartitionIndex;
     std::vector<size_t> splittingRightPartitionIndex;
     std::vector<size_t> categorialCols = *(*trainingData).getCatCols();
+
+    // Center partition sets
+    std::vector<size_t> splittingCenterPartitionIndex;
+    std::vector<size_t> averagingCenterPartitionIndex;
 
     // Create split for both averaging and splitting dataset based on
     // categorical feature or not
@@ -670,16 +886,20 @@ void forestryTree::recursivePartition(
       bestSplitNaDir,
       &averagingLeftPartitionIndex,
       &averagingRightPartitionIndex,
+      &averagingCenterPartitionIndex,
       &splittingLeftPartitionIndex,
       &splittingRightPartitionIndex,
+      &splittingCenterPartitionIndex,
       naLeftCount,
+      naCenterCount,
       naRightCount,
       std::find(
         categorialCols.begin(),
         categorialCols.end(),
         bestSplitFeature
       ) != categorialCols.end(),
-      gethasNas()
+        gethasNas(),
+        trinary
     );
 
     // Stopping-criteria
@@ -706,7 +926,9 @@ void forestryTree::recursivePartition(
         (*rootNode).setLeafNode(
             std::move(averagingSampleIndex_),
             std::move(splittingSampleIndex_),
-            node_id
+            node_id,
+            trinary,
+            1
         );
         return;
       }
@@ -716,6 +938,7 @@ void forestryTree::recursivePartition(
     // Recursively grow the tree
     std::unique_ptr< RFNode > leftChild ( new RFNode() );
     std::unique_ptr< RFNode > rightChild ( new RFNode() );
+    std::unique_ptr< RFNode > centerChild ( new RFNode() );
 
     size_t childDepth = depth + 1;
 
@@ -736,40 +959,38 @@ void forestryTree::recursivePartition(
     // uncle mean, and right and left child indicators
     struct monotonic_info monotonic_details_left;
     struct monotonic_info monotonic_details_right;
+    struct monotonic_info monotonic_details_center;
+
+    // Update the weights we give to different nodes
+    double lWeight=0;
+    double rWeight=0;
+    double cWeight = 0;
+    if (trinary) {
+      updatePartitionWeights(
+        trainingData->partitionMean(&averagingLeftPartitionIndex),
+        trainingData->partitionMean(&averagingCenterPartitionIndex),
+        trainingData->partitionMean(&averagingRightPartitionIndex),
+        averagingLeftPartitionIndex.size(),
+        averagingRightPartitionIndex.size(),
+        averagingCenterPartitionIndex.size(),
+        lWeight,
+        rWeight,
+        cWeight);
+    }
 
     if (monotone_splits) {
-      int monotone_direction = monotone_details.monotonic_constraints[bestSplitFeature];
-      monotonic_details_left.monotonic_constraints = (*trainingData->getMonotonicConstraints());
-      monotonic_details_right.monotonic_constraints = (*trainingData->getMonotonicConstraints());
-
-      // Also need to pass down the monotone Average Flag
-      monotonic_details_left.monotoneAvg = monotone_details.monotoneAvg;
-      monotonic_details_right.monotoneAvg = monotone_details.monotoneAvg;
-
-      double leftNodeMean = calculateMonotonicBound(trainingData->partitionMean(&splittingLeftPartitionIndex), monotone_details);
-      double rightNodeMean = calculateMonotonicBound(trainingData->partitionMean(&splittingRightPartitionIndex), monotone_details);
-      double midMean = (leftNodeMean + rightNodeMean )/(2);
-
-      // Pass down the new upper and lower bounds if it is a monotonic split,
-      if (monotone_direction == -1) {
-        monotonic_details_left.lower_bound = midMean;
-        monotonic_details_right.upper_bound = midMean;
-
-        monotonic_details_left.upper_bound = monotone_details.upper_bound;
-        monotonic_details_right.lower_bound = monotone_details.lower_bound;
-      } else if (monotone_direction == 1) {
-        monotonic_details_left.upper_bound = midMean;
-        monotonic_details_right.lower_bound = midMean;
-
-        monotonic_details_left.lower_bound =  monotone_details.lower_bound;
-        monotonic_details_right.upper_bound = monotone_details.upper_bound;
-      } else {
-        // otherwise keep the old ones
-        monotonic_details_left.upper_bound = monotone_details.upper_bound;
-        monotonic_details_left.lower_bound = monotone_details.lower_bound;
-        monotonic_details_right.upper_bound = monotone_details.upper_bound;
-        monotonic_details_right.lower_bound = monotone_details.lower_bound;
-      }
+      updateMonotoneConstraints(
+        monotone_details,
+        monotonic_details_left,
+        monotonic_details_right,
+        monotonic_details_center,
+        (*trainingData->getMonotonicConstraints()),
+        trinary ? lWeight : trainingData->partitionMean(&splittingLeftPartitionIndex),
+        trinary ? rWeight : trainingData->partitionMean(&splittingRightPartitionIndex),
+        trinary ? cWeight : 0,
+        bestSplitFeature,
+        trinary
+      );
     }
 
     recursivePartition(
@@ -786,8 +1007,31 @@ void forestryTree::recursivePartition(
       g_ptr_l,
       s_ptr_l,
       monotone_splits,
-      monotonic_details_left
+      monotonic_details_left,
+      trinary,
+      lWeight
     );
+    // If doing trinary splits, we do a third recursion
+    if (trinary) {
+      recursivePartition(
+        centerChild.get(),
+        &averagingCenterPartitionIndex,
+        &splittingCenterPartitionIndex,
+        trainingData,
+        random_number_generator,
+        childDepth,
+        splitMiddle,
+        maxObs,
+        linear,
+        overfitPenalty,
+        g_ptr_r,
+        s_ptr_r,
+        monotone_splits,
+        monotonic_details_right, // Pass appropriate monotone details
+        trinary,
+        cWeight
+      );
+    }
     recursivePartition(
       rightChild.get(),
       &averagingRightPartitionIndex,
@@ -802,7 +1046,9 @@ void forestryTree::recursivePartition(
       g_ptr_r,
       s_ptr_r,
       monotone_splits,
-      monotonic_details_right
+      monotonic_details_right,
+      trinary,
+      rWeight
     );
 
     // For now we want to give each splitNode the avging sample idx
@@ -811,15 +1057,31 @@ void forestryTree::recursivePartition(
         new std::vector<size_t>(agv_idx_copy)
     );
 
-    (*rootNode).setSplitNode(
-        bestSplitFeature,
-        bestSplitValue,
-        std::move(leftChild),
-        std::move(rightChild),
-        std::move(averagingSampleIndex_forsplit),
-        naLeftCount,
-        naRightCount
-    );
+    if (trinary) {
+      (*rootNode).setSplitNode(
+          bestSplitFeature,
+          bestSplitValue,
+          std::move(leftChild),
+          std::move(rightChild),
+          std::move(centerChild),
+          true,
+          naLeftCount,
+          naCenterCount,
+          naRightCount
+      );
+    } else {
+      (*rootNode).setSplitNode(
+          bestSplitFeature,
+          bestSplitValue,
+          std::move(leftChild),
+          std::move(rightChild),
+          nullptr,
+          false,
+          naLeftCount,
+          0,
+          naRightCount
+      );
+    }
   }
 }
 
@@ -864,6 +1126,7 @@ void forestryTree::selectBestFeature(
     bool splitMiddle,
     size_t maxObs,
     bool linear,
+    bool trinary,
     double overfitPenalty,
     std::shared_ptr< arma::Mat<double> > gtotal,
     std::shared_ptr< arma::Mat<double> > stotal,
@@ -975,6 +1238,27 @@ void forestryTree::selectBestFeature(
         overfitPenalty,
         gtotal,
         stotal
+      );
+    } else if (trinary) {
+      // Run symmetric splitting algorithm
+      findBestSplitSymmetric(
+        averagingSampleIndex,
+        splittingSampleIndex,
+        i,
+        currentFeature,
+        bestSplitLossAll,
+        bestSplitValueAll,
+        bestSplitFeatureAll,
+        bestSplitCountAll,
+        bestSplitNaDirectionAll,
+        trainingData,
+        getMinNodeSizeToSplitSpt(),
+        getMinNodeSizeToSplitAvg(),
+        random_number_generator,
+        splitMiddle,
+        maxObs,
+        monotone_splits,
+        monotone_details
       );
     } else if (gethasNas()) {
       // Run impute split
@@ -1586,13 +1870,16 @@ void forestryTree::recursive_reconstruction(
     (*currentNode).setLeafNode(
         std::move(averagingSampleIndex_),
         std::move(splittingSampleIndex_),
-        node_id
+        node_id,
+        false,
+        0
     );
     return;
   } else {
     // This is a normal splitting node
     std::unique_ptr< RFNode > leftChild ( new RFNode() );
     std::unique_ptr< RFNode > rightChild ( new RFNode() );
+    std::unique_ptr< RFNode > centerChild ( new RFNode() );
 
     // We need to populate the current node averaging index
     // before we recurse the reconstruction. This is due to the fact that we
@@ -1633,8 +1920,10 @@ void forestryTree::recursive_reconstruction(
         split_val,
         std::move(leftChild),
         std::move(rightChild),
-        std::move(averagingSampleIndex_),
+        std::move(centerChild),
+        false,
         naLeftCount,
+        0,
         naRightCount
     );
 

@@ -42,6 +42,7 @@ public:
     size_t minTreesPerGroup,
     bool hasNas,
     bool linear,
+    bool symmetric,
     double overfitPenalty,
     bool doubleTree
   );
@@ -219,6 +220,10 @@ public:
     return _linear;
   }
 
+  bool getSymmetric() {
+    return _symmetric;
+  }
+
   double getOverfitPenalty() {
     return _overfitPenalty;
   }
@@ -255,6 +260,7 @@ private:
   size_t _minTreesPerGroup;
   bool _hasNas;
   bool _linear;
+  bool _symmetric;
   double _overfitPenalty;
   bool _doubleTree;
 };

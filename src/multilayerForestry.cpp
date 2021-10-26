@@ -162,6 +162,7 @@ void multilayerForestry::addForests(size_t ntree) {
       0, // We aren't giving minimum trees per groups, so set this to zero
       false,  // This is hasNAs being set to false
       _linear,
+      false, // Set symmetric = FALSE
       _overfitPenalty,
       _doubleTree
     );

@@ -231,6 +231,51 @@ void findBestSplitImputeCategorical(
         size_t maxObs
 );
 
+
+void findBestSplitSymmetric(
+        std::vector<size_t>* averagingSampleIndex,
+        std::vector<size_t>* splittingSampleIndex,
+        size_t bestSplitTableIndex,
+        size_t currentFeature,
+        double* bestSplitLossAll,
+        double* bestSplitValueAll,
+        size_t* bestSplitFeatureAll,
+        size_t* bestSplitCountAll,
+        int* bestSplitNaDirectionAll,
+        DataFrame* trainingData,
+        size_t splitNodeSize,
+        size_t averageNodeSize,
+        std::mt19937_64& random_number_generator,
+        bool splitMiddle,
+        size_t maxObs,
+        bool monotone_splits,
+        monotonic_info monotone_details
+);
+
+double calcSymmetricLoss(
+        double leftSum,
+        double midSum,
+        double rightSum,
+        size_t nLeft,
+        size_t nRight,
+        size_t nMid,
+        double leftWeight,
+        double rightWeight,
+        double midWeight
+);
+
+void updatePartitionWeights(
+        double leftMean,
+        double midMean,
+        double rightMean,
+        size_t nLeft,
+        size_t nRight,
+        size_t nMid,
+        double &leftWeight,
+        double &rightWeight,
+        double &midWeight
+);
+
 void determineBestSplit(
         size_t &bestSplitFeature,
         double &bestSplitValue,
@@ -250,6 +295,21 @@ bool acceptMonotoneSplit(
     size_t currentFeature,
     double leftPartitionMean,
     double rightPartitionMean
+);
+
+bool acceptMonotoneTrinarySplit(
+        monotonic_info &monotone_details,
+        size_t currentFeature,
+        double leftPartitionMean,
+        double rightPartitionMean,
+        double centerPartitionMean
+);
+
+int calculateNaDirection(
+        double naMean,
+        double left,
+        double center,
+        double right
 );
 
 double calculateMonotonicBound(

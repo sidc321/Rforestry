@@ -11,6 +11,7 @@ test_that("Tests if imputation splitting works", {
   rf <- forestry(x = x,
                  y = y,
                  nthread = 2,
+                 seed=239,
                  ntree = 500)
 
   pred <- predict(rf, x)

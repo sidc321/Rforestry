@@ -30,6 +30,7 @@ training_data_checker(
   deepFeatureWeights,
   observationWeights,
   linear,
+  symmetric,
   hasNas
 )
 }
@@ -130,6 +131,10 @@ This option is not allowed when sampling is done without replacement.}
 \item{linear}{Indicator that enables Ridge penalized splits and linear aggregation
 functions in the leaf nodes. This is recommended for data with linear outcomes.
 For implementation details, see: https://arxiv.org/abs/1906.06463. Default is FALSE.}
+
+\item{symmetric}{An indicator for the eperimental feature which imposes symmetric
+structure on the forest through only selecting symmetric splits with symmetric
+aggregation functions. Default is FALSE.}
 
 \item{hasNas}{indicates if there is any missingness in x.}
 }
