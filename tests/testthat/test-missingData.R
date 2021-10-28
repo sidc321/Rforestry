@@ -52,6 +52,23 @@ test_that("Test missing data with several other features", {
   expect_equal(all.equal(p,rep(max(p_all),5)), TRUE)
   #plot(rf)
 
+
+  # Try simon's example
+  set.seed(1)
+  n <- 11257
+  y <- rnorm(n)
+  x <- matrix(rnorm(2*n),ncol=2)
+
+  rf <- forestry(
+    x=x,
+    y=y,
+    monotonicConstraints = c(-1,0),
+    monotoneAvg = TRUE,
+    ntree=1000,
+    OOBhonest = TRUE,
+    symmetric = TRUE
+  )
+
   # Some problems:
   # Predicting with NA's is still random when symmetric  = TRUE
   # Some very weird interaction of honesty and monotoneAVG
