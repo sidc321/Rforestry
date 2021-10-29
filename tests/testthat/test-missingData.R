@@ -43,13 +43,13 @@ test_that("Test missing data with several other features", {
                  scale=FALSE,
                  seed = 2323,
                  ntree=1,
-                 #OOBhonest = TRUE,
-                 #monotoneAvg = TRUE,
+                 OOBhonest = TRUE,
+                 monotoneAvg = TRUE,
                  maxDepth = 1)
 
   p <- predict(rf, newdata = data.frame(x = rep(NA,5)))
   p_all <- predict(rf, newdata=x)
-  expect_equal(all.equal(p,rep(max(p_all),5)), TRUE)
+  expect_equal(all.equal(p,rep(0.9869673,5),tolerance = 1e-5), TRUE)
   #plot(rf)
 
 
@@ -69,9 +69,15 @@ test_that("Test missing data with several other features", {
     symmetric = TRUE
   )
 
+  p <- predict(rf, newdata = x)
   # Some problems:
   # Predicting with NA's is still random when symmetric  = TRUE
   # Some very weird interaction of honesty and monotoneAVG
   # Just with OOB honest the predictions are NA
+
+
+
+
+
 
 })

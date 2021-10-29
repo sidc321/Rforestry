@@ -179,6 +179,52 @@ void updateBestSplitImpute(
   }
 }
 
+// Best split impute only additionally updates the second split point for trinary splits
+void updateBestSplitTrinary(
+    double* bestSplitLossAll,
+    double* bestSplitValueAll,
+    double* bestSplitLeftValueAll,
+    size_t* bestSplitFeatureAll,
+    size_t* bestSplitCountAll,
+    int* bestSplitNaDirectionAll,
+    double currentSplitLoss,
+    double currentSplitValue,
+    double currentSplitLeftValue,
+    size_t currentFeature,
+    size_t bestSplitTableIndex,
+    int currentSplitNaDirection,
+    std::mt19937_64& random_number_generator
+) {
+
+  // Update the value if a higher value has been seen
+  if (currentSplitLoss > bestSplitLossAll[bestSplitTableIndex]) {
+    bestSplitLossAll[bestSplitTableIndex] = currentSplitLoss;
+    bestSplitFeatureAll[bestSplitTableIndex] = currentFeature;
+    bestSplitValueAll[bestSplitTableIndex] = currentSplitValue;
+    bestSplitLeftValueAll[bestSplitTableIndex] = currentSplitLeftValue;
+    bestSplitCountAll[bestSplitTableIndex] = 1;
+    bestSplitNaDirectionAll[bestSplitTableIndex] = currentSplitNaDirection;
+  } else {
+
+    //If we are as good as the best split
+    if (currentSplitLoss == bestSplitLossAll[bestSplitTableIndex]) {
+      bestSplitCountAll[bestSplitTableIndex] =
+        bestSplitCountAll[bestSplitTableIndex] + 1;
+
+      // Only update with probability 1/nseen
+      std::uniform_real_distribution<double> unif_dist;
+      double tmp_random = unif_dist(random_number_generator);
+      if (tmp_random * bestSplitCountAll[bestSplitTableIndex] <= 1) {
+        bestSplitLossAll[bestSplitTableIndex] = currentSplitLoss;
+        bestSplitFeatureAll[bestSplitTableIndex] = currentFeature;
+        bestSplitValueAll[bestSplitTableIndex] = currentSplitValue;
+        bestSplitLeftValueAll[bestSplitTableIndex] = currentSplitLeftValue;
+        bestSplitNaDirectionAll[bestSplitTableIndex] = currentSplitNaDirection;
+      }
+    }
+  }
+}
+
 void updateBestSplitS(
     arma::Mat<double> &bestSplitSL,
     arma::Mat<double> &bestSplitSR,
@@ -1789,6 +1835,7 @@ void findBestSplitSymmetric(
     size_t currentFeature,
     double* bestSplitLossAll,
     double* bestSplitValueAll,
+    double* bestSplitLeftValueAll,
     size_t* bestSplitFeatureAll,
     size_t* bestSplitCountAll,
     int* bestSplitNaDirectionAll,
@@ -1843,6 +1890,15 @@ void findBestSplitSymmetric(
   std::vector<naPair> missingSplit;
   std::vector<naPair> missingAvg;
 
+  // get the mean feature value in this node, we use this to get the split values
+  // as we create the splits symmetric around the mean
+  double featureMean = 0;
+  for (size_t i=0;i < splittingSampleIndex->size(); i++) {
+    featureMean +=  (*trainingData).
+    getPoint((*splittingSampleIndex)[i], currentFeature);
+  }
+  featureMean = featureMean / ((double) splittingSampleIndex->size());
+
   for (size_t j=0; j<(*splittingSampleIndex).size(); j++) {
     // Retrieve the current feature value
     double tmpFeatureValue = (*trainingData).
@@ -1858,15 +1914,15 @@ void findBestSplitSymmetric(
       missingSplit.push_back(
         std::make_tuple(
           (*splittingSampleIndex)[j],
-                                 tmpOutcomeValue
+          tmpOutcomeValue
         )
       );
     } else {
       // Adding data to the internal data vector (Note: R index)
       splittingData.push_back(
         std::make_tuple(
-          tmpFeatureValue,
-          std::fabs(tmpFeatureValue),
+          tmpFeatureValue-featureMean,
+          std::fabs(tmpFeatureValue-featureMean),
           tmpOutcomeValue
         )
       );
@@ -1893,15 +1949,15 @@ void findBestSplitSymmetric(
       missingAvg.push_back(
         std::make_tuple(
           (*averagingSampleIndex)[j],
-                                 tmpOutcomeValue
+          tmpOutcomeValue
         )
       );
     } else {
       // Adding data to the internal data vector (Note: R index)
       averagingData.push_back(
         std::make_tuple(
-          tmpFeatureValue,
-          std::fabs(tmpFeatureValue),
+          tmpFeatureValue-featureMean,
+          std::fabs(tmpFeatureValue-featureMean),
           tmpOutcomeValue
         )
       );
@@ -1912,6 +1968,13 @@ void findBestSplitSymmetric(
   sort(
     splittingData.begin(),
     splittingData.end(),
+    [](const dataPair &lhs, const dataPair &rhs) {
+      return std::get<1>(lhs) < std::get<1>(rhs);
+    }
+  );
+  sort(
+    averagingData.begin(),
+    averagingData.end(),
     [](const dataPair &lhs, const dataPair &rhs) {
       return std::get<1>(lhs) < std::get<1>(rhs);
     }
@@ -1990,7 +2053,7 @@ void findBestSplitSymmetric(
 
     while (
         averagingDataIter < averagingData.end() &&
-          std::get<1>(*averagingDataIter) == featureValue
+          std::get<1>(*averagingDataIter) <= featureValue
     ) {
       // We check if the current value is in the left or right partition
       if (std::get<0>(*averagingDataIter) > 0) {
@@ -2134,15 +2197,17 @@ void findBestSplitSymmetric(
     //   }
     // }
 
-    updateBestSplitImpute(
+    updateBestSplitTrinary(
       bestSplitLossAll,
       bestSplitValueAll,
+      bestSplitLeftValueAll,
       bestSplitFeatureAll,
       bestSplitCountAll,
       bestSplitNaDirectionAll,
-      -currentSplitLoss, // Standard RF split loss we want to maximize due to
-      currentSplitValue, // the splitting trick, here we want to minimize, so we
-      currentFeature,    // flip the sign when picking the best.
+      -currentSplitLoss,               // Standard RF split loss we want to maximize due to
+      featureMean + currentSplitValue, // the splitting trick, here we want to minimize, so we
+      featureMean - currentSplitValue, // flip the sign when picking the best.
+      currentFeature,
       bestSplitTableIndex,
       calculateNaDirection(NaMean,
                            leftWeight,

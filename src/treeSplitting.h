@@ -44,6 +44,22 @@ void updateBestSplitImpute(
         std::mt19937_64& random_number_generator
 );
 
+void updateBestSplitTrinary(
+        double* bestSplitLossAll,
+        double* bestSplitValueAll,
+        double* bestSplitLeftValueAll,
+        size_t* bestSplitFeatureAll,
+        size_t* bestSplitCountAll,
+        int* bestSplitNaDirectionAll,
+        double currentSplitLoss,
+        double currentSplitValue,
+        double currentSplitLeftValue,
+        size_t currentFeature,
+        size_t bestSplitTableIndex,
+        int currentSplitNaDirection,
+        std::mt19937_64& random_number_generator
+);
+
 void updateBestSplitS(
         arma::Mat<double> &bestSplitSL,
         arma::Mat<double> &bestSplitSR,
@@ -239,6 +255,7 @@ void findBestSplitSymmetric(
         size_t currentFeature,
         double* bestSplitLossAll,
         double* bestSplitValueAll,
+        double* bestSplitLeftValueAll,
         size_t* bestSplitFeatureAll,
         size_t* bestSplitCountAll,
         int* bestSplitNaDirectionAll,

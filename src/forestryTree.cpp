@@ -406,6 +406,7 @@ void splitDataIntoThreeParts(
     std::vector<size_t>* sampleIndex,
     size_t splitFeature,
     double splitValue,
+    double splitLeftValue,
     int naDirection,
     std::vector<size_t>* leftPartitionIndex,
     std::vector<size_t>* rightPartitionIndex,
@@ -428,12 +429,12 @@ void splitDataIntoThreeParts(
       double currentFeatureValue = trainingData->getPoint(*it, splitFeature);
       if (std::isnan(currentFeatureValue)) {
         naIndices.push_back(*it);
-      } else if ((*trainingData).getPoint(*it, splitFeature) < -splitValue) {
+      } else if ((*trainingData).getPoint(*it, splitFeature) < splitLeftValue) {
         (*leftPartitionIndex).push_back(*it);
       } else if ((*trainingData).getPoint(*it, splitFeature) < splitValue) {
-        (*rightPartitionIndex).push_back(*it);
-      } else{
         centerPartitionIndex->push_back(*it);
+      } else{
+        (*rightPartitionIndex).push_back(*it);
       }
     }
 
@@ -464,12 +465,12 @@ void splitDataIntoThreeParts(
         ++it
     ) {
       // Non-categorical, split to left (< - splitValue) and right (> splitValue) and center
-      if ((*trainingData).getPoint(*it, splitFeature) < -splitValue) {
+      if ((*trainingData).getPoint(*it, splitFeature) < splitLeftValue) {
         (*leftPartitionIndex).push_back(*it);
       } else if ((*trainingData).getPoint(*it, splitFeature) < splitValue) {
-        (*rightPartitionIndex).push_back(*it);
-      } else{
         centerPartitionIndex->push_back(*it);
+      } else{
+        (*rightPartitionIndex).push_back(*it);
       }
     }
   }
@@ -571,6 +572,7 @@ void splitData(
     std::vector<size_t>* splittingSampleIndex,
     size_t splitFeature,
     double splitValue,
+    double splitLeftValue,
     int naDirection,
     std::vector<size_t>* averagingLeftPartitionIndex,
     std::vector<size_t>* averagingRightPartitionIndex,
@@ -584,7 +586,7 @@ void splitData(
     bool categoical,
     bool hasNas,
     bool trinary
-){
+) {
   size_t avgL = 0;
   size_t avgC = 0;
   size_t avgR = 0;
@@ -596,6 +598,7 @@ void splitData(
       averagingSampleIndex,
       splitFeature,
       splitValue,
+      splitLeftValue,
       naDirection,
       averagingLeftPartitionIndex,
       averagingRightPartitionIndex,
@@ -613,6 +616,7 @@ void splitData(
       splittingSampleIndex,
       splitFeature,
       splitValue,
+      splitLeftValue,
       naDirection,
       splittingLeftPartitionIndex,
       splittingRightPartitionIndex,
@@ -803,6 +807,8 @@ void forestryTree::recursivePartition(
   size_t naRightCount = 0;
   size_t naCenterCount = 0;
   int bestSplitNaDir = 0;
+  double bestSplitLeftValue; // For the left split threshold
+                             // when doing symmetric splits
 
   /* Arma mat memory is uninitialized now */
   arma::Mat<double> bestSplitGL;
@@ -822,6 +828,7 @@ void forestryTree::recursivePartition(
   selectBestFeature(
     bestSplitFeature,
     bestSplitValue,
+    bestSplitLeftValue,
     bestSplitLoss,
     bestSplitNaDir,
     bestSplitGL,
@@ -883,6 +890,7 @@ void forestryTree::recursivePartition(
       splittingSampleIndex,
       bestSplitFeature,
       bestSplitValue,
+      bestSplitLeftValue,
       bestSplitNaDir,
       &averagingLeftPartitionIndex,
       &averagingRightPartitionIndex,
@@ -901,6 +909,37 @@ void forestryTree::recursivePartition(
         gethasNas(),
         trinary
     );
+
+
+
+    size_t mAvgSize = averagingCenterPartitionIndex.size();
+    size_t lAvgSize = averagingLeftPartitionIndex.size();
+    size_t rAvgSize = averagingRightPartitionIndex.size();
+    size_t mSplSize = splittingCenterPartitionIndex.size();
+    size_t lSplSize = splittingLeftPartitionIndex.size();
+    size_t rSplSize = splittingRightPartitionIndex.size();
+
+    // Check that once we have split the data, we need to make sure no partitions are empty
+    // If we do have an empty partition we make a leaf node.
+    if ((trinary && (mAvgSize*lAvgSize*rAvgSize*mSplSize*lSplSize*rSplSize == 0)) ||
+        (lAvgSize*rAvgSize*lSplSize*rSplSize == 0)) {
+      std::unique_ptr<std::vector<size_t> > averagingSampleIndex_(
+          new std::vector<size_t>(*averagingSampleIndex)
+      );
+      std::unique_ptr<std::vector<size_t> > splittingSampleIndex_(
+          new std::vector<size_t>(*splittingSampleIndex)
+      );
+      size_t node_id;
+      assignNodeId(node_id);
+      (*rootNode).setLeafNode(
+          std::move(averagingSampleIndex_),
+          std::move(splittingSampleIndex_),
+          node_id,
+          trinary,
+          weight
+      );
+      return;
+    }
 
     // Stopping-criteria
     if (getMinSplitGain() > 0) {
@@ -1027,7 +1066,7 @@ void forestryTree::recursivePartition(
         g_ptr_r,
         s_ptr_r,
         monotone_splits,
-        monotonic_details_right, // Pass appropriate monotone details
+        monotonic_details_center, // Pass appropriate monotone details
         trinary,
         cWeight
       );
@@ -1055,6 +1094,7 @@ void forestryTree::recursivePartition(
       (*rootNode).setSplitNode(
           bestSplitFeature,
           bestSplitValue,
+          bestSplitLeftValue,
           std::move(leftChild),
           std::move(rightChild),
           std::move(centerChild),
@@ -1067,6 +1107,7 @@ void forestryTree::recursivePartition(
       (*rootNode).setSplitNode(
           bestSplitFeature,
           bestSplitValue,
+          0,
           std::move(leftChild),
           std::move(rightChild),
           nullptr,
@@ -1106,6 +1147,7 @@ void forestryTree::initializelinear(
 void forestryTree::selectBestFeature(
     size_t &bestSplitFeature,
     double &bestSplitValue,
+    double &bestSplitLeftValue,
     double &bestSplitLoss,
     int &bestSplitNaDir,
     arma::Mat<double> &bestSplitGL,
@@ -1137,10 +1179,12 @@ void forestryTree::selectBestFeature(
   size_t* bestSplitFeatureAll = new size_t[mtry];
   size_t* bestSplitCountAll = new size_t[mtry];
   int* bestSplitNaDirectionAll = new int[mtry];
+  double* bestSplitLeftValueAll = new double[mtry];
 
   for (size_t i=0; i<mtry; i++) {
     bestSplitLossAll[i] = -std::numeric_limits<double>::infinity();
     bestSplitValueAll[i] = std::numeric_limits<double>::quiet_NaN();
+    bestSplitLeftValueAll[i] = std::numeric_limits<double>::quiet_NaN();
     bestSplitFeatureAll[i] = std::numeric_limits<size_t>::quiet_NaN();
     bestSplitCountAll[i] = 0;
     bestSplitNaDirectionAll[i] = 0;
@@ -1242,6 +1286,7 @@ void forestryTree::selectBestFeature(
         currentFeature,
         bestSplitLossAll,
         bestSplitValueAll,
+        bestSplitLeftValueAll,
         bestSplitFeatureAll,
         bestSplitCountAll,
         bestSplitNaDirectionAll,
@@ -1912,6 +1957,7 @@ void forestryTree::recursive_reconstruction(
     (*currentNode).setSplitNode(
         (size_t) var_id - 1,
         split_val,
+        0,
         std::move(leftChild),
         std::move(rightChild),
         std::move(centerChild),

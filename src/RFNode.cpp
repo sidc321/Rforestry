@@ -12,8 +12,8 @@ std::mutex mutex_weightMatrix;
 
 RFNode::RFNode():
   _averagingSampleIndex(nullptr), _splittingSampleIndex(nullptr),
-  _splitFeature(0), _splitValue(0),_trinary(false), _weight(0),
-  _leftChild(nullptr), _rightChild(nullptr),
+  _splitFeature(0), _splitValue(0),_leftSplitValue(0),_trinary(false),
+  _weight(0),_leftChild(nullptr), _rightChild(nullptr),
   _naLeftCount(0), _naRightCount(0),_naCenterCount(0),
   _averageCount(0), _splitCount(0) {}
 
@@ -51,6 +51,7 @@ void RFNode::setLeafNode(
 void RFNode::setSplitNode(
   size_t splitFeature,
   double splitValue,
+  double leftSplitValue,
   std::unique_ptr< RFNode > leftChild,
   std::unique_ptr< RFNode > rightChild,
   std::unique_ptr< RFNode > centerChild,
@@ -72,6 +73,7 @@ void RFNode::setSplitNode(
   _trinary = trinary;
   if (trinary) {
     _centerChild = std::move(centerChild);
+    _leftSplitValue = leftSplitValue;
   }
   _nodeId = -1;
 }
@@ -193,7 +195,7 @@ void RFNode::predict(
 
         double predictedMean;
         // Calculate the mean of current node
-        if (getAveragingIndex()->size() == 0) {
+        if (getAverageCount() == 0) {
           predictedMean = std::numeric_limits<double>::quiet_NaN();
         } else if (getTrinary()) {
           predictedMean = getWeight();
@@ -392,12 +394,12 @@ void RFNode::predict(
         } else {
           if (getTrinary()) {
             // Split based on three partitions around + - splitValue
-            if (currentValue < -getSplitValue()) {
+            if (currentValue < getLeftSplitValue()) {
               (*leftPartitionIndex).push_back(*it);
-            } else if (currentValue > getSplitValue()) {
-              (*rightPartitionIndex).push_back(*it);
-            } else {
+            } else if (currentValue < getSplitValue()) {
               (*centerPartitionIndex).push_back(*it);
+            } else {
+              (*rightPartitionIndex).push_back(*it);
             }
           } else {
             // Run standard predictions
@@ -471,8 +473,8 @@ void RFNode::predict(
 }
 
 bool RFNode::is_leaf() {
-  // int ave_ct = getAverageCount();
-  int spl_ct = getSplitCount();
+  int ave_ct = getAverageCount();
+  //int spl_ct = getSplitCount();
   // if (
   //     (ave_ct == 0 && spl_ct != 0) ||(ave_ct != 0 && spl_ct == 0)
   // ) {
@@ -481,7 +483,7 @@ bool RFNode::is_leaf() {
   //       );
   // }
   //return !(ave_ct == 0 && spl_ct == 0);
-  return !(spl_ct == 0);
+  return !(ave_ct == 0);
 }
 
 size_t RFNode::getAverageCountAlways() {

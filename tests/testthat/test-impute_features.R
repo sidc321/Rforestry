@@ -20,7 +20,7 @@ skip_if_not_mac()
 forest <- forestry(x_with_miss, y, ntree = 500, seed = 2, nthread = 1,scale=FALSE)
 imputed_x <- impute_features(forest, x_with_miss, seed = 2)
 expect_equal(sum(imputed_x$Species != x$Species), 3)
-expect_equal(mean(abs(x$Sepal.Width - imputed_x$Sepal.Width)), 0.0712581100112, tolerance = 1e-6)
+expect_equal(mean(abs(x$Sepal.Width - imputed_x$Sepal.Width)), 0.0713294731908, tolerance = 1e-6)
 
 # Testing mean imputation fallback:
 set.seed(1)

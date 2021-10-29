@@ -25,15 +25,16 @@ public:
   );
 
   void setSplitNode(
-    size_t splitFeature,
-    double splitValue,
-    std::unique_ptr< RFNode > leftChild,
-    std::unique_ptr< RFNode > rightChild,
-    std::unique_ptr< RFNode > centerChild,
-    bool trinary,
-    size_t naLeftCount,
-    size_t naCenterCount,
-    size_t naRightCount
+      size_t splitFeature,
+      double splitValue,
+      double leftSplitValue,
+      std::unique_ptr< RFNode > leftChild,
+      std::unique_ptr< RFNode > rightChild,
+      std::unique_ptr< RFNode > centerChild,
+      bool trinary,
+      size_t naLeftCount,
+      size_t naCenterCount,
+      size_t naRightCount
   );
 
   void ridgePredict(
@@ -82,6 +83,14 @@ public:
       throw "Cannot get split feature for a leaf.";
     } else {
       return _splitValue;
+    }
+  }
+
+  double getLeftSplitValue() {
+    if (is_leaf()) {
+      throw "Cannot get left split feature for a leaf.";
+    } else {
+      return _leftSplitValue;
     }
   }
 
@@ -156,6 +165,7 @@ private:
   std::unique_ptr< std::vector<size_t> > _splittingSampleIndex;
   size_t _splitFeature;
   double _splitValue;
+  double _leftSplitValue;
   bool _trinary;
   double _weight;
   std::unique_ptr< RFNode > _leftChild;
