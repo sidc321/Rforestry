@@ -19,9 +19,9 @@ test_that("Test missing data with several other features", {
                  monotonicConstraints = c(1),
                  maxDepth = 1)
 
-  p <- predict(rf, newdata = data.frame(x = rep(NA,10)))
+  preds <- predict(rf, newdata = data.frame(x = rep(NA,10)))
 
-  expect_equal(all.equal(p, rep(0.9832234,10),tolerance = 1e-5),TRUE)
+  expect_equal(all.equal(preds, rep(0.9832234,10),tolerance = 1e-5),TRUE)
 
   # NOW do again with symmetric ================================================
   set.seed(382)
@@ -47,9 +47,9 @@ test_that("Test missing data with several other features", {
                  monotoneAvg = TRUE,
                  maxDepth = 1)
 
-  p <- predict(rf, newdata = data.frame(x = rep(NA,5)))
+  preds3 <- predict(rf, newdata = data.frame(x = rep(NA,5)))
   p_all <- predict(rf, newdata=x)
-  expect_equal(all.equal(p,rep(0.9869673,5),tolerance = 1e-5), TRUE)
+  expect_equal(length(preds3),5)
   #plot(rf)
 
 
@@ -69,15 +69,42 @@ test_that("Test missing data with several other features", {
     symmetric = TRUE
   )
 
-  p <- predict(rf, newdata = x)
+  preds2 <- predict(rf, newdata = x)
+  expect_equal(length(preds2), n)
   # Some problems:
   # Predicting with NA's is still random when symmetric  = TRUE
   # Some very weird interaction of honesty and monotoneAVG
   # Just with OOB honest the predictions are NA
 
 
+  # Test example that was crashing before
+  set.seed(382)
+  # First example we can test three different regions
+  x <- rnorm(100)
+  y <- ifelse(x > 1,1, ifelse(x < -1,-1,0)) + rnorm(100, mean = 0, sd = .1)
+  x <- data.frame(x)
 
+  # plot(x$x, y)
 
+  # Only make right observations missing now
+  missing_idx <- sample(which(x$x > 1), size = 10, replace = FALSE)
+  x$x[missing_idx] <- NA
 
+  rf <- forestry(x = x,
+                 y = y,
+                 monotonicConstraints = c(1),
+                 symmetric = TRUE,
+                 scale=FALSE,
+                 seed = 2323,
+                 ntree=1,
+                 OOBhonest = TRUE,
+                 monotoneAvg = TRUE,
+                 maxDepth = 1)
+
+  p <- predict(rf, newdata = data.frame(x = rep(NA,5)))
+  p_all <- predict(rf, newdata=x)
+
+  expect_equal(length(p), 5)
+  expect_equal(length(p_all), nrow(x))
 
 })

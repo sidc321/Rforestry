@@ -1893,11 +1893,17 @@ void findBestSplitSymmetric(
   // get the mean feature value in this node, we use this to get the split values
   // as we create the splits symmetric around the mean
   double featureMean = 0;
+  size_t featureCount = 0;
+  // Get mean of feature values excluding the Na values
   for (size_t i=0;i < splittingSampleIndex->size(); i++) {
-    featureMean +=  (*trainingData).
+    double tmpFeatureValue = (*trainingData).
     getPoint((*splittingSampleIndex)[i], currentFeature);
+    if (!std::isnan(tmpFeatureValue)) {
+      featureMean += tmpFeatureValue;
+      featureCount++;
+    }
   }
-  featureMean = featureMean / ((double) splittingSampleIndex->size());
+  featureMean = featureMean / ((double) featureCount);
 
   for (size_t j=0; j<(*splittingSampleIndex).size(); j++) {
     // Retrieve the current feature value
@@ -2051,9 +2057,10 @@ void findBestSplitSymmetric(
       splittingDataIter++;
     }
 
+    // Exhaust all observations with current split value in averaging data set
     while (
         averagingDataIter < averagingData.end() &&
-          std::get<1>(*averagingDataIter) <= featureValue
+          std::get<1>(*averagingDataIter) == featureValue
     ) {
       // We check if the current value is in the left or right partition
       if (std::get<0>(*averagingDataIter) > 0) {
@@ -2180,22 +2187,6 @@ void findBestSplitSymmetric(
     // This is a little weird, but basically we are working with the absolute
     // values, so it is okay to use the half values
     double currentSplitValue = featureValue;
-    // if (splitMiddle) {
-    //   currentSplitValue = (newFeatureValue + featureValue) / 2.0;
-    // } else {
-    //   std::uniform_real_distribution<double> unif_dist;
-    //   double tmp_random = unif_dist(random_number_generator) *
-    //     (newFeatureValue - featureValue);
-    //   double epsilon_lower = std::nextafter(featureValue, newFeatureValue);
-    //   double epsilon_upper = std::nextafter(newFeatureValue, featureValue);
-    //   currentSplitValue = tmp_random + featureValue;
-    //   if (currentSplitValue > epsilon_upper) {
-    //     currentSplitValue = epsilon_upper;
-    //   }
-    //   if (currentSplitValue < epsilon_lower) {
-    //     currentSplitValue = epsilon_lower;
-    //   }
-    // }
 
     updateBestSplitTrinary(
       bestSplitLossAll,
@@ -2210,9 +2201,9 @@ void findBestSplitSymmetric(
       currentFeature,
       bestSplitTableIndex,
       calculateNaDirection(NaMean,
-                           leftWeight,
-                           midWeight,
-                           rightWeight),
+                          leftWeight,
+                          midWeight,
+                          rightWeight),
       random_number_generator
     );
 
