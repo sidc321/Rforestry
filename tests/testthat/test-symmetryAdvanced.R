@@ -1,0 +1,169 @@
+test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone Avg", {
+
+  library(Rforestry)
+  context("Test symmetry + advanced options")
+  set.seed(23322)
+
+  n <- 1000
+  x <- matrix(runif(n,min=-2,max=2), ncol=1)
+  y <- x[,1]**3
+  colnames(x) <- c("V1")
+  # plot(x[,1],y)
+
+
+  rf <- forestry(x=x,
+                 y=y,
+                 ntree=500,
+                 seed=2131,
+                 OOBhonest = TRUE,
+                 monotonicConstraints = c(1),
+                 monotoneAvg = TRUE,
+                 symmetric = TRUE)
+
+  p <- predict(rf, newdata = x)
+
+  # plot(x[,1],p)
+  # plot(x[,1], y)
+
+  context('Tests symmetric = TRUE flag with monotonicity + NAs + OOBhonesty')
+  # Try with some missing data ---------------------------------------------------
+  for (seed_i in 1:50) {
+    set.seed(seed_i)
+
+    # Generate Data
+    x <- matrix(runif(n,min=-2,max=2), ncol=1)
+    y <- x[,1]**3
+    colnames(x) <- c("V1")
+
+    x_missing <- sample(1:n, size = round(.2*n), replace = FALSE)
+    x[x_missing,1] <- NA
+
+    # Regress
+    rf <- forestry(x=x,
+                   y=y,
+                   ntree=500,
+                   seed=seed_i,
+                   OOBhonest = TRUE,
+                   monotonicConstraints = c(1),
+                   monotoneAvg = TRUE,
+                   symmetric = TRUE
+    )
+
+    # predict
+    preds_na <- predict(rf, newdata = x)
+
+    # plot(x[,1], y)
+    # plot(x[,1], preds_na)
+  }
+  expect_equal(length(preds_na),n)
+
+  #plot(x[,1],p)
+  context('Tests symmetric = TRUE flag with monotonicity + NAs + high dimensional X + OOBhonesty')
+
+  # Try with some missing data in many columns -----------------------------------
+  for (seed_i in 1:50) {
+    set.seed(seed_i)
+    p <- 10
+    # Generate Data
+    x <- matrix(runif(n*p,min=-2,max=2), ncol=p)
+    y <- x[,1]**3
+    colnames(x) <- c("V1","V2","V3","V4","V5","V6","V7","V8","V9","V10")
+
+    for (i in 1:5) {
+      x_missing <- sample(1:n, size = round(.2*n), replace = FALSE)
+      x[x_missing,i] <- NA
+    }
+
+    # Regress
+    rf <- forestry(x=x,
+                   y=y,
+                   ntree=500,
+                   seed=seed_i,
+                   OOBhonest = TRUE,
+                   monotonicConstraints = c(1,1,-1,rep(0,7)),
+                   monotoneAvg = TRUE,
+                   symmetric = TRUE
+    )
+
+    # predict
+    preds_p_na <- predict(rf, newdata = x)
+  }
+  expect_equal(length(preds_p_na), n)
+
+  # Test the predictions -------------------------------------------------------
+  set.seed(23322)
+
+  n <- 1000
+  x <- matrix(runif(n,min=-2,max=2), ncol=1)
+  y <- x[,1]**3
+  colnames(x) <- c("V1")
+
+  x_missing <- sample(1:n, size = round(.2*n), replace = FALSE)
+  x[x_missing,1] <- NA
+
+  # Regress
+  rf <- forestry(x=x,
+                 y=y,
+                 ntree=500,
+                 seed=seed_i,
+                 OOBhonest = TRUE,
+                 monotonicConstraints = c(1),
+                 monotoneAvg = TRUE,
+                 symmetric = TRUE
+  )
+
+  # predict
+  preds_na <- predict(rf, newdata = x)
+
+  # Regress
+  rf_old <- forestry(x=x,
+                 y=y,
+                 ntree=500,
+                 seed=seed_i,
+                 OOBhonest = TRUE,
+                 monotonicConstraints = c(1),
+                 monotoneAvg = TRUE,
+                 symmetric = FALSE
+  )
+
+  # predict
+  preds_old <- predict(rf_old, newdata = x)
+
+  # Look at MSE's
+  mse_sym <- mean((preds_na-y)**2)
+  mse_std <- mean((preds_old-y)**2)
+
+  expect_equal(mse_sym, 7.7125026705, tolerance = 1e-4)
+  expect_equal(mse_std, 2.16587110963, tolerance = 1e-4)
+
+
+  # Test that predictions follow monotone constraints
+  new_x <- data.frame(V1 = seq(from=-1.5,to=1.5,length.out=50))
+  monotone_preds <- predict(rf, newdata = new_x, seed=239)
+  expect_equal(all.equal(order(monotone_preds), 1:50),TRUE)
+
+  context("Test that NA behavior is working correctly with symmetry")
+  # Test that NA behavior is working as expected -------------------------------
+  set.seed(2332)
+  x <- data.frame(V1 = runif(100,min=-1,max=1))
+  y <- ifelse(x > .5,1,ifelse(x < -.5,-1,0))
+
+  # plot(x[,1], y)
+
+  x$V1[which(x$V1 > .1 & x$V1 <.25)] <- NA
+
+  rf <- forestry(x=x,
+                 y=y,
+                 ntree=1,
+                 seed=23,
+                 symmetric = TRUE,
+                 maxDepth = 1)
+
+  preds_sym <- predict(rf, newdata = x)
+  weights <- unique(preds_sym)
+
+  preds_na <- predict(rf, newdata = data.frame(V1 = rep(NA,5)))
+  expect_equal(all.equal(preds_na, rep(median(weights),5)), TRUE)
+
+
+})

@@ -1388,6 +1388,7 @@ void forestryTree::selectBestFeature(
   delete[](bestSplitFeatureAll);
   delete[](bestSplitCountAll);
   delete[](bestSplitNaDirectionAll);
+  delete[](bestSplitLeftValueAll);
 }
 
 void forestryTree::printTree(){

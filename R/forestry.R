@@ -207,6 +207,12 @@ training_data_checker <- function(x,
     stop("splitratio must in between 0 and 1.")
   }
 
+  if (symmetric) {
+    # for now don't scale when we run symmetric splitting since we use pseudo outcomes
+    # and wnat to retain the scaling of Y
+    scale <- FALSE
+  }
+
   if (!is.null(groups)) {
     if (!is.factor(groups)) {
       stop("groups must be supplied as a vector of factors")

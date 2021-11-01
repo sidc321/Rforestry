@@ -1937,7 +1937,7 @@ void findBestSplitSymmetric(
   }
 
   // Get the mean of missing outcomes if there are any
-  double NaMean;
+  double NaMean = std::numeric_limits<double>::quiet_NaN();
   if (naSplTotalCount > 0) {
     NaMean = naAvgTotalSum / ((double) naSplTotalCount);
   }
@@ -1969,6 +1969,12 @@ void findBestSplitSymmetric(
         )
       );
     }
+  }
+
+  // return if we have no data
+  if ( (splittingData.size() < 1) || (averagingData.size() < 1) )
+  {
+    return;
   }
 
   // Now sort possible splitting points by absolute feature value
@@ -2317,6 +2323,8 @@ void determineBestSplit(
     bestSplitFeature = std::numeric_limits<size_t>::quiet_NaN();
     bestSplitValue = std::numeric_limits<double>::quiet_NaN();
     bestSplitLoss = std::numeric_limits<double>::quiet_NaN();
+    bestSplitLeftValue = std::numeric_limits<double>::quiet_NaN();
+    bestSplitNaDir = std::numeric_limits<int>::quiet_NaN();
   }
 
 }
@@ -2414,7 +2422,9 @@ int calculateNaDirection(
   double center,
   double right
 ) {
-  if (std::fabs(naMean - left) < std::min(std::fabs(naMean-center),std::fabs(naMean-right))) {
+  if (std::isnan(naMean)) {
+    return 2;
+  } else if (std::fabs(naMean - left) < std::min(std::fabs(naMean-center),std::fabs(naMean-right))) {
     return ((int) -1);
   } else if (std::fabs(naMean - center) < std::min(std::fabs(naMean-left),std::fabs(naMean-right))) {
     return ((int) 0);
