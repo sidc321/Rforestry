@@ -296,11 +296,13 @@ void updatePartitionWeights(
 void determineBestSplit(
         size_t &bestSplitFeature,
         double &bestSplitValue,
+        double &bestSplitLeftValue,
         double &bestSplitLoss,
         int &bestSplitNaDir,
         size_t mtry,
         double* bestSplitLossAll,
         double* bestSplitValueAll,
+        double* bestSplitLeftValueAll,
         size_t* bestSplitFeatureAll,
         size_t* bestSplitCountAll,
         int* bestSplitNaDirectionAll,

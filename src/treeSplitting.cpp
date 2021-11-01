@@ -4,6 +4,7 @@
 #include "RFNode.h"
 #include "utils.h"
 #include <RcppArmadillo.h>
+#include <RcppThread.h>
 #include <cmath>
 #include <set>
 #include <map>
@@ -2006,18 +2007,18 @@ void findBestSplitSymmetric(
   for (const auto& dataPoint : splittingData) {
     if (std::get<0>(dataPoint) > 0) {
       rightRunningSum += std::get<2>(dataPoint);
-      nLeft++;
+      nRight++;
     } else {
       leftRunningSum += std::get<2>(dataPoint);
-      nRight++;
+      nLeft++;
     }
   }
 
   for (const auto& dataPoint : averagingData) {
     if (std::get<0>(dataPoint) > 0) {
-      nAvgLeft++;
-    } else {
       nAvgRight++;
+    } else {
+      nAvgLeft++;
     }
   }
 
@@ -2195,9 +2196,9 @@ void findBestSplitSymmetric(
       bestSplitFeatureAll,
       bestSplitCountAll,
       bestSplitNaDirectionAll,
-      -currentSplitLoss,               // Standard RF split loss we want to maximize due to
-      featureMean + currentSplitValue, // the splitting trick, here we want to minimize, so we
-      featureMean - currentSplitValue, // flip the sign when picking the best.
+      -currentSplitLoss,                 // Standard RF split loss we want to maximize due to
+      (featureMean + currentSplitValue), // the splitting trick, here we want to minimize, so we
+      (featureMean - currentSplitValue), // flip the sign when picking the best.
       currentFeature,
       bestSplitTableIndex,
       calculateNaDirection(NaMean,
@@ -2264,11 +2265,13 @@ void updatePartitionWeights(
 void determineBestSplit(
     size_t &bestSplitFeature,
     double &bestSplitValue,
+    double &bestSplitLeftValue,
     double &bestSplitLoss,
     int &bestSplitNaDir,
     size_t mtry,
     double* bestSplitLossAll,
     double* bestSplitValueAll,
+    double* bestSplitLeftValueAll,
     size_t* bestSplitFeatureAll,
     size_t* bestSplitCountAll,
     int* bestSplitNaDirectionAll,
@@ -2306,6 +2309,7 @@ void determineBestSplit(
     // Return the best splitFeature and splitValue
     bestSplitFeature = bestSplitFeatureAll[bestFeatureIndex];
     bestSplitValue = bestSplitValueAll[bestFeatureIndex];
+    bestSplitLeftValue = bestSplitLeftValueAll[bestFeatureIndex];
     bestSplitNaDir = bestSplitNaDirectionAll[bestFeatureIndex];
     bestSplitLoss = bestSplitLoss_;
   } else {

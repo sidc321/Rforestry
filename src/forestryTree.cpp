@@ -2,6 +2,7 @@
 #include "utils.h"
 #include "treeSplitting.h"
 #include <RcppArmadillo.h>
+#include <RcppThread.h>
 #include <cmath>
 #include <set>
 #include <map>
@@ -757,6 +758,7 @@ void forestryTree::recursivePartition(
   if ((*averagingSampleIndex).size() < getMinNodeSizeAvg() ||
       (*splittingSampleIndex).size() < getMinNodeSizeSpt() ||
       (depth == getMaxDepth())) {
+
     // Create two lists on heap and transfer the owernship to the node
     std::unique_ptr<std::vector<size_t> > averagingSampleIndex_(
         new std::vector<size_t>(*averagingSampleIndex)
@@ -807,7 +809,7 @@ void forestryTree::recursivePartition(
   size_t naRightCount = 0;
   size_t naCenterCount = 0;
   int bestSplitNaDir = 0;
-  double bestSplitLeftValue; // For the left split threshold
+  double bestSplitLeftValue=-1.0; // For the left split threshold
                              // when doing symmetric splits
 
   /* Arma mat memory is uninitialized now */
@@ -853,6 +855,7 @@ void forestryTree::recursivePartition(
 
   // Create a leaf node if the current bestSplitValue is NA
   if (std::isnan(bestSplitValue)) {
+
     // Create two lists on heap and transfer the owernship to the node
     std::unique_ptr<std::vector<size_t> > averagingSampleIndex_(
         new std::vector<size_t>(*averagingSampleIndex)
@@ -884,6 +887,7 @@ void forestryTree::recursivePartition(
 
     // Create split for both averaging and splitting dataset based on
     // categorical feature or not
+
     splitData(
       trainingData,
       averagingSampleIndex,
@@ -923,6 +927,7 @@ void forestryTree::recursivePartition(
     // If we do have an empty partition we make a leaf node.
     if ((trinary && (mAvgSize*lAvgSize*rAvgSize*mSplSize*lSplSize*rSplSize == 0)) ||
         (lAvgSize*rAvgSize*lSplSize*rSplSize == 0)) {
+
       std::unique_ptr<std::vector<size_t> > averagingSampleIndex_(
           new std::vector<size_t>(*averagingSampleIndex)
       );
@@ -1346,11 +1351,13 @@ void forestryTree::selectBestFeature(
   determineBestSplit(
     bestSplitFeature,
     bestSplitValue,
+    bestSplitLeftValue,
     bestSplitLoss,
     bestSplitNaDir,
     mtry,
     bestSplitLossAll,
     bestSplitValueAll,
+    bestSplitLeftValueAll,
     bestSplitFeatureAll,
     bestSplitCountAll,
     bestSplitNaDirectionAll,
