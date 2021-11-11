@@ -184,13 +184,11 @@ void updateBestSplitImpute(
 void updateBestSplitTrinary(
     double* bestSplitLossAll,
     double* bestSplitValueAll,
-    double* bestSplitLeftValueAll,
     size_t* bestSplitFeatureAll,
     size_t* bestSplitCountAll,
     int* bestSplitNaDirectionAll,
     double currentSplitLoss,
     double currentSplitValue,
-    double currentSplitLeftValue,
     size_t currentFeature,
     size_t bestSplitTableIndex,
     int currentSplitNaDirection,
@@ -202,7 +200,6 @@ void updateBestSplitTrinary(
     bestSplitLossAll[bestSplitTableIndex] = currentSplitLoss;
     bestSplitFeatureAll[bestSplitTableIndex] = currentFeature;
     bestSplitValueAll[bestSplitTableIndex] = currentSplitValue;
-    bestSplitLeftValueAll[bestSplitTableIndex] = currentSplitLeftValue;
     bestSplitCountAll[bestSplitTableIndex] = 1;
     bestSplitNaDirectionAll[bestSplitTableIndex] = currentSplitNaDirection;
   } else {
@@ -219,7 +216,6 @@ void updateBestSplitTrinary(
         bestSplitLossAll[bestSplitTableIndex] = currentSplitLoss;
         bestSplitFeatureAll[bestSplitTableIndex] = currentFeature;
         bestSplitValueAll[bestSplitTableIndex] = currentSplitValue;
-        bestSplitLeftValueAll[bestSplitTableIndex] = currentSplitLeftValue;
         bestSplitNaDirectionAll[bestSplitTableIndex] = currentSplitNaDirection;
       }
     }
@@ -1836,7 +1832,6 @@ void findBestSplitSymmetric(
     size_t currentFeature,
     double* bestSplitLossAll,
     double* bestSplitValueAll,
-    double* bestSplitLeftValueAll,
     size_t* bestSplitFeatureAll,
     size_t* bestSplitCountAll,
     int* bestSplitNaDirectionAll,
@@ -2198,13 +2193,12 @@ void findBestSplitSymmetric(
     updateBestSplitTrinary(
       bestSplitLossAll,
       bestSplitValueAll,
-      bestSplitLeftValueAll,
       bestSplitFeatureAll,
       bestSplitCountAll,
       bestSplitNaDirectionAll,
       -currentSplitLoss,                 // Standard RF split loss we want to maximize due to
       (featureMean + currentSplitValue), // the splitting trick, here we want to minimize, so we
-      (featureMean - currentSplitValue), // flip the sign when picking the best.
+      //(featureMean - currentSplitValue), // flip the sign when picking the best.
       currentFeature,
       bestSplitTableIndex,
       calculateNaDirection(NaMean,
@@ -2226,7 +2220,6 @@ void findBestSplitSymmetricOuter(
     size_t currentFeature,
     double* bestSplitLossAll,
     double* bestSplitValueAll,
-    double* bestSplitLeftValueAll,
     size_t* bestSplitFeatureAll,
     size_t* bestSplitCountAll,
     int* bestSplitNaDirectionAll,
@@ -2580,13 +2573,12 @@ void findBestSplitSymmetricOuter(
     updateBestSplitTrinary(
       bestSplitLossAll,
       bestSplitValueAll,
-      bestSplitLeftValueAll,
       bestSplitFeatureAll,
       bestSplitCountAll,
       bestSplitNaDirectionAll,
       -currentSplitLoss,                 // Standard RF split loss we want to maximize due to
       (featureMean + currentSplitValue), // the splitting trick, here we want to minimize, so we
-      (featureMean - currentSplitValue), // flip the sign when picking the best.
+      //(featureMean - currentSplitValue), // flip the sign when picking the best.
       currentFeature,
       bestSplitTableIndex,
       calculateNaDirection(NaMean,
@@ -2653,13 +2645,11 @@ void updatePartitionWeights(
 void determineBestSplit(
     size_t &bestSplitFeature,
     double &bestSplitValue,
-    double &bestSplitLeftValue,
     double &bestSplitLoss,
     int &bestSplitNaDir,
     size_t mtry,
     double* bestSplitLossAll,
     double* bestSplitValueAll,
-    double* bestSplitLeftValueAll,
     size_t* bestSplitFeatureAll,
     size_t* bestSplitCountAll,
     int* bestSplitNaDirectionAll,
@@ -2697,7 +2687,6 @@ void determineBestSplit(
     // Return the best splitFeature and splitValue
     bestSplitFeature = bestSplitFeatureAll[bestFeatureIndex];
     bestSplitValue = bestSplitValueAll[bestFeatureIndex];
-    bestSplitLeftValue = bestSplitLeftValueAll[bestFeatureIndex];
     bestSplitNaDir = bestSplitNaDirectionAll[bestFeatureIndex];
     bestSplitLoss = bestSplitLoss_;
   } else {
@@ -2705,7 +2694,6 @@ void determineBestSplit(
     bestSplitFeature = std::numeric_limits<size_t>::quiet_NaN();
     bestSplitValue = std::numeric_limits<double>::quiet_NaN();
     bestSplitLoss = std::numeric_limits<double>::quiet_NaN();
-    bestSplitLeftValue = std::numeric_limits<double>::quiet_NaN();
     bestSplitNaDir = std::numeric_limits<int>::quiet_NaN();
   }
 

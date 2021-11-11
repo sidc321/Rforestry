@@ -126,7 +126,6 @@ public:
   void selectBestFeature(
       size_t &bestSplitFeature,
       double &bestSplitValue,
-      double &bestSplitLeftValue,
       double &bestSplitLoss,
       int &bestSplitNaDir,
       arma::Mat<double> &bestSplitGL,

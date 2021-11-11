@@ -12,9 +12,9 @@ std::mutex mutex_weightMatrix;
 
 RFNode::RFNode():
   _averagingSampleIndex(nullptr), _splittingSampleIndex(nullptr),
-  _splitFeature(0), _splitValue(0),_leftSplitValue(0),_trinary(false),
-  _weightNegative(0),_weightPositive(0),_leftChild(nullptr), _rightChild(nullptr),
-  _naLeftCount(0), _naRightCount(0),_naCenterCount(0),
+  _splitFeature(0), _splitValue(0),_trinary(false),
+  _weightNegative(0),_weightPositive(0),_leftChild(nullptr),
+  _rightChild(nullptr),_naLeftCount(0), _naRightCount(0),
   _averageCount(0), _splitCount(0) {}
 
 RFNode::~RFNode() {
@@ -53,10 +53,8 @@ void RFNode::setLeafNode(
 void RFNode::setSplitNode(
   size_t splitFeature,
   double splitValue,
-  double leftSplitValue,
   std::unique_ptr< RFNode > leftChild,
   std::unique_ptr< RFNode > rightChild,
-  std::unique_ptr< RFNode > centerChild,
   bool trinary,
   size_t naLeftCount,
   size_t naCenterCount,
@@ -70,13 +68,8 @@ void RFNode::setSplitNode(
   _leftChild = std::move(leftChild);
   _rightChild = std::move(rightChild);
   _naLeftCount = naLeftCount;
-  _naCenterCount = naCenterCount;
   _naRightCount = naRightCount;
   _trinary = trinary;
-  if (trinary) {
-    _centerChild = std::move(centerChild);
-    _leftSplitValue = leftSplitValue;
-  }
   _nodeId = -1;
 }
 
@@ -260,7 +253,6 @@ void RFNode::predict(
     // Separate prediction tasks to two children
     std::vector<size_t>* leftPartitionIndex = new std::vector<size_t>();
     std::vector<size_t>* rightPartitionIndex = new std::vector<size_t>();
-    std::vector<size_t>* centerPartitionIndex = new std::vector<size_t>();
 
     size_t naLeftCount = getNaLeftCount();
     size_t naRightCount = getNaRightCount();
@@ -274,20 +266,12 @@ void RFNode::predict(
     // Initialize vectors of ratios in which we sample randomly to send
     // observations with NA values
     std::vector<size_t> naSampling;
-    if (getTrinary() && !categorical_split) {
-      size_t naCenterCount = getNaCenterCount();
-      naSampling = {naLeftCount, naCenterCount, naRightCount};
-    } else {
+    if (!categorical_split) {
       naSampling = {naLeftCount, naRightCount};
     }
 
     std::vector<size_t> naSampling_no_miss;
-    if (getTrinary() && !categorical_split) {
-      naSampling_no_miss = {
-        (*getLeftChild()).getAverageCountAlways(),
-        (*getCenterChild()).getAverageCountAlways(),
-        (*getRightChild()).getAverageCountAlways()};
-    } else {
+    if (!categorical_split) {
       naSampling_no_miss = {
         (*getLeftChild()).getAverageCountAlways(),
         (*getRightChild()).getAverageCountAlways()};
@@ -364,18 +348,16 @@ void RFNode::predict(
           // right/left with probability in proportion to NA's which went
           // left/right when splitting
           if (getTrinary()) {
-            if ((naLeftCount == 0) && (naRightCount == 0) && (getNaCenterCount() == 0)) {
+            if ((naLeftCount == 0) && (naRightCount == 0)) {
               draw = discrete_dist_nonmissing(random_number_generator);
             } else {
               draw = discrete_dist(random_number_generator);
             }
 
             // Have to push to three indices when we have trinary splits
-            if (draw == 0) {
+            if (draw == -1) {
               (*leftPartitionIndex).push_back(*it);
             } else if (draw == 1) {
-              (*centerPartitionIndex).push_back(*it);
-            } else {
               (*rightPartitionIndex).push_back(*it);
             }
           } else {
@@ -395,11 +377,9 @@ void RFNode::predict(
 
         } else {
           if (getTrinary()) {
-            // Split based on three partitions around + - splitValue
-            if (currentValue < getLeftSplitValue()) {
+            // If trinary splits, we split based on absolute values of the feat
+            if (std::fabs(currentValue) < getSplitValue()) {
               (*leftPartitionIndex).push_back(*it);
-            } else if (currentValue < getSplitValue()) {
-              (*centerPartitionIndex).push_back(*it);
             } else {
               (*rightPartitionIndex).push_back(*it);
             }
@@ -434,23 +414,6 @@ void RFNode::predict(
       );
     }
 
-    // We also get recursive predictions from center child when doing symmetric
-    if (centerPartitionIndex->size() > 0 && getTrinary()) {
-      getCenterChild()->predict(
-          outputPrediction,
-          terminalNodes,
-          outputCoefficients,
-          centerPartitionIndex,
-          xNew,
-          trainingData,
-          weightMatrix,
-          linear,
-          lambda,
-          seed,
-          nodesizeStrictAvg
-      );
-    }
-
     if ((*rightPartitionIndex).size() > 0) {
         (*getRightChild()).predict(
           outputPrediction,
@@ -470,7 +433,6 @@ void RFNode::predict(
 
     delete(leftPartitionIndex);
     delete(rightPartitionIndex);
-    delete(centerPartitionIndex);
   }
 }
 
@@ -523,14 +485,12 @@ void RFNode::printSubtree(int indentSpace) {
               << getSplitFeature()
               << ", split value = "
               << getSplitValue()
-              << ", left split value = "
-              << getLeftSplitValue()
+              << ", trinary indicator "
+              << getTrinary()
               << ", # of average samples = "
               << getAverageCount()
               << ", # NA's l,c,r = "
               << getNaLeftCount()
-              << " "
-              << getNaCenterCount()
               << " "
               << getNaRightCount()
               << std::endl;
@@ -539,11 +499,7 @@ void RFNode::printSubtree(int indentSpace) {
     R_ProcessEvents();
     // Recursively calling its children
     (*getLeftChild()).printSubtree(indentSpace+2);
-    if (getTrinary()) {
-      (*getCenterChild()).printSubtree(indentSpace+2);
-    }
     (*getRightChild()).printSubtree(indentSpace+2);
-
   }
 }
 

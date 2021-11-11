@@ -28,10 +28,8 @@ public:
   void setSplitNode(
       size_t splitFeature,
       double splitValue,
-      double leftSplitValue,
       std::unique_ptr< RFNode > leftChild,
       std::unique_ptr< RFNode > rightChild,
-      std::unique_ptr< RFNode > centerChild,
       bool trinary,
       size_t naLeftCount,
       size_t naCenterCount,
@@ -87,14 +85,6 @@ public:
     }
   }
 
-  double getLeftSplitValue() {
-    if (is_leaf()) {
-      throw "Cannot get left split feature for a leaf.";
-    } else {
-      return _leftSplitValue;
-    }
-  }
-
   RFNode* getLeftChild() {
     if (is_leaf()) {
       throw "Cannot get left child for a leaf.";
@@ -108,14 +98,6 @@ public:
       throw "Cannot get right child for a leaf.";
     } else {
       return _rightChild.get();
-    }
-  }
-
-  RFNode* getCenterChild() {
-    if (is_leaf()) {
-      throw "Cannot get right child for a leaf.";
-    } else {
-      return _centerChild.get();
     }
   }
 
@@ -135,10 +117,6 @@ public:
 
   size_t getNaRightCount() {
     return _naRightCount;
-  }
-
-  size_t getNaCenterCount() {
-    return _naCenterCount;
   }
 
   size_t getNodeId() {
@@ -170,16 +148,13 @@ private:
   std::unique_ptr< std::vector<size_t> > _splittingSampleIndex;
   size_t _splitFeature;
   double _splitValue;
-  double _leftSplitValue;
   bool _trinary;
   double _weightNegative;
   double _weightPositive;
   std::unique_ptr< RFNode > _leftChild;
   std::unique_ptr< RFNode > _rightChild;
-  std::unique_ptr< RFNode > _centerChild;
   size_t _naLeftCount;
   size_t _naRightCount;
-  size_t _naCenterCount;
   size_t _averageCount;
   size_t _splitCount;
   size_t _nodeId;
