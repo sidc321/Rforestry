@@ -773,6 +773,7 @@ void forestryTree::recursivePartition(
         std::move(splittingSampleIndex_),
         node_id,
         trinary,
+        weight,
         weight
     );
     return;
@@ -870,6 +871,7 @@ void forestryTree::recursivePartition(
         std::move(splittingSampleIndex_),
         node_id,
         trinary,
+        weight,
         weight
     );
 
@@ -941,6 +943,7 @@ void forestryTree::recursivePartition(
           std::move(splittingSampleIndex_),
           node_id,
           trinary,
+          weight,
           weight
       );
       return;
@@ -972,6 +975,7 @@ void forestryTree::recursivePartition(
             std::move(splittingSampleIndex_),
             node_id,
             trinary,
+            weight,
             weight
         );
         return;
@@ -1919,6 +1923,7 @@ void forestryTree::recursive_reconstruction(
         std::move(splittingSampleIndex_),
         node_id,
         false,
+        0,
         0
     );
     return;

@@ -21,7 +21,8 @@ public:
     std::unique_ptr< std::vector<size_t> > splittingSampleIndex,
     size_t nodeId,
     bool trinary,
-    double weight
+    double weightNegative,
+    double weightPositive
   );
 
   void setSplitNode(
@@ -144,8 +145,12 @@ public:
     return _nodeId;
   }
 
-  double getWeight() {
-    return _weight;
+  double getPositiveWeight() {
+    return _weightPositive;
+  }
+
+  double getNegativeWeight() {
+    return _weightNegative;
   }
 
   bool getTrinary() {
@@ -167,7 +172,8 @@ private:
   double _splitValue;
   double _leftSplitValue;
   bool _trinary;
-  double _weight;
+  double _weightNegative;
+  double _weightPositive;
   std::unique_ptr< RFNode > _leftChild;
   std::unique_ptr< RFNode > _rightChild;
   std::unique_ptr< RFNode > _centerChild;

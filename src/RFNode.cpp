@@ -13,7 +13,7 @@ std::mutex mutex_weightMatrix;
 RFNode::RFNode():
   _averagingSampleIndex(nullptr), _splittingSampleIndex(nullptr),
   _splitFeature(0), _splitValue(0),_leftSplitValue(0),_trinary(false),
-  _weight(0),_leftChild(nullptr), _rightChild(nullptr),
+  _weightNegative(0),_weightPositive(0),_leftChild(nullptr), _rightChild(nullptr),
   _naLeftCount(0), _naRightCount(0),_naCenterCount(0),
   _averageCount(0), _splitCount(0) {}
 
@@ -26,7 +26,8 @@ void RFNode::setLeafNode(
   std::unique_ptr< std::vector<size_t> > splittingSampleIndex,
   size_t nodeId,
   bool trinary,
-  double weight
+  double weightNegative,
+  double weightPositive
 ) {
   if (
       (*averagingSampleIndex).size() == 0 &&
@@ -44,7 +45,8 @@ void RFNode::setLeafNode(
   this->_splitCount = (*_splittingSampleIndex).size();
   if (trinary) {
     this->_trinary = trinary;
-    this->_weight = weight;
+    this->_weightNegative = weightNegative;
+    this->_weightPositive = weightPositive;
   }
 }
 
@@ -198,7 +200,7 @@ void RFNode::predict(
         if (getAverageCount() == 0) {
           predictedMean = std::numeric_limits<double>::quiet_NaN();
         } else if (getTrinary()) {
-          predictedMean = getWeight();
+          predictedMean = getPositiveWeight();
         } else {
           predictedMean = (*trainingData).partitionMean(getAveragingIndex());
         }
@@ -508,7 +510,7 @@ void RFNode::printSubtree(int indentSpace) {
               << ", # of average samples = "
               << getAverageCount()
               << ", weight = "
-              << getWeight()
+              << getPositiveWeight()
               << std::endl;
     R_FlushConsole();
     R_ProcessEvents();

@@ -2219,6 +2219,388 @@ void findBestSplitSymmetric(
   }
 }
 
+void findBestSplitSymmetricOuter(
+    std::vector<size_t>* averagingSampleIndex,
+    std::vector<size_t>* splittingSampleIndex,
+    size_t bestSplitTableIndex,
+    size_t currentFeature,
+    double* bestSplitLossAll,
+    double* bestSplitValueAll,
+    double* bestSplitLeftValueAll,
+    size_t* bestSplitFeatureAll,
+    size_t* bestSplitCountAll,
+    int* bestSplitNaDirectionAll,
+    DataFrame* trainingData,
+    size_t splitNodeSize,
+    size_t averageNodeSize,
+    std::mt19937_64& random_number_generator,
+    bool splitMiddle,
+    size_t maxObs,
+    bool monotone_splits,
+    monotonic_info monotone_details
+) {
+  // In order to revise the symmetry implementation, we now work with two
+  // splitting functions, one that is called when we are splitting on an interval
+  // of feature values ncluding zero, and another that is called when we are
+  // spitting on an interval that does not include zero.
+
+  // In this scheme, we pass observations down a binary tree based on only
+  // the absolute value of the feature. Then within each node, we have two
+  // Pseudo-outcomes (that are equal in magnitude due to symmetry), one for
+  // positive observations and one for negative observations.
+
+  // This splitting function is called when we are splitting on a partition that
+  // does not include zero, and results in two further partitions by the
+  // absolute value of the feature.
+
+  typedef std::tuple<double,double,double> dataPair;
+  std::vector<dataPair> splittingData;
+  std::vector<dataPair> averagingData;
+
+  double leftRunningSum = 0;
+  double rightRunningSum = 0;
+  double midRunningSum = 0;
+  double leftAvgRunningSum = 0;
+  double rightAvgRunningSum = 0;
+  double midAvgRunningSum = 0;
+  double naTotalSum = 0;
+  double naAvgTotalSum = 0;
+  size_t naAvgTotalCount = 0;
+  size_t naSplTotalCount = 0;
+
+  //Create vector to hold missing data
+  typedef std::tuple<size_t, double> naPair;
+  std::vector<naPair> missingSplit;
+  std::vector<naPair> missingAvg;
+
+  // get the mean feature value in this node, we use this to get the split values
+  // as we create the splits symmetric around the mean
+  double featureMean = 0;
+  size_t featureCount = 0;
+  // Get mean of feature values excluding the Na values
+  for (size_t i=0;i < splittingSampleIndex->size(); i++) {
+    double tmpFeatureValue = (*trainingData).
+    getPoint((*splittingSampleIndex)[i], currentFeature);
+    if (!std::isnan(tmpFeatureValue)) {
+      featureMean += tmpFeatureValue;
+      featureCount++;
+    }
+  }
+  featureMean = featureMean / ((double) featureCount);
+
+  for (size_t j=0; j<(*splittingSampleIndex).size(); j++) {
+    // Retrieve the current feature value
+    double tmpFeatureValue = (*trainingData).
+    getPoint((*splittingSampleIndex)[j], currentFeature);
+    double tmpOutcomeValue = (*trainingData).
+    getOutcomePoint((*splittingSampleIndex)[j]);
+
+    // If feature data is missing, push back to missingData vector
+    if (std::isnan(tmpFeatureValue)) {
+      naTotalSum += tmpOutcomeValue;
+      naSplTotalCount++;
+
+      missingSplit.push_back(
+        std::make_tuple(
+          (*splittingSampleIndex)[j],
+                                 tmpOutcomeValue
+        )
+      );
+    } else {
+      // Adding data to the internal data vector (Note: R index)
+      splittingData.push_back(
+        std::make_tuple(
+          tmpFeatureValue-featureMean,
+          std::fabs(tmpFeatureValue-featureMean),
+          tmpOutcomeValue
+        )
+      );
+    }
+  }
+
+  // Get the mean of missing outcomes if there are any
+  double NaMean = std::numeric_limits<double>::quiet_NaN();
+  if (naSplTotalCount > 0) {
+    NaMean = naAvgTotalSum / ((double) naSplTotalCount);
+  }
+
+  for (size_t j=0; j<(*averagingSampleIndex).size(); j++) {
+    // Retrieve the current feature value
+    double tmpFeatureValue = (*trainingData).
+    getPoint((*averagingSampleIndex)[j], currentFeature);
+    double tmpOutcomeValue = (*trainingData).
+    getOutcomePoint((*averagingSampleIndex)[j]);
+
+    if (std::isnan(tmpFeatureValue)) {
+      naAvgTotalSum += tmpOutcomeValue;
+      naAvgTotalCount++;
+
+      missingAvg.push_back(
+        std::make_tuple(
+          (*averagingSampleIndex)[j],
+                                 tmpOutcomeValue
+        )
+      );
+    } else {
+      // Adding data to the internal data vector (Note: R index)
+      averagingData.push_back(
+        std::make_tuple(
+          tmpFeatureValue-featureMean,
+          std::fabs(tmpFeatureValue-featureMean),
+          tmpOutcomeValue
+        )
+      );
+    }
+  }
+
+  // return if we have no data
+  if ( (splittingData.size() < 1) || (averagingData.size() < 1) )
+  {
+    return;
+  }
+
+  // Now sort possible splitting points by absolute feature value
+  sort(
+    splittingData.begin(),
+    splittingData.end(),
+    [](const dataPair &lhs, const dataPair &rhs) {
+      return std::get<1>(lhs) < std::get<1>(rhs);
+    }
+  );
+  sort(
+    averagingData.begin(),
+    averagingData.end(),
+    [](const dataPair &lhs, const dataPair &rhs) {
+      return std::get<1>(lhs) < std::get<1>(rhs);
+    }
+  );
+
+  size_t nLeft = 0;
+  size_t nRight = 0;
+  size_t nMid = 0;
+
+  size_t nAvgLeft = 0;
+  size_t nAvgRight = 0;
+  size_t nAvgMid = 0;
+
+  double midWeight;
+  double leftWeight;
+  double rightWeight;
+
+
+  double newFeatureValue;
+  bool oneValueDistinctFlag = true;
+
+  // Now iterate through split points, and initialize lhs and rhs sums
+  for (const auto& dataPoint : splittingData) {
+    if (std::get<0>(dataPoint) > 0) {
+      rightRunningSum += std::get<2>(dataPoint);
+      nRight++;
+    } else {
+      leftRunningSum += std::get<2>(dataPoint);
+      nLeft++;
+    }
+  }
+
+  for (const auto& dataPoint : averagingData) {
+    if (std::get<0>(dataPoint) > 0) {
+      nAvgRight++;
+    } else {
+      nAvgLeft++;
+    }
+  }
+
+  // Now work on determining the optimal split
+  std::vector<dataPair>::iterator splittingDataIter = splittingData.begin();
+  std::vector<dataPair>::iterator averagingDataIter = averagingData.begin();
+
+  // Initialize the split value to be minimum of first value in two datasets
+  double featureValue = std::min(
+    std::get<1>(*splittingDataIter),
+    std::get<1>(*averagingDataIter)
+  );
+
+
+  while (
+      splittingDataIter < splittingData.end() ||
+        averagingDataIter < averagingData.end()
+  ) {
+
+    // Exhaust all current feature value in both datasets as partitioning
+    while (
+        splittingDataIter < splittingData.end() &&
+          std::get<1>(*splittingDataIter) == featureValue
+    ) {
+      // We check if the current value is in the left or right partition
+      if (std::get<0>(*splittingDataIter) > 0) {
+        nMid++;
+        nRight--;
+        rightRunningSum -= std::get<2>(*splittingDataIter);
+        midRunningSum += std::get<2>(*splittingDataIter);
+      } else {
+        nMid++;
+        nLeft--;
+        leftRunningSum -= std::get<2>(*splittingDataIter);
+        midRunningSum += std::get<2>(*splittingDataIter);
+      }
+      splittingDataIter++;
+    }
+
+    // Exhaust all observations with current split value in averaging data set
+    while (
+        averagingDataIter < averagingData.end() &&
+          std::get<1>(*averagingDataIter) == featureValue
+    ) {
+      // We check if the current value is in the left or right partition
+      if (std::get<0>(*averagingDataIter) > 0) {
+        nAvgMid++;
+        nAvgRight--;
+        rightAvgRunningSum -= std::get<2>(*averagingDataIter);
+        midAvgRunningSum += std::get<2>(*averagingDataIter);
+      } else {
+        nAvgMid++;
+        nAvgLeft--;
+        leftAvgRunningSum -= std::get<2>(*averagingDataIter);
+        midAvgRunningSum += std::get<2>(*averagingDataIter);
+      }
+      averagingDataIter++;
+    }
+
+    // Test if the all the values for the feature are the same, then proceed
+    if (oneValueDistinctFlag) {
+      oneValueDistinctFlag = false;
+      if (
+          splittingDataIter == splittingData.end() &&
+            averagingDataIter == averagingData.end()
+      ) {
+        break;
+      }
+    }
+
+    // Update the splitting value to the next feature value with the smallest absolute value
+    if (
+        splittingDataIter == splittingData.end() &&
+          averagingDataIter == averagingData.end()
+    ) {
+      break;
+    } else if (splittingDataIter == splittingData.end()) {
+      newFeatureValue = std::get<1>(*averagingDataIter);
+    } else if (averagingDataIter == averagingData.end()) {
+      newFeatureValue = std::get<1>(*splittingDataIter);
+    } else {
+      newFeatureValue = std::min(
+        std::get<1>(*splittingDataIter),
+        std::get<1>(*averagingDataIter)
+      );
+    }
+
+    // Check nodesize for all three partitions
+    if (
+        std::min(
+          nLeft,
+          std::min(nRight,nMid)
+        ) < splitNodeSize ||
+          std::min(
+            nAvgLeft,
+            std::min(nAvgRight,nAvgMid)
+          ) < averageNodeSize
+    ) {
+      featureValue = newFeatureValue;
+      continue;
+    }
+
+    // Get the appropriate partition weights given the means and counts
+    updatePartitionWeights(leftRunningSum/(double) nLeft,
+                           midRunningSum/(double) nMid,
+                           rightRunningSum/(double) nRight,
+                           nLeft,
+                           nRight,
+                           nMid,
+                           leftWeight,
+                           rightWeight,
+                           midWeight);
+
+
+    // If we are using monotonic constraints, we need to work out whether
+    // the monotone constraints will reject a split
+    if (monotone_splits) {
+      bool keepMonotoneSplit = acceptMonotoneTrinarySplit(monotone_details,
+                                                          currentFeature,
+                                                          leftWeight,
+                                                          rightWeight,
+                                                          midWeight);
+
+      bool avgKeepMonotoneSplit = true;
+      // If monotoneAvg, we also need to check the monotonicity of the avg set
+      if (monotone_details.monotoneAvg) {
+        double midAvgWeight;
+        double leftAvgWeight;
+        double rightAvgWeight;
+
+        updatePartitionWeights(leftAvgRunningSum/(double) nAvgLeft,
+                               midAvgRunningSum/(double) nAvgMid,
+                               rightAvgRunningSum/(double) nAvgRight,
+                               nAvgLeft,
+                               nAvgRight,
+                               nAvgMid,
+                               leftAvgWeight,
+                               rightAvgWeight,
+                               midAvgWeight);
+
+        avgKeepMonotoneSplit = acceptMonotoneTrinarySplit(monotone_details,
+                                                          currentFeature,
+                                                          leftAvgWeight,
+                                                          rightAvgWeight,
+                                                          midAvgWeight);
+
+      }
+
+      if (!(keepMonotoneSplit && avgKeepMonotoneSplit)) {
+        // Update the oldFeature value before proceeding
+        featureValue = newFeatureValue;
+        continue;
+      }
+    }
+
+    // Calculate the variance of the splitting
+    double currentSplitLoss = calcSymmetricLoss(leftRunningSum,
+                                                midRunningSum,
+                                                rightRunningSum,
+                                                nLeft,
+                                                nRight,
+                                                nMid,
+                                                leftWeight,
+                                                rightWeight,
+                                                midWeight);
+
+    // This is a little weird, but basically we are working with the absolute
+    // values, so it is okay to use the half values
+    double currentSplitValue = featureValue;
+
+    updateBestSplitTrinary(
+      bestSplitLossAll,
+      bestSplitValueAll,
+      bestSplitLeftValueAll,
+      bestSplitFeatureAll,
+      bestSplitCountAll,
+      bestSplitNaDirectionAll,
+      -currentSplitLoss,                 // Standard RF split loss we want to maximize due to
+      (featureMean + currentSplitValue), // the splitting trick, here we want to minimize, so we
+      (featureMean - currentSplitValue), // flip the sign when picking the best.
+      currentFeature,
+      bestSplitTableIndex,
+      calculateNaDirection(NaMean,
+                           leftWeight,
+                           midWeight,
+                           rightWeight),
+                           random_number_generator
+    );
+
+    // Update the old feature value
+    featureValue = newFeatureValue;
+  }
+}
+
 double calcSymmetricLoss(
     double leftSum,
     double midSum,
