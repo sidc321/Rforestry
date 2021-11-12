@@ -13,10 +13,10 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
 
   rf <- forestry(x=x,
                  y=y,
-                 ntree=500,
+                 ntree=1,
                  seed=2131,
                  OOBhonest = TRUE,
-                 monotonicConstraints = c(1),
+                 #monotonicConstraints = c(1),
                  monotoneAvg = TRUE,
                  symmetric = TRUE)
 

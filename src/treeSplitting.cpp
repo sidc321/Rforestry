@@ -2925,3 +2925,49 @@ double calculateMonotonicBound(
     return node_mean;
   }
 }
+
+void getSplitCounts(
+    DataFrame* trainingData,
+    std::vector<size_t>* averagingSampleIndex,
+    size_t splitFeature,
+    double splitValue,
+    size_t &nLP,
+    size_t &nRP,
+    size_t &nLN,
+    size_t &nRN,
+    double &sLP,
+    double &sRP,
+    double &sLN,
+    double &sRN
+) {
+  for (
+      std::vector<size_t>::iterator it = averagingSampleIndex->begin();
+      it != averagingSampleIndex->end();
+      ++it
+  ) {
+
+    double currentFeatureValue = trainingData->getPoint(*it, splitFeature);
+    if (std::isnan(currentFeatureValue)) {
+      continue;
+    } else if (std::fabs(currentFeatureValue) > splitValue) {
+      if (currentFeatureValue > 0) {
+        nRP++;
+        sRP += trainingData->getOutcomePoint(*it);
+      } else {
+        nRN++;
+        sRN += trainingData->getOutcomePoint(*it);
+      }
+    } else {
+      if (currentFeatureValue > 0) {
+        nLP++;
+        sLP += trainingData->getOutcomePoint(*it);
+      } else {
+        nLN++;
+        sLN += trainingData->getOutcomePoint(*it);
+      }
+    }
+  }
+}
+
+
+

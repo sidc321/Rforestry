@@ -193,6 +193,7 @@ forestryTree::forestryTree(
     monotone_splits,
     monotonic_details,
     symmetric,
+    true,
     0,
     0
   );
@@ -653,6 +654,7 @@ void forestryTree::recursivePartition(
     bool monotone_splits,
     monotonic_info monotone_details,
     bool trinary,
+    bool centerSplit,
     double positiveWeight,
     double negativeWeight
 ){
@@ -749,7 +751,10 @@ void forestryTree::recursivePartition(
     gtotal,
     stotal,
     monotone_splits,
-    monotone_details
+    monotone_details,
+    centerSplit,
+    positiveWeight,
+    negativeWeight
   );
 
   // Create a leaf node if the current bestSplitValue is NA
@@ -897,20 +902,52 @@ void forestryTree::recursivePartition(
     struct monotonic_info monotonic_details_center;
 
     // Update the weights we give to different nodes
-    double lWeight=0;
-    double rWeight=0;
-    double cWeight = 0;
+    double wLP=0;
+    double wLN=0;
+    double wRP=0;
+    double wRN=0;
+
+    double sLP=0;
+    double sLN=0;
+    double sRP=0;
+    double sRN=0;
+
+    size_t nLP=0;
+    size_t nLN=0;
+    size_t nRP=0;
+    size_t nRN=0;
+
     if (trinary) {
-      updatePartitionWeights(
-        trainingData->partitionMean(&averagingLeftPartitionIndex),
-        0,
-        trainingData->partitionMean(&averagingRightPartitionIndex),
-        averagingLeftPartitionIndex.size(),
-        averagingRightPartitionIndex.size(),
-        1,
-        lWeight,
-        rWeight,
-        cWeight);
+      getSplitCounts(
+        trainingData,
+        averagingSampleIndex,
+        bestSplitFeature,
+        bestSplitValue,
+        nLP,
+        nRP,
+        nLN,
+        nRN,
+        sLP,
+        sRP,
+        sLN,
+        sRN
+      );
+
+      updatePartitionWeightsOuter(
+          negativeWeight,
+          positiveWeight,
+          nLP,
+          nRP,
+          nLN,
+          nRN,
+          sLP / nLP,
+          sRP / nRP,
+          sLN / nLN,
+          sRN / nRN,
+          wLP,
+          wRP,
+          wLN,
+          wRN);
     }
 
     if (monotone_splits) {
@@ -920,9 +957,9 @@ void forestryTree::recursivePartition(
         monotonic_details_right,
         monotonic_details_center,
         (*trainingData->getMonotonicConstraints()),
-        trinary ? lWeight : trainingData->partitionMean(&splittingLeftPartitionIndex),
-        trinary ? rWeight : trainingData->partitionMean(&splittingRightPartitionIndex),
-        trinary ? cWeight : 0,
+        trinary ? wLP : trainingData->partitionMean(&splittingLeftPartitionIndex),
+        trinary ? wRP : trainingData->partitionMean(&splittingRightPartitionIndex),
+        trinary ? wLN : 0,
         bestSplitFeature,
         trinary
       );
@@ -944,8 +981,9 @@ void forestryTree::recursivePartition(
       monotone_splits,
       monotonic_details_left,
       trinary,
-      lWeight,
-      lWeight
+      centerSplit,
+      wLP,
+      wLN
     );
 
     recursivePartition(
@@ -964,8 +1002,9 @@ void forestryTree::recursivePartition(
       monotone_splits,
       monotonic_details_right,
       trinary,
-      rWeight,
-      rWeight
+      false,
+      wRP,
+      wRN
     );
 
     if (trinary) {
@@ -1040,7 +1079,10 @@ void forestryTree::selectBestFeature(
     std::shared_ptr< arma::Mat<double> > gtotal,
     std::shared_ptr< arma::Mat<double> > stotal,
     bool monotone_splits,
-    monotonic_info &monotone_details
+    monotonic_info &monotone_details,
+    bool centerSplit,
+    double positiveWeight,
+    double negativeWeight
 ){
 
   // Get the number of total features
@@ -1148,7 +1190,7 @@ void forestryTree::selectBestFeature(
         gtotal,
         stotal
       );
-    } else if (trinary) {
+    } else if (trinary && centerSplit) {
       // Run symmetric splitting algorithm
       findBestSplitSymmetric(
         averagingSampleIndex,
@@ -1168,6 +1210,29 @@ void forestryTree::selectBestFeature(
         maxObs,
         monotone_splits,
         monotone_details
+      );
+    } else if (trinary) {
+      // Run symmetric splitting algorithm
+      findBestSplitSymmetricOuter(
+        averagingSampleIndex,
+        splittingSampleIndex,
+        i,
+        currentFeature,
+        bestSplitLossAll,
+        bestSplitValueAll,
+        bestSplitFeatureAll,
+        bestSplitCountAll,
+        bestSplitNaDirectionAll,
+        trainingData,
+        getMinNodeSizeToSplitSpt(),
+        getMinNodeSizeToSplitAvg(),
+        random_number_generator,
+        splitMiddle,
+        maxObs,
+        monotone_splits,
+        monotone_details,
+        positiveWeight,
+        negativeWeight
       );
     } else if (gethasNas()) {
       // Run impute split

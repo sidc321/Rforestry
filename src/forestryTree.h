@@ -120,6 +120,7 @@ public:
     bool monotone_splits,
     monotonic_info monotone_details,
     bool trinary,
+    bool centerSplit,
     double positiveWeight,
     double negativeWeight
   );
@@ -146,7 +147,10 @@ public:
       std::shared_ptr< arma::Mat<double> > gtotal,
       std::shared_ptr< arma::Mat<double> > stotal,
       bool monotone_splits,
-      monotonic_info &monotone_details
+      monotonic_info &monotone_details,
+      bool centerSplit,
+      double positiveWeight,
+      double negativeWeight
   );
 
   void initializelinear(

@@ -402,4 +402,19 @@ double calculateMonotonicBound(
     monotonic_info& monotone_details
 );
 
+void getSplitCounts(
+        DataFrame* trainingData,
+        std::vector<size_t>* averagingSampleIndex,
+        size_t splitFeature,
+        double splitValue,
+        size_t &nLP,
+        size_t &nRP,
+        size_t &nLN,
+        size_t &nRN,
+        double &sLP,
+        double &sRP,
+        double &sLN,
+        double &sRN
+);
+
 #endif //FORESTRYCPP_TREESPLIT_H

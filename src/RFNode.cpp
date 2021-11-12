@@ -193,7 +193,7 @@ void RFNode::predict(
         if (getAverageCount() == 0) {
           predictedMean = std::numeric_limits<double>::quiet_NaN();
         } else if (getTrinary()) {
-          predictedMean = getPositiveWeight();
+          predictedMean = 0;
         } else {
           predictedMean = (*trainingData).partitionMean(getAveragingIndex());
         }
@@ -205,7 +205,17 @@ void RFNode::predict(
           it != (*updateIndex).end();
           ++it
         ) {
-          outputPrediction[*it] = predictedMean;
+          if (getTrinary()) {
+            // In this case, we test the feature value and use the correct
+            // pseudo outcome by weight
+            if ((*xNew)[0][*it] > 0) {
+              outputPrediction[*it] = getPositiveWeight();
+            } else {
+              outputPrediction[*it] = -1;//getNegativeWeight();
+            }
+          } else {
+            outputPrediction[*it] = predictedMean;
+          }
         }
     }
 
