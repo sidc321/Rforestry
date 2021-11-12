@@ -21,8 +21,8 @@ public:
     std::unique_ptr< std::vector<size_t> > splittingSampleIndex,
     size_t nodeId,
     bool trinary,
-    double weightNegative,
-    double weightPositive
+    double weightPositive,
+    double weightNegative
   );
 
   void setSplitNode(

@@ -26,8 +26,8 @@ void RFNode::setLeafNode(
   std::unique_ptr< std::vector<size_t> > splittingSampleIndex,
   size_t nodeId,
   bool trinary,
-  double weightNegative,
-  double weightPositive
+  double weightPositive,
+  double weightNegative
 ) {
   if (
       (*averagingSampleIndex).size() == 0 &&
@@ -185,8 +185,8 @@ void RFNode::predict(
                      xNew,
                      trainingData,
                      lambda);
-      } else {
 
+      } else {
 
         double predictedMean;
         // Calculate the mean of current node

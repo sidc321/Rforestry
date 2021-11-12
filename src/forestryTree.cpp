@@ -193,6 +193,7 @@ forestryTree::forestryTree(
     monotone_splits,
     monotonic_details,
     symmetric,
+    0,
     0
   );
 }
@@ -652,7 +653,8 @@ void forestryTree::recursivePartition(
     bool monotone_splits,
     monotonic_info monotone_details,
     bool trinary,
-    double weight
+    double positiveWeight,
+    double negativeWeight
 ){
   if ((*averagingSampleIndex).size() < getMinNodeSizeAvg() ||
       (*splittingSampleIndex).size() < getMinNodeSizeSpt() ||
@@ -672,8 +674,8 @@ void forestryTree::recursivePartition(
         std::move(splittingSampleIndex_),
         node_id,
         trinary,
-        weight,
-        weight
+        positiveWeight,
+        negativeWeight
     );
     return;
   }
@@ -767,8 +769,8 @@ void forestryTree::recursivePartition(
         std::move(splittingSampleIndex_),
         node_id,
         trinary,
-        weight,
-        weight
+        positiveWeight,
+        negativeWeight
     );
 
   } else {
@@ -829,8 +831,8 @@ void forestryTree::recursivePartition(
           std::move(splittingSampleIndex_),
           node_id,
           trinary,
-          weight,
-          weight
+          positiveWeight,
+          negativeWeight
       );
       return;
     }
@@ -861,8 +863,8 @@ void forestryTree::recursivePartition(
             std::move(splittingSampleIndex_),
             node_id,
             trinary,
-            weight,
-            weight
+            positiveWeight,
+            negativeWeight
         );
         return;
       }
@@ -942,6 +944,7 @@ void forestryTree::recursivePartition(
       monotone_splits,
       monotonic_details_left,
       trinary,
+      lWeight,
       lWeight
     );
 
@@ -961,6 +964,7 @@ void forestryTree::recursivePartition(
       monotone_splits,
       monotonic_details_right,
       trinary,
+      rWeight,
       rWeight
     );
 

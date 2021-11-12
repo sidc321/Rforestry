@@ -120,7 +120,8 @@ public:
     bool monotone_splits,
     monotonic_info monotone_details,
     bool trinary,
-    double weight
+    double positiveWeight,
+    double negativeWeight
   );
 
   void selectBestFeature(

@@ -1888,18 +1888,6 @@ void findBestSplitSymmetric(
 
   // get the mean feature value in this node, we use this to get the split values
   // as we create the splits symmetric around the mean
-  double featureMean = 0;
-  size_t featureCount = 0;
-  // Get mean of feature values excluding the Na values
-  for (size_t i=0;i < splittingSampleIndex->size(); i++) {
-    double tmpFeatureValue = (*trainingData).
-    getPoint((*splittingSampleIndex)[i], currentFeature);
-    if (!std::isnan(tmpFeatureValue)) {
-      featureMean += tmpFeatureValue;
-      featureCount++;
-    }
-  }
-  featureMean = featureMean / ((double) featureCount);
 
   for (size_t j=0; j<(*splittingSampleIndex).size(); j++) {
     // Retrieve the current feature value
@@ -1923,8 +1911,8 @@ void findBestSplitSymmetric(
       // Adding data to the internal data vector (Note: R index)
       splittingData.push_back(
         std::make_tuple(
-          tmpFeatureValue-featureMean,
-          std::fabs(tmpFeatureValue-featureMean),
+          tmpFeatureValue,
+          std::fabs(tmpFeatureValue),
           tmpOutcomeValue
         )
       );
@@ -1958,8 +1946,8 @@ void findBestSplitSymmetric(
       // Adding data to the internal data vector (Note: R index)
       averagingData.push_back(
         std::make_tuple(
-          tmpFeatureValue-featureMean,
-          std::fabs(tmpFeatureValue-featureMean),
+          tmpFeatureValue,
+          std::fabs(tmpFeatureValue),
           tmpOutcomeValue
         )
       );
@@ -2196,15 +2184,14 @@ void findBestSplitSymmetric(
       bestSplitFeatureAll,
       bestSplitCountAll,
       bestSplitNaDirectionAll,
-      -currentSplitLoss,                 // Standard RF split loss we want to maximize due to
-      (featureMean + currentSplitValue), // the splitting trick, here we want to minimize, so we
-      //(featureMean - currentSplitValue), // flip the sign when picking the best.
-      currentFeature,
+      -currentSplitLoss,        // Standard RF split loss we want to maximize due to
+      currentSplitValue,        // the splitting trick, here we want to minimize, so we
+      currentFeature,           // flip the sign when picking the best.
       bestSplitTableIndex,
       calculateNaDirection(NaMean,
-                          leftWeight,
-                          midWeight,
-                          rightWeight),
+                           leftWeight,
+                           midWeight,
+                           rightWeight),
       random_number_generator
     );
 
@@ -2230,11 +2217,13 @@ void findBestSplitSymmetricOuter(
     bool splitMiddle,
     size_t maxObs,
     bool monotone_splits,
-    monotonic_info monotone_details
+    monotonic_info monotone_details,
+    double positiveParentWeight,
+    double negativeParentWeight
 ) {
   // In order to revise the symmetry implementation, we now work with two
   // splitting functions, one that is called when we are splitting on an interval
-  // of feature values ncluding zero, and another that is called when we are
+  // of feature values including zero, and another that is called when we are
   // spitting on an interval that does not include zero.
 
   // In this scheme, we pass observations down a binary tree based on only
@@ -2250,12 +2239,14 @@ void findBestSplitSymmetricOuter(
   std::vector<dataPair> splittingData;
   std::vector<dataPair> averagingData;
 
-  double leftRunningSum = 0;
-  double rightRunningSum = 0;
-  double midRunningSum = 0;
-  double leftAvgRunningSum = 0;
-  double rightAvgRunningSum = 0;
-  double midAvgRunningSum = 0;
+  double sLP = 0;
+  double sRP = 0;
+  double sLN = 0;
+  double sRN = 0;
+  double sAvgLP = 0;
+  double sAvgRP = 0;
+  double sAvgLN = 0;
+  double sAvgRN = 0;
   double naTotalSum = 0;
   double naAvgTotalSum = 0;
   size_t naAvgTotalCount = 0;
@@ -2266,20 +2257,6 @@ void findBestSplitSymmetricOuter(
   std::vector<naPair> missingSplit;
   std::vector<naPair> missingAvg;
 
-  // get the mean feature value in this node, we use this to get the split values
-  // as we create the splits symmetric around the mean
-  double featureMean = 0;
-  size_t featureCount = 0;
-  // Get mean of feature values excluding the Na values
-  for (size_t i=0;i < splittingSampleIndex->size(); i++) {
-    double tmpFeatureValue = (*trainingData).
-    getPoint((*splittingSampleIndex)[i], currentFeature);
-    if (!std::isnan(tmpFeatureValue)) {
-      featureMean += tmpFeatureValue;
-      featureCount++;
-    }
-  }
-  featureMean = featureMean / ((double) featureCount);
 
   for (size_t j=0; j<(*splittingSampleIndex).size(); j++) {
     // Retrieve the current feature value
@@ -2296,15 +2273,15 @@ void findBestSplitSymmetricOuter(
       missingSplit.push_back(
         std::make_tuple(
           (*splittingSampleIndex)[j],
-                                 tmpOutcomeValue
+          tmpOutcomeValue
         )
       );
     } else {
       // Adding data to the internal data vector (Note: R index)
       splittingData.push_back(
         std::make_tuple(
-          tmpFeatureValue-featureMean,
-          std::fabs(tmpFeatureValue-featureMean),
+          tmpFeatureValue,
+          std::fabs(tmpFeatureValue),
           tmpOutcomeValue
         )
       );
@@ -2331,15 +2308,15 @@ void findBestSplitSymmetricOuter(
       missingAvg.push_back(
         std::make_tuple(
           (*averagingSampleIndex)[j],
-                                 tmpOutcomeValue
+          tmpOutcomeValue
         )
       );
     } else {
       // Adding data to the internal data vector (Note: R index)
       averagingData.push_back(
         std::make_tuple(
-          tmpFeatureValue-featureMean,
-          std::fabs(tmpFeatureValue-featureMean),
+          tmpFeatureValue,
+          std::fabs(tmpFeatureValue),
           tmpOutcomeValue
         )
       );
@@ -2368,38 +2345,40 @@ void findBestSplitSymmetricOuter(
     }
   );
 
-  size_t nLeft = 0;
-  size_t nRight = 0;
-  size_t nMid = 0;
+  size_t nLP = 0;
+  size_t nRP = 0;
+  size_t nLN = 0;
+  size_t nRN = 0;
 
-  size_t nAvgLeft = 0;
-  size_t nAvgRight = 0;
-  size_t nAvgMid = 0;
+  size_t nAvgLP = 0;
+  size_t nAvgRP = 0;
+  size_t nAvgLN = 0;
+  size_t nAvgRN = 0;
 
-  double midWeight;
-  double leftWeight;
-  double rightWeight;
-
+  double wLP = 0;
+  double wRP = 0;
+  double wLN = 0;
+  double wRN = 0;
 
   double newFeatureValue;
   bool oneValueDistinctFlag = true;
 
-  // Now iterate through split points, and initialize lhs and rhs sums
+  // Now iterate through split points, and initialize rhs sums
   for (const auto& dataPoint : splittingData) {
     if (std::get<0>(dataPoint) > 0) {
-      rightRunningSum += std::get<2>(dataPoint);
-      nRight++;
+      sRP += std::get<2>(dataPoint);
+      nRP++;
     } else {
-      leftRunningSum += std::get<2>(dataPoint);
-      nLeft++;
+      sRN += std::get<2>(dataPoint);
+      nRN++;
     }
   }
 
   for (const auto& dataPoint : averagingData) {
     if (std::get<0>(dataPoint) > 0) {
-      nAvgRight++;
+      nAvgRP++;
     } else {
-      nAvgLeft++;
+      nAvgRN++;
     }
   }
 
@@ -2426,15 +2405,15 @@ void findBestSplitSymmetricOuter(
     ) {
       // We check if the current value is in the left or right partition
       if (std::get<0>(*splittingDataIter) > 0) {
-        nMid++;
-        nRight--;
-        rightRunningSum -= std::get<2>(*splittingDataIter);
-        midRunningSum += std::get<2>(*splittingDataIter);
+        nLP++;
+        nRP--;
+        sRP -= std::get<2>(*splittingDataIter);
+        sLP += std::get<2>(*splittingDataIter);
       } else {
-        nMid++;
-        nLeft--;
-        leftRunningSum -= std::get<2>(*splittingDataIter);
-        midRunningSum += std::get<2>(*splittingDataIter);
+        nLN++;
+        nRN--;
+        sRN -= std::get<2>(*splittingDataIter);
+        sLN += std::get<2>(*splittingDataIter);
       }
       splittingDataIter++;
     }
@@ -2446,15 +2425,15 @@ void findBestSplitSymmetricOuter(
     ) {
       // We check if the current value is in the left or right partition
       if (std::get<0>(*averagingDataIter) > 0) {
-        nAvgMid++;
-        nAvgRight--;
-        rightAvgRunningSum -= std::get<2>(*averagingDataIter);
-        midAvgRunningSum += std::get<2>(*averagingDataIter);
+        nAvgLP++;
+        nAvgRP--;
+        sAvgRP -= std::get<2>(*averagingDataIter);
+        sAvgLP += std::get<2>(*averagingDataIter);
       } else {
-        nAvgMid++;
-        nAvgLeft--;
-        leftAvgRunningSum -= std::get<2>(*averagingDataIter);
-        midAvgRunningSum += std::get<2>(*averagingDataIter);
+        nAvgLN++;
+        nAvgRN--;
+        sAvgRN -= std::get<2>(*averagingDataIter);
+        sAvgLN += std::get<2>(*averagingDataIter);
       }
       averagingDataIter++;
     }
@@ -2490,61 +2469,78 @@ void findBestSplitSymmetricOuter(
     // Check nodesize for all three partitions
     if (
         std::min(
-          nLeft,
-          std::min(nRight,nMid)
+          std::min(nLP, nRP),
+          std::min(nLN,nRN)
         ) < splitNodeSize ||
           std::min(
-            nAvgLeft,
-            std::min(nAvgRight,nAvgMid)
+            std::min(nAvgLP, nAvgRP),
+            std::min(nAvgLN, nAvgRN)
           ) < averageNodeSize
     ) {
       featureValue = newFeatureValue;
       continue;
     }
 
-    // Get the appropriate partition weights given the means and counts
-    updatePartitionWeights(leftRunningSum/(double) nLeft,
-                           midRunningSum/(double) nMid,
-                           rightRunningSum/(double) nRight,
-                           nLeft,
-                           nRight,
-                           nMid,
-                           leftWeight,
-                           rightWeight,
-                           midWeight);
 
+    // Get the appropriate partition weights given the means and counts
+    updatePartitionWeightsOuter(
+      negativeParentWeight,
+      positiveParentWeight,
+      nLP,
+      nRP,
+      nLN,
+      nRN,
+      sLP/ (double) nLP,
+      sRP/ (double) nRP,
+      sLN/ (double) nLN,
+      sRN/ (double) nRN,
+      wLP,
+      wRP,
+      wLN,
+      wRN
+    );
 
     // If we are using monotonic constraints, we need to work out whether
     // the monotone constraints will reject a split
     if (monotone_splits) {
-      bool keepMonotoneSplit = acceptMonotoneTrinarySplit(monotone_details,
+      bool keepMonotoneSplit = acceptMonotoneOuterSplit(monotone_details,
                                                           currentFeature,
-                                                          leftWeight,
-                                                          rightWeight,
-                                                          midWeight);
+                                                          wLP,
+                                                          wLN,
+                                                          wRP,
+                                                          wRN);
 
       bool avgKeepMonotoneSplit = true;
       // If monotoneAvg, we also need to check the monotonicity of the avg set
       if (monotone_details.monotoneAvg) {
-        double midAvgWeight;
-        double leftAvgWeight;
-        double rightAvgWeight;
+        double wAvgLP;
+        double wAvgLN;
+        double wAvgRP;
+        double wAvgRN;
 
-        updatePartitionWeights(leftAvgRunningSum/(double) nAvgLeft,
-                               midAvgRunningSum/(double) nAvgMid,
-                               rightAvgRunningSum/(double) nAvgRight,
-                               nAvgLeft,
-                               nAvgRight,
-                               nAvgMid,
-                               leftAvgWeight,
-                               rightAvgWeight,
-                               midAvgWeight);
+        updatePartitionWeightsOuter(
+            negativeParentWeight,
+            positiveParentWeight,
+            nLP,
+            nRP,
+            nLN,
+            nRN,
+            sAvgLP / (double) nAvgLP,
+            sAvgRP / (double) nAvgRP,
+            sAvgLN / (double) nAvgLN,
+            sAvgRN / (double) nAvgRN,
+            wAvgLP,
+            wAvgRP,
+            wAvgLN,
+            wAvgRN
+        );
 
-        avgKeepMonotoneSplit = acceptMonotoneTrinarySplit(monotone_details,
-                                                          currentFeature,
-                                                          leftAvgWeight,
-                                                          rightAvgWeight,
-                                                          midAvgWeight);
+        avgKeepMonotoneSplit = acceptMonotoneOuterSplit(monotone_details,
+                                                        currentFeature,
+                                                        wAvgLP,
+                                                        wAvgLN,
+                                                        wAvgRP,
+                                                        wAvgRN);
 
       }
 
@@ -2556,15 +2552,18 @@ void findBestSplitSymmetricOuter(
     }
 
     // Calculate the variance of the splitting
-    double currentSplitLoss = calcSymmetricLoss(leftRunningSum,
-                                                midRunningSum,
-                                                rightRunningSum,
-                                                nLeft,
-                                                nRight,
-                                                nMid,
-                                                leftWeight,
-                                                rightWeight,
-                                                midWeight);
+    double currentSplitLoss = calcSymmetricLossOuter(sLP,
+                                                     sLN,
+                                                     sRP,
+                                                     sRN,
+                                                     nLP,
+                                                     nLN,
+                                                     nRP,
+                                                     nRN,
+                                                     wLP,
+                                                     wLN,
+                                                     wRP,
+                                                     wRN);
 
     // This is a little weird, but basically we are working with the absolute
     // values, so it is okay to use the half values
@@ -2577,15 +2576,15 @@ void findBestSplitSymmetricOuter(
       bestSplitCountAll,
       bestSplitNaDirectionAll,
       -currentSplitLoss,                 // Standard RF split loss we want to maximize due to
-      (featureMean + currentSplitValue), // the splitting trick, here we want to minimize, so we
-      //(featureMean - currentSplitValue), // flip the sign when picking the best.
-      currentFeature,
+      currentSplitValue,                 // the splitting trick, here we want to minimize, so we
+      currentFeature,                    // flip the sign when picking the best.
       bestSplitTableIndex,
-      calculateNaDirection(NaMean,
-                           leftWeight,
-                           midWeight,
-                           rightWeight),
-                           random_number_generator
+      calculateNaDirectionOuter(NaMean,
+                                wLP,
+                                wLN,
+                                wRP,
+                                wRN),
+      random_number_generator
     );
 
     // Update the old feature value
@@ -2593,6 +2592,8 @@ void findBestSplitSymmetricOuter(
   }
 }
 
+// Function to evaluate splitting loss on symmetric splits done on the
+// center partition (the partition including zero)
 double calcSymmetricLoss(
     double leftSum,
     double midSum,
@@ -2609,6 +2610,29 @@ double calcSymmetricLoss(
          ((double) nRight)*rightWeight*rightWeight -
          2*(leftWeight*leftSum + midWeight*midSum + rightWeight*rightSum));
 }
+
+double calcSymmetricLossOuter(
+  double leftPositiveSum,
+  double leftNegativeSum,
+  double rightPositiveSum,
+  double rightNegativeSum,
+  size_t leftPositiveCount,
+  size_t leftNegativeCount,
+  size_t rightPositiveCount,
+  size_t rightNegativeCount,
+  double leftPositiveWeight,
+  double leftNegativeWeight,
+  double rightPositiveWeight,
+  double rightNegativeWeight
+) {
+  return(((double) leftPositiveCount)*leftPositiveWeight*leftPositiveWeight +
+         ((double) leftNegativeCount)*leftNegativeWeight*leftNegativeWeight +
+         ((double) rightPositiveCount)*rightPositiveWeight*rightPositiveWeight +
+         ((double) rightNegativeCount)*rightNegativeWeight*rightNegativeWeight -
+         2*(leftPositiveWeight*leftPositiveSum + leftNegativeWeight*leftNegativeSum +
+            rightPositiveWeight*rightPositiveSum + rightNegativeWeight*rightNegativeSum));
+}
+
 
 void updatePartitionWeights(
     double leftMean,
@@ -2639,6 +2663,62 @@ void updatePartitionWeights(
   {
     leftWeight = midWeight + average_diff;
     rightWeight = midWeight - average_diff;
+  }
+}
+
+void updatePartitionWeightsOuter(
+    double negativeParentWeight,
+    double positiveParentWeight,
+    size_t nLP,
+    size_t nRP,
+    size_t nLN,
+    size_t nRN,
+    double uLP,
+    double uRP,
+    double uLN,
+    double uRN,
+    double &wLP,
+    double &wRP,
+    double &wLN,
+    double &wRN
+) {
+  // Update the partition weights given new partition means and sizes in order
+  // to ensure symmetric weights
+  size_t n = nLP + nRP + nLN + nRN;
+
+  // Positive and negative average differences of node means from the parent
+  // weight, weighted by the size of the partition the mean is calculated on
+  double average_diff_pos = std::fabs(positiveParentWeight -
+                                      (((double) nRP)*std::fabs(uRP) +  ((double) nLP)*std::fabs(uLP))/
+                                        ((double) nLP + nRP));
+  double average_diff_neg = std::fabs(negativeParentWeight -
+                                     (((double) nRN)*std::fabs(uRN) +  ((double) nLN)*std::fabs(uLN))/
+                                       ((double) nLN + nRN));
+
+  // Average diff is positive and negative diffs weighted by size
+  double average_diff = (((double) nLP + nRP) * average_diff_pos +
+                         ((double) nLN + nRN) * average_diff_neg) / ((double) n);
+
+  if (uLP < uRP)
+  {
+    wLP = positiveParentWeight - average_diff;
+    wRP = positiveParentWeight + average_diff;
+  }
+  else
+  {
+    wLP = positiveParentWeight + average_diff;
+    wRP = positiveParentWeight - average_diff;
+  }
+
+  if (uLN < uRN)
+  {
+    wLN = negativeParentWeight - average_diff;
+    wRN = negativeParentWeight + average_diff;
+  }
+  else
+  {
+    wLN = negativeParentWeight + average_diff;
+    wRN = negativeParentWeight - average_diff;
   }
 }
 
@@ -2784,6 +2864,19 @@ bool acceptMonotoneTrinarySplit(
   }
 }
 
+bool acceptMonotoneOuterSplit(
+    monotonic_info &monotone_details,
+    size_t currentFeature,
+    double LPMean,
+    double RPMean,
+    double LNMean,
+    double RNMean
+) {
+  // If we have the uncle mean equal to infinity, then we enforce a simple
+  // monotone split without worrying about the uncle bounds
+  return true;
+}
+
 // Helper function to calculate which partition is best for the NA observations
 // given the mean outcome of NA values and the three partition means
 int calculateNaDirection(
@@ -2798,6 +2891,23 @@ int calculateNaDirection(
     return ((int) -1);
   } else if (std::fabs(naMean - center) < std::min(std::fabs(naMean-left),std::fabs(naMean-right))) {
     return ((int) 0);
+  } else {
+    return ((int) 1);
+  }
+}
+
+int calculateNaDirectionOuter(
+    double naMean,
+    double LP,
+    double LN,
+    double RP,
+    double RN
+) {
+  if (std::isnan(naMean)) {
+    return 2;
+  } else if (std::min(std::fabs(naMean - LP), std::fabs(naMean - LN)) <
+             std::min(std::fabs(naMean - RP), std::fabs(naMean - RN))) {
+    return ((int) -1);
   } else {
     return ((int) 1);
   }

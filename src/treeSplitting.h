@@ -283,7 +283,9 @@ void findBestSplitSymmetricOuter(
         bool splitMiddle,
         size_t maxObs,
         bool monotone_splits,
-        monotonic_info monotone_details
+        monotonic_info monotone_details,
+        double positiveParentWeight,
+        double negativeParentWeight
 );
 
 double calcSymmetricLoss(
@@ -298,6 +300,21 @@ double calcSymmetricLoss(
         double midWeight
 );
 
+double calcSymmetricLossOuter(
+        double leftPositiveSum,
+        double leftNegativeSum,
+        double rightPositiveSum,
+        double rightNegativeSum,
+        size_t leftPositiveCount,
+        size_t leftNegativeCount,
+        size_t rightPositiveCount,
+        size_t rightNegativeCount,
+        double leftPositiveWeight,
+        double leftNegativeWeight,
+        double rightPositiveWeight,
+        double rightNegativeWeight
+);
+
 void updatePartitionWeights(
         double leftMean,
         double midMean,
@@ -308,6 +325,23 @@ void updatePartitionWeights(
         double &leftWeight,
         double &rightWeight,
         double &midWeight
+);
+
+void updatePartitionWeightsOuter(
+        double negativeParentWeight,
+        double positiveParentWeight,
+        size_t nLP,
+        size_t nRP,
+        size_t nLN,
+        size_t nRN,
+        double uLP,
+        double uRP,
+        double uLN,
+        double uRN,
+        double &wLP,
+        double &wRP,
+        double &wLN,
+        double &wRN
 );
 
 void determineBestSplit(
@@ -339,11 +373,28 @@ bool acceptMonotoneTrinarySplit(
         double centerPartitionMean
 );
 
+bool acceptMonotoneOuterSplit(
+        monotonic_info &monotone_details,
+        size_t currentFeature,
+        double LPMean,
+        double RPMean,
+        double LNMean,
+        double RNMean
+);
+
 int calculateNaDirection(
         double naMean,
         double left,
         double center,
         double right
+);
+
+int calculateNaDirectionOuter(
+        double naMean,
+        double LP,
+        double LN,
+        double RP,
+        double RN
 );
 
 double calculateMonotonicBound(
