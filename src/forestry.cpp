@@ -129,7 +129,7 @@ forestry::forestry(
   });
 
   //(*curr_forest)[curr_forest->size()-1]->printTree();
-  //(*curr_forest)[0]->printTree();
+  (*curr_forest)[0]->printTree();
 
 }
 

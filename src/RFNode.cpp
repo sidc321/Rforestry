@@ -211,7 +211,7 @@ void RFNode::predict(
             if ((*xNew)[0][*it] > 0) {
               outputPrediction[*it] = getPositiveWeight();
             } else {
-              outputPrediction[*it] = -1;//getNegativeWeight();
+              outputPrediction[*it] = getNegativeWeight();
             }
           } else {
             outputPrediction[*it] = predictedMean;
@@ -481,8 +481,10 @@ void RFNode::printSubtree(int indentSpace) {
               << getSplitCount()
               << ", # of average samples = "
               << getAverageCount()
-              << ", weight = "
+              << ", Positive weight = "
               << getPositiveWeight()
+              << ", Negative weight = "
+              << getNegativeWeight()
               << std::endl;
     R_FlushConsole();
     R_ProcessEvents();
@@ -499,7 +501,7 @@ void RFNode::printSubtree(int indentSpace) {
               << getTrinary()
               << ", # of average samples = "
               << getAverageCount()
-              << ", # NA's l,c,r = "
+              << ", # NA's l,r = "
               << getNaLeftCount()
               << " "
               << getNaRightCount()
