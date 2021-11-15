@@ -677,7 +677,7 @@ void forestryTree::recursivePartition(
         node_id,
         trinary,
         positiveWeight,
-        negativeWeight
+        centerSplit ? positiveWeight : negativeWeight
     );
     return;
   }
@@ -775,7 +775,7 @@ void forestryTree::recursivePartition(
         node_id,
         trinary,
         positiveWeight,
-        negativeWeight
+        centerSplit ? positiveWeight : negativeWeight
     );
 
   } else {
@@ -837,7 +837,7 @@ void forestryTree::recursivePartition(
           node_id,
           trinary,
           positiveWeight,
-          negativeWeight
+          centerSplit ? positiveWeight : negativeWeight
       );
       return;
     }
@@ -869,7 +869,7 @@ void forestryTree::recursivePartition(
             node_id,
             trinary,
             positiveWeight,
-            negativeWeight
+            centerSplit ? positiveWeight : negativeWeight
         );
         return;
       }
@@ -918,22 +918,50 @@ void forestryTree::recursivePartition(
     size_t nRN=0;
 
     if (trinary) {
-      getSplitCounts(
-        trainingData,
-        averagingSampleIndex,
-        bestSplitFeature,
-        bestSplitValue,
-        nLP,
-        nRP,
-        nLN,
-        nRN,
-        sLP,
-        sRP,
-        sLN,
-        sRN
-      );
+      if (centerSplit) {
+        getSplitCounts(
+          trainingData,
+          averagingSampleIndex,
+          bestSplitFeature,
+          bestSplitValue,
+          nLP,
+          nRP,
+          nLN,
+          nRN,
+          sLP,
+          sRP,
+          sLN,
+          sRN
+        );
 
-      updatePartitionWeightsOuter(
+        updatePartitionWeights(
+          sRN / nRN,
+          (sLP + sLN) / ((double) nLP + nLN),
+          sRP / nRP,
+          nRN,
+          nRP,
+          nLP + nLN,
+          wRN,
+          wRP,
+          wLP);
+
+      } else {
+        getSplitCounts(
+          trainingData,
+          averagingSampleIndex,
+          bestSplitFeature,
+          bestSplitValue,
+          nLP,
+          nRP,
+          nLN,
+          nRN,
+          sLP,
+          sRP,
+          sLN,
+          sRN
+        );
+
+        updatePartitionWeightsOuter(
           negativeWeight,
           positiveWeight,
           nLP,
@@ -948,6 +976,7 @@ void forestryTree::recursivePartition(
           wRP,
           wLN,
           wRN);
+      }
     }
 
     if (monotone_splits) {
