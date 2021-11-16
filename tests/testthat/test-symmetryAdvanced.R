@@ -13,8 +13,8 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
 
   rf <- forestry(x=x,
                  y=y,
-                 ntree=1,
-                 maxDepth = 1,
+                 ntree=100,
+                 maxDepth = 10,
                  seed=2131,
                  OOBhonest = TRUE,
                  scale = FALSE,
@@ -48,7 +48,8 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
                    OOBhonest = TRUE,
                    monotonicConstraints = c(1),
                    monotoneAvg = TRUE,
-                   symmetric = TRUE
+                   symmetric = TRUE,
+                   scale = FALSE
     )
 
     # predict
@@ -82,6 +83,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
                    ntree=500,
                    seed=seed_i,
                    OOBhonest = TRUE,
+                   scale = FALSE,
                    monotonicConstraints = c(1,1,-1,rep(0,7)),
                    monotoneAvg = TRUE,
                    symmetric = TRUE
@@ -109,6 +111,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
                  ntree=500,
                  seed=seed_i,
                  OOBhonest = TRUE,
+                 scale = FALSE,
                  monotonicConstraints = c(1),
                  monotoneAvg = TRUE,
                  symmetric = TRUE
@@ -123,6 +126,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
                  ntree=500,
                  seed=seed_i,
                  OOBhonest = TRUE,
+                 scale = FALSE,
                  monotonicConstraints = c(1),
                  monotoneAvg = TRUE,
                  symmetric = FALSE
@@ -158,6 +162,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
                  y=y,
                  ntree=1,
                  seed=23,
+                 scale = FALSE,
                  symmetric = TRUE,
                  maxDepth = 1)
 

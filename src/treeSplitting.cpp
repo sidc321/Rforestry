@@ -2874,6 +2874,27 @@ bool acceptMonotoneOuterSplit(
 ) {
   // If we have the uncle mean equal to infinity, then we enforce a simple
   // monotone split without worrying about the uncle bounds
+  int monotone_direction = monotone_details.monotonic_constraints[currentFeature];
+  double pos_upper_bound = monotone_details.upper_bound;
+  double pos_lower_bound = monotone_details.lower_bound;
+
+  //double neg_upper_bound = monotone_details.neg_upper_bound;
+  //double neg_lower_bound = monotone_details.neg_lower_bound;
+
+  if (monotone_direction == 1 && (LPMean > RPMean || LNMean > RNMean)) {
+    return false;
+  } else if (monotone_direction == -1 && (LPMean < RPMean || LNMean < RNMean)) {
+    return false;
+  }
+
+  // Now we check that the upper and lower bounds are respected for
+  // the positive and negative means
+  if (std::max(LPMean, RPMean) > pos_upper_bound || std::min(LPMean, RPMean) < pos_lower_bound) {
+    return false;
+  } else if (std::max(LNMean, RNMean) > pos_upper_bound || std::min(LNMean, RNMean) < pos_lower_bound) {
+    return false;
+  }
+
   return true;
 }
 

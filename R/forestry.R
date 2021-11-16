@@ -39,6 +39,7 @@ training_data_checker <- function(x,
                                   observationWeights,
                                   linear,
                                   symmetric,
+                                  scale,
                                   hasNas
                                   ) {
   x <- as.data.frame(x)
@@ -143,6 +144,12 @@ training_data_checker <- function(x,
   if (symmetric && linear) {
     stop(paste0("Symmetric forests cannot be combined with linear aggregation",
                 " please set either symmetric = FALSE or linear = FALSE."))
+  }
+
+  if (symmetric && scale) {
+    scale = FALSE
+    warning(paste0("As symmetry is implementing pseudo outcomes, this causes ",
+                   " problems when the Y values are scaled. Setting scale = FALSE"))
   }
 
   observationWeights <- observationWeights/sum(observationWeights)
@@ -274,6 +281,7 @@ training_data_checker <- function(x,
               "linFeats" = linFeats,
               "monotonicConstraints" = monotonicConstraints,
               "featureWeights" = featureWeights,
+              "scale" = scale,
               "deepFeatureWeights" = deepFeatureWeights,
               "observationWeights" = observationWeights,
               "hasNas" = hasNas))
@@ -715,6 +723,7 @@ forestry <- function(x,
       observationWeights = observationWeights,
       linear = linear,
       symmetric = symmetric,
+      scale = scale,
       hasNas = hasNas)
 
   for (variable in names(updated_variables)) {
@@ -1175,6 +1184,7 @@ multilayerForestry <- function(x,
       observationWeights = observationWeights,
       groups = groups,
       linear = linear,
+      scale = scale,
       symmetric = symmetric,
       hasNas = hasNas)
 

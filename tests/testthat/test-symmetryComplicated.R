@@ -64,6 +64,7 @@ test_that("Test missing data with several other features", {
     y=y,
     monotonicConstraints = c(-1,0),
     monotoneAvg = TRUE,
+    scale = FALSE,
     ntree=1000,
     OOBhonest = TRUE,
     symmetric = TRUE
