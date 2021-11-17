@@ -18,7 +18,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
                  seed=2131,
                  OOBhonest = TRUE,
                  scale = FALSE,
-                 #monotonicConstraints = c(1),
+                 monotonicConstraints = c(1),
                  monotoneAvg = TRUE,
                  symmetric = TRUE)
 
@@ -171,6 +171,165 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
 
   preds_na <- predict(rf, newdata = data.frame(V1 = rep(NA,5)))
   expect_equal(all.equal(preds_na, rep(median(weights),5)), TRUE)
+
+
+  x <- data.frame(V1 = rnorm(100))
+  y <- (x$V1)*2
+
+  set.seed(275)
+  rf <- forestry(x = x,
+                 y = y,
+                 maxDepth = 1,
+                 monotonicConstraints = c(1),
+                 seed = 298,
+                 symmetric = TRUE,
+                 ntree = 1)
+
+  preds <- predict(rf, newdata = x)
+
+  # Now add missings, should all go to the right
+  x$V1[which(x$V1 > 1.3)] <- NA
+
+  rf <- forestry(x = x,
+                 y = y,
+                 maxDepth = 1,
+                 seed = 298,
+                 monotonicConstraints = c(1),
+                 symmetric = TRUE,
+                 ntree = 1)
+
+  preds_overall <- predict(rf, newdata = x)
+  preds_na <- predict(rf, newdata = data.frame(V1 = c(NA,NA,NA)))
+
+  #expect_equal(all.equal(preds_na, rep(max(preds_overall),3)),TRUE)
+
+  # Test the code that was crashing before
+  set.seed(1)
+  n <- 11257
+  y <- rnorm(n)
+  x <- matrix(rnorm(2*n), ncol = 2)
+
+  rf <- forestry(
+    x=x,
+    y=y,
+    monotonicConstraints = c(-1,0),
+    monotoneAvg = TRUE,
+    ntree=1000,
+    OOBhonest = TRUE,
+    symmetric = TRUE
+  )
+
+  context("Test missing data with several other features")
+  #p <- predict(rf, newdata = x)
+  #expect_equal(length(p), n)
+  library(Rforestry)
+
+  set.seed(382)
+  # First example we can test three different regions
+  x <- rnorm(100)
+  y <- ifelse(x > 0, 1,0) + rnorm(100, mean = 0, sd = .1)
+  x <- data.frame(x)
+
+  # plot(x$x, y)
+
+  # Only make right observations missing now
+  missing_idx <- sample(which(x$x > 0), size = 10, replace = FALSE)
+  x$x[missing_idx] <- NA
+
+  rf <- forestry(x = x,
+                 y = y,
+                 seed=939,
+                 monotonicConstraints = c(1),
+                 maxDepth = 1)
+
+  preds <- predict(rf, newdata = data.frame(x = rep(NA,10)))
+
+  expect_equal(all.equal(preds, rep(0.9832234,10),tolerance = 1e-5),TRUE)
+
+  # NOW do again with symmetric ================================================
+  set.seed(382)
+  # First example we can test three different regions
+  x <- rnorm(100)
+  y <- ifelse(x > 1,1, ifelse(x < -1,-1,0)) + rnorm(100, mean = 0, sd = .1)
+  x <- data.frame(x)
+
+  # plot(x$x, y)
+
+  # Only make right observations missing now
+  missing_idx <- sample(which(x$x > 1), size = 10, replace = FALSE)
+  x$x[missing_idx] <- NA
+
+  rf <- forestry(x = x,
+                 y = y,
+                 monotonicConstraints = c(1),
+                 symmetric = TRUE,
+                 scale=FALSE,
+                 seed = 2323,
+                 ntree=1,
+                 OOBhonest = TRUE,
+                 monotoneAvg = TRUE,
+                 maxDepth = 1)
+
+  preds3 <- predict(rf, newdata = data.frame(x = rep(NA,5)))
+  p_all <- predict(rf, newdata=x)
+  expect_equal(length(preds3),5)
+  #plot(rf)
+
+
+  # Try simon's example
+  set.seed(1)
+  n <- 11257
+  y <- rnorm(n)
+  x <- matrix(rnorm(2*n),ncol=2)
+
+  rf <- forestry(
+    x=x,
+    y=y,
+    monotonicConstraints = c(-1,0),
+    monotoneAvg = TRUE,
+    scale = FALSE,
+    ntree=1000,
+    OOBhonest = TRUE,
+    symmetric = TRUE
+  )
+
+  preds2 <- predict(rf, newdata = x)
+  expect_equal(length(preds2), n)
+  # Some problems:
+  # Predicting with NA's is still random when symmetric  = TRUE
+  # Some very weird interaction of honesty and monotoneAVG
+  # Just with OOB honest the predictions are NA
+
+
+  # Test example that was crashing before
+  set.seed(382)
+  # First example we can test three different regions
+  x <- rnorm(100)
+  y <- ifelse(x > 1,1, ifelse(x < -1,-1,0)) + rnorm(100, mean = 0, sd = .1)
+  x <- data.frame(x)
+
+  # plot(x$x, y)
+
+  # Only make right observations missing now
+  missing_idx <- sample(which(x$x > 1), size = 10, replace = FALSE)
+  x$x[missing_idx] <- NA
+
+  rf <- forestry(x = x,
+                 y = y,
+                 monotonicConstraints = c(1),
+                 symmetric = TRUE,
+                 scale=FALSE,
+                 seed = 2323,
+                 ntree=1,
+                 OOBhonest = TRUE,
+                 monotoneAvg = TRUE,
+                 maxDepth = 1)
+
+  p <- predict(rf, newdata = data.frame(x = rep(NA,5)))
+  p_all <- predict(rf, newdata=x)
+
+  expect_equal(length(p), 5)
+  expect_equal(length(p_all), nrow(x))
 
 
 })

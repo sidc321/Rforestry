@@ -74,6 +74,11 @@ struct monotonic_info {
   double upper_bound;
   double lower_bound;
 
+  // Two more upper bounds, these are only used when we are doing symmetric splits
+  // and must enforce monotonicity on both the positive and negative outcomes
+  // within a single node.
+  double upper_bound_neg;
+  double lower_bound_neg;
   // This flag indicates whether or not to enforce monotonicity on the averaging
   // set as well as the splitting set
   bool monotoneAvg;

@@ -2878,8 +2878,8 @@ bool acceptMonotoneOuterSplit(
   double pos_upper_bound = monotone_details.upper_bound;
   double pos_lower_bound = monotone_details.lower_bound;
 
-  //double neg_upper_bound = monotone_details.neg_upper_bound;
-  //double neg_lower_bound = monotone_details.neg_lower_bound;
+  //double neg_upper_bound = monotone_details.upper_bound_neg;
+  //double neg_lower_bound = monotone_details.lower_bound_neg;
 
   if (monotone_direction == 1 && (LPMean > RPMean || LNMean > RNMean)) {
     return false;
@@ -2891,7 +2891,7 @@ bool acceptMonotoneOuterSplit(
   // the positive and negative means
   if (std::max(LPMean, RPMean) > pos_upper_bound || std::min(LPMean, RPMean) < pos_lower_bound) {
     return false;
-  } else if (std::max(LNMean, RNMean) > pos_upper_bound || std::min(LNMean, RNMean) < pos_lower_bound) {
+  } else if (std::max(LNMean, RNMean) > pos_upper_bound || std::min(LPMean, RPMean) < pos_lower_bound) {
     return false;
   }
 

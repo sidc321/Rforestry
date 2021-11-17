@@ -174,6 +174,8 @@ forestryTree::forestryTree(
   monotonic_details.upper_bound = std::numeric_limits<double>::max();
   monotonic_details.lower_bound = -std::numeric_limits<double>::max();
   monotonic_details.monotoneAvg = (bool) trainingData->getMonotoneAvg();
+  monotonic_details.upper_bound_neg = std::numeric_limits<double>::max();
+  monotonic_details.lower_bound_neg = -std::numeric_limits<double>::max();
 
 
   /* Recursively grow the tree */
@@ -423,7 +425,6 @@ void updateMonotoneConstraints(
     monotonic_info& monotone_details,
     monotonic_info& monotonic_details_left,
     monotonic_info& monotonic_details_right,
-    monotonic_info& monotonic_details_center,
     std::vector<int> monotonic_constraints,
     double leftMean,
     double rightMean,
@@ -452,9 +453,6 @@ void updateMonotoneConstraints(
                                              monotone_details);
     leftMidMean = (leftNodeMean + centerNodeMean)/2.0;
     rightMidMean = (rightNodeMean + centerNodeMean)/2.0;
-
-    monotonic_details_center.monotoneAvg = monotone_details.monotoneAvg;
-    monotonic_details_center.monotonic_constraints = monotonic_constraints;
   }
 
   double midMean = (leftNodeMean + rightNodeMean )/(2);
@@ -462,28 +460,35 @@ void updateMonotoneConstraints(
   // Pass down the new upper and lower bounds if it is a monotonic split,
   if (update_center) {
     if (monotone_direction == -1) {
-      monotonic_details_left.lower_bound = leftMidMean;
-      monotonic_details_right.upper_bound = rightMidMean;
-      monotonic_details_center.upper_bound = leftMidMean;
-      monotonic_details_center.lower_bound = rightMidMean;
+      monotonic_details_left.lower_bound = rightMidMean;
+      monotonic_details_left.lower_bound_neg = rightMidMean;
+      monotonic_details_left.upper_bound = leftMidMean;
+      monotonic_details_left.upper_bound_neg = leftMidMean;
 
-      monotonic_details_left.upper_bound = monotone_details.upper_bound;
+
+      monotonic_details_right.lower_bound_neg = leftMidMean;
+      monotonic_details_right.upper_bound = rightMidMean;
+
+      monotonic_details_right.upper_bound_neg = monotone_details.upper_bound;
       monotonic_details_right.lower_bound = monotone_details.lower_bound;
     } else if (monotone_direction == 1) {
-      monotonic_details_left.upper_bound = leftMidMean;
-      monotonic_details_right.lower_bound = rightMidMean;
-      monotonic_details_center.upper_bound = rightMidMean;
-      monotonic_details_center.lower_bound = leftMidMean;
+      monotonic_details_left.upper_bound = rightMidMean;
+      monotonic_details_left.lower_bound = leftMidMean;
+      monotonic_details_left.upper_bound_neg = rightMidMean;
+      monotonic_details_left.lower_bound_neg = leftMidMean;
 
-      monotonic_details_left.lower_bound =  monotone_details.lower_bound;
+      monotonic_details_right.upper_bound_neg = leftMidMean;
+      monotonic_details_right.lower_bound = rightMidMean;
+
+      monotonic_details_right.lower_bound_neg =  monotone_details.lower_bound;
       monotonic_details_right.upper_bound = monotone_details.upper_bound;
     } else {
+
+      // Just respect the previous bounds
       monotonic_details_left.upper_bound = monotone_details.upper_bound;
       monotonic_details_left.lower_bound = monotone_details.lower_bound;
       monotonic_details_right.upper_bound = monotone_details.upper_bound;
       monotonic_details_right.lower_bound = monotone_details.lower_bound;
-      monotonic_details_center.upper_bound = monotone_details.upper_bound;
-      monotonic_details_center.lower_bound = monotone_details.lower_bound;
     }
 
   } else {
@@ -506,6 +511,87 @@ void updateMonotoneConstraints(
       monotonic_details_right.upper_bound = monotone_details.upper_bound;
       monotonic_details_right.lower_bound = monotone_details.lower_bound;
     }
+  }
+}
+
+void updateMonotoneConstraintsOuter(
+    monotonic_info& monotone_details,
+    monotonic_info& monotonic_details_left,
+    monotonic_info& monotonic_details_right,
+    std::vector<int> monotonic_constraints,
+    double LPMean,
+    double LNMean,
+    double RPMean,
+    double RNMean,
+    size_t bestSplitFeature,
+    bool update_center
+) {
+  // Updates the monotone constraints when doing non center splits
+  // in symmetric trees
+  int monotone_direction = monotone_details.monotonic_constraints[bestSplitFeature];
+  monotonic_details_left.monotonic_constraints = monotonic_constraints;
+  monotonic_details_right.monotonic_constraints = monotonic_constraints;
+
+  // Also need to pass down the monotone Average Flag
+  monotonic_details_left.monotoneAvg = monotone_details.monotoneAvg;
+  monotonic_details_right.monotoneAvg = monotone_details.monotoneAvg;
+
+  // Get Mid mean positive
+  double leftNodeMeanPositive = calculateMonotonicBound(LPMean,
+                                                        monotone_details);
+  double rightNodeMeanPositive = calculateMonotonicBound(RPMean,
+                                                         monotone_details);
+
+  double midMeanPositive = (leftNodeMeanPositive + rightNodeMeanPositive )/(2);
+
+  // Get mid mean negtive
+  double leftNodeMeanNegative = calculateMonotonicBound(LNMean,
+                                                        monotone_details);
+  double rightNodeMeanNegative = calculateMonotonicBound(RNMean,
+                                                         monotone_details);
+
+  double midMeanNegative = (leftNodeMeanNegative + rightNodeMeanNegative )/(2);
+
+  // Update the monotone constraints for the positive observations
+  if (monotone_direction == -1) {
+    monotonic_details_left.lower_bound = midMeanPositive;
+    monotonic_details_right.upper_bound = midMeanPositive;
+
+    monotonic_details_left.upper_bound = monotone_details.upper_bound;
+    monotonic_details_right.lower_bound = monotone_details.lower_bound;
+  } else if (monotone_direction == 1) {
+    monotonic_details_left.upper_bound = midMeanPositive;
+    monotonic_details_right.lower_bound = midMeanPositive;
+
+    monotonic_details_left.lower_bound =  monotone_details.lower_bound;
+    monotonic_details_right.upper_bound = monotone_details.upper_bound;
+  } else {
+    // otherwise keep the old ones
+    monotonic_details_left.upper_bound = monotone_details.upper_bound;
+    monotonic_details_left.lower_bound = monotone_details.lower_bound;
+    monotonic_details_right.upper_bound = monotone_details.upper_bound;
+    monotonic_details_right.lower_bound = monotone_details.lower_bound;
+  }
+
+  // Update the monotone constraints for the negative observations
+  if (monotone_direction == -1) {
+    monotonic_details_left.lower_bound_neg = midMeanNegative;
+    monotonic_details_right.upper_bound_neg = midMeanNegative;
+
+    monotonic_details_left.upper_bound_neg = monotone_details.upper_bound_neg;
+    monotonic_details_right.lower_bound_neg = monotone_details.lower_bound_neg;
+  } else if (monotone_direction == 1) {
+    monotonic_details_left.upper_bound_neg = midMeanNegative;
+    monotonic_details_right.lower_bound_neg = midMeanNegative;
+
+    monotonic_details_left.lower_bound_neg =  monotone_details.lower_bound_neg;
+    monotonic_details_right.upper_bound_neg = monotone_details.upper_bound_neg;
+  } else {
+    // otherwise keep the old ones
+    monotonic_details_left.upper_bound_neg = monotone_details.upper_bound_neg;
+    monotonic_details_left.lower_bound_neg = monotone_details.lower_bound_neg;
+    monotonic_details_right.upper_bound_neg = monotone_details.upper_bound_neg;
+    monotonic_details_right.lower_bound_neg = monotone_details.lower_bound_neg;
   }
 }
 
@@ -979,21 +1065,37 @@ void forestryTree::recursivePartition(
       }
     }
 
+    // Update the monotonity constraints before we recursively split
     if (monotone_splits) {
-      updateMonotoneConstraints(
-        monotone_details,
-        monotonic_details_left,
-        monotonic_details_right,
-        monotonic_details_center,
-        (*trainingData->getMonotonicConstraints()),
-        trinary ? wLP : trainingData->partitionMean(&splittingLeftPartitionIndex),
-        trinary ? wRP : trainingData->partitionMean(&splittingRightPartitionIndex),
-        trinary ? wLN : 0,
-        bestSplitFeature,
-        trinary
-      );
+      if (trinary && !centerSplit) {
+        updateMonotoneConstraintsOuter(
+          monotone_details,
+          monotonic_details_left,
+          monotonic_details_right,
+          (*trainingData->getMonotonicConstraints()),
+          wLP,
+          wLN,
+          wRP,
+          wRN,
+          bestSplitFeature,
+          trinary
+        );
+      } else {
+        updateMonotoneConstraints(
+          monotone_details,
+          monotonic_details_left,
+          monotonic_details_right,
+          (*trainingData->getMonotonicConstraints()),
+          trinary ? wLP : trainingData->partitionMean(&splittingLeftPartitionIndex),
+          trinary ? wRP : trainingData->partitionMean(&splittingRightPartitionIndex),
+          trinary ? wLN : 0,
+          bestSplitFeature,
+          trinary
+        );
+      }
     }
 
+    // Recursively split on the left child node
     recursivePartition(
       leftChild.get(),
       &averagingLeftPartitionIndex,
@@ -1015,6 +1117,7 @@ void forestryTree::recursivePartition(
       wLN
     );
 
+    // Recursively split on the right child node
     recursivePartition(
       rightChild.get(),
       &averagingRightPartitionIndex,
@@ -1036,29 +1139,17 @@ void forestryTree::recursivePartition(
       wRN
     );
 
-    if (trinary) {
-      (*rootNode).setSplitNode(
-          bestSplitFeature,
-          bestSplitValue,
-          std::move(leftChild),
-          std::move(rightChild),
-          true,
-          naLeftCount,
-          naCenterCount,
-          naRightCount
-      );
-    } else {
-      (*rootNode).setSplitNode(
-          bestSplitFeature,
-          bestSplitValue,
-          std::move(leftChild),
-          std::move(rightChild),
-          false,
-          naLeftCount,
-          0,
-          naRightCount
-      );
-    }
+    (*rootNode).setSplitNode(
+        bestSplitFeature,
+        bestSplitValue,
+        std::move(leftChild),
+        std::move(rightChild),
+        trinary,
+        naLeftCount,
+        trinary ? naCenterCount : 0,
+        naRightCount
+    );
+
   }
 }
 
