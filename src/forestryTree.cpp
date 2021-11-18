@@ -1086,7 +1086,7 @@ void forestryTree::recursivePartition(
           monotonic_details_left,
           monotonic_details_right,
           (*trainingData->getMonotonicConstraints()),
-          trinary ? wLP : trainingData->partitionMean(&splittingLeftPartitionIndex),
+          trinary ? wRN : trainingData->partitionMean(&splittingLeftPartitionIndex),
           trinary ? wRP : trainingData->partitionMean(&splittingRightPartitionIndex),
           trinary ? wLN : 0,
           bestSplitFeature,

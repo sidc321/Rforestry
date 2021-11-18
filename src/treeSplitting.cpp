@@ -1988,6 +1988,9 @@ void findBestSplitSymmetric(
   double leftWeight;
   double rightWeight;
 
+  double midAvgWeight;
+  double leftAvgWeight;
+  double rightAvgWeight;
 
   double newFeatureValue;
   bool oneValueDistinctFlag = true;
@@ -2006,8 +2009,10 @@ void findBestSplitSymmetric(
   for (const auto& dataPoint : averagingData) {
     if (std::get<0>(dataPoint) > 0) {
       nAvgRight++;
+      rightAvgRunningSum += std::get<2>(dataPoint);
     } else {
       nAvgLeft++;
+      leftAvgRunningSum += std::get<2>(dataPoint);
     }
   }
 
@@ -2121,6 +2126,32 @@ void findBestSplitSymmetric(
                            rightWeight,
                            midWeight);
 
+    // Update the partition weights for the averaging set as well
+    updatePartitionWeights(leftAvgRunningSum/(double) nAvgLeft,
+                           midAvgRunningSum/(double) nAvgMid,
+                           rightAvgRunningSum/(double) nAvgRight,
+                           nAvgLeft,
+                           nAvgRight,
+                           nAvgMid,
+                           leftAvgWeight,
+                           rightAvgWeight,
+                           midAvgWeight);
+
+    // Print count of samples in the leaf node
+    // RcppThread::Rcout << "At Split point "
+    //                   << featureValue
+    //                   << " Weights L,C,R = "
+    //                   << leftWeight
+    //                   << " " << midWeight
+    //                   << " " << rightWeight
+    //                   << " averaging weights Weights L,C,R = "
+    //                   << leftAvgWeight
+    //                   << " " << midAvgWeight
+    //                   << " " << rightAvgWeight
+    //                   << std::endl;
+    // R_FlushConsole();
+    // R_ProcessEvents();
+
 
     // If we are using monotonic constraints, we need to work out whether
     // the monotone constraints will reject a split
@@ -2134,20 +2165,6 @@ void findBestSplitSymmetric(
       bool avgKeepMonotoneSplit = true;
       // If monotoneAvg, we also need to check the monotonicity of the avg set
       if (monotone_details.monotoneAvg) {
-        double midAvgWeight;
-        double leftAvgWeight;
-        double rightAvgWeight;
-
-        updatePartitionWeights(leftAvgRunningSum/(double) nAvgLeft,
-                               midAvgRunningSum/(double) nAvgMid,
-                               rightAvgRunningSum/(double) nAvgRight,
-                               nAvgLeft,
-                               nAvgRight,
-                               nAvgMid,
-                               leftAvgWeight,
-                               rightAvgWeight,
-                               midAvgWeight);
-
         avgKeepMonotoneSplit = acceptMonotoneTrinarySplit(monotone_details,
                                                           currentFeature,
                                                           leftAvgWeight,
@@ -2832,9 +2849,6 @@ bool acceptMonotoneTrinarySplit(
   int monotone_direction = monotone_details.monotonic_constraints[currentFeature];
   double upper_bound = monotone_details.upper_bound;
   double lower_bound = monotone_details.lower_bound;
-
-  // This is not right. I should check the split is correctly monotonic and then
-  // check that neither node violates the upper and lower bounds
 
   // Monotone increasing
   if ((monotone_direction == 1) && !((rightPartitionMean > centerPartitionMean) &&
