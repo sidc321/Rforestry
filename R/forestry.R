@@ -2287,11 +2287,17 @@ predictInfo <- function(object,
   acive_indices <- apply(p$weightMatrix, MARGIN = 1, function(x){return(which(x != 0))})
   # Get the relative weight given to each averaging observation outcome
   weights <- apply(p$weightMatrix, MARGIN = 1, function(x){return(x[which(x != 0)])})
+
   # Get the observations which correspond to the averaging indices used to predict each outcome
-  observations <- apply(p$weightMatrix, MARGIN = 1, function(y){return(cbind(newdata[which(y != 0),],
-                                                                             "Weight" = y[which(y != 0)]))})
   # Want observations by descending weight
+  observations <- apply(p$weightMatrix, MARGIN = 1, function(y){df <- data.frame(newdata[which(y != 0),],
+                                                                                 "Weight" = y[which(y != 0)]);
+                                                                colnames(df) <- c(colnames(newdata), "Weight");
+                                                                      return(df)})
+
   obs_sorted <- lapply(observations, function(x){return(x[order(x$Weight,decreasing=TRUE),])})
+
+
 
   return(list("weightMatrix" = p$weightMatrix,
               "avgIndices" = acive_indices,
