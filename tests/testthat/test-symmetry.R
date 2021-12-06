@@ -5,7 +5,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
   set.seed(23322)
 
   n <- 1000
-  x <- matrix(runif(2*n,min=-2,max=2), ncol=2)
+  x <- matrix(runif(1*n,min=-2,max=2), ncol=1)
 
   #y <- ifelse(x[,1] > 1,2,ifelse(x[,1] < -1, -2,0))
     y <- x[,1]**3
@@ -17,14 +17,21 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
   rf <- forestry(x=x,
                  y=y,
                  ntree=500,
-                 seed=2131,
+                 seed=212,
+                 #maxDepth = 3,
+                 #mtry=2,
                  OOBhonest = TRUE,
                  scale = FALSE,
-                 monotonicConstraints = c(1,0),
+                 monotonicConstraints = c(1),
                  monotoneAvg = TRUE,
                  symmetric = TRUE)
 
   p <- predict(rf, newdata = x)
+
+  # Make synthetic data set with V2 fixed
+  # x_new <- data.frame(V1 = seq(-2,2,length.out = 1000), V2 = rep(.2,n))
+  # p_new <- predict(rf, newdata = x_new)
+  # plot(x_new[,1],p_new)
 
   # plot(x[,1],p)
   # plot(x[,1], y)

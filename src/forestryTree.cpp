@@ -196,8 +196,8 @@ forestryTree::forestryTree(
     monotonic_details,
     symmetric,
     true,
-    0,
-    0
+    trainingData->partitionMean(getAveragingIndex()),
+    trainingData->partitionMean(getAveragingIndex())
   );
 }
 
@@ -1070,6 +1070,27 @@ void forestryTree::recursivePartition(
       }
     }
 
+    // Check if any pseudo outcomes are NaN
+    if (std::isnan(wLP) || std::isnan(wRP) || std::isnan(wLN) || std::isnan(wRN)) {
+      // Create two lists on heap and transfer the owernship to the node
+      std::unique_ptr<std::vector<size_t> > averagingSampleIndex_(
+          new std::vector<size_t>(*averagingSampleIndex)
+      );
+      std::unique_ptr<std::vector<size_t> > splittingSampleIndex_(
+          new std::vector<size_t>(*splittingSampleIndex)
+      );
+      size_t node_id;
+      assignNodeId(node_id);
+      (*rootNode).setLeafNode(
+          std::move(averagingSampleIndex_),
+          std::move(splittingSampleIndex_),
+          node_id,
+          trinary,
+          positiveWeight,
+          centerSplit ? positiveWeight : negativeWeight
+      );
+    }
+
     // Update the monotonity constraints before we recursively split
     if (monotone_splits) {
       if (trinary && !centerSplit) {
@@ -1315,7 +1336,7 @@ void forestryTree::selectBestFeature(
         gtotal,
         stotal
       );
-    } else if (trinary && centerSplit) {
+    } else if (trinary && centerSplit && (i==0)) {
       // Run symmetric splitting algorithm
       findBestSplitSymmetric(
         averagingSampleIndex,

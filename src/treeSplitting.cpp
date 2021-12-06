@@ -2497,7 +2497,7 @@ void findBestSplitSymmetricOuter(
     if (
         std::min(
           std::min(nLP, nRP),
-          std::min(nLN,nRN)
+          std::min(nLN, nRN)
         ) < splitNodeSize ||
           std::min(
             std::min(nAvgLP, nAvgRP),
@@ -2985,17 +2985,31 @@ void getSplitCounts(
     double &sLN,
     double &sRN
 ) {
+
+  size_t currentSymmetricFeature = 0;
+
   for (
       std::vector<size_t>::iterator it = averagingSampleIndex->begin();
       it != averagingSampleIndex->end();
       ++it
   ) {
 
-    double currentFeatureValue = trainingData->getPoint(*it, splitFeature);
+    double currentFeatureValue =
+      trainingData->getPoint(*it, splitFeature);
+    double currentSymmetricFeatureValue =
+      trainingData->getPoint(*it, currentSymmetricFeature);
+
     if (std::isnan(currentFeatureValue)) {
       continue;
-    } else if (std::fabs(currentFeatureValue) > splitValue) {
-      if (currentFeatureValue > 0) {
+    }
+    // If looking at the symmetric feature, we take absolute value,
+    // otherwise we look at the standard data
+    if (splitFeature == currentSymmetricFeature) {
+      currentFeatureValue = std::fabs(currentFeatureValue);
+    }
+
+    if (currentFeatureValue > splitValue) {
+      if (currentSymmetricFeatureValue > 0) {
         nRP++;
         sRP += trainingData->getOutcomePoint(*it);
       } else {
@@ -3003,7 +3017,7 @@ void getSplitCounts(
         sRN += trainingData->getOutcomePoint(*it);
       }
     } else {
-      if (currentFeatureValue > 0) {
+      if (currentSymmetricFeatureValue > 0) {
         nLP++;
         sLP += trainingData->getOutcomePoint(*it);
       } else {
