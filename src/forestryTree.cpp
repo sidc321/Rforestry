@@ -331,7 +331,8 @@ void splitDataIntoTwoParts(
     bool hasNas,
     bool trinary,
     size_t &naLeftCount,
-    size_t &naRightCount
+    size_t &naRightCount,
+    size_t symmetricFeature
 ){
 
   if (hasNas) {
@@ -361,7 +362,7 @@ void splitDataIntoTwoParts(
         } else {
 
           // If trinary splits, we only split by absolute value of the feature value
-          if (trinary) {
+          if (trinary && (splitFeature == symmetricFeature)) {
             currentFeatureValue = std::fabs(currentFeatureValue);
           }
 
@@ -408,7 +409,7 @@ void splitDataIntoTwoParts(
         double tmpFeatureValue = (*trainingData).getPoint(*it, splitFeature);
 
         // If trinary splits, we only split by absolute value of the feature value
-        if (trinary) {
+        if (trinary && (splitFeature == symmetricFeature)) {
           tmpFeatureValue = std::fabs(tmpFeatureValue);
         }
         if (tmpFeatureValue < splitValue) {
@@ -611,7 +612,8 @@ void splitData(
     size_t &naRightCount,
     bool categoical,
     bool hasNas,
-    bool trinary
+    bool trinary,
+    size_t symmetricFeature
 ) {
   size_t avgL = 0;
   size_t avgR = 0;
@@ -628,7 +630,8 @@ void splitData(
     hasNas,
     trinary,
     avgL,
-    avgR
+    avgR,
+    symmetricFeature
   );
 
   // splitting data
@@ -644,7 +647,8 @@ void splitData(
     hasNas,
     trinary,
     naLeftCount,
-    naRightCount
+    naRightCount,
+    symmetricFeature
   );
 }
 
@@ -894,7 +898,8 @@ void forestryTree::recursivePartition(
         bestSplitFeature
       ) != categorialCols.end(),
         gethasNas(),
-        trinary
+        trinary,
+        0
     );
 
 

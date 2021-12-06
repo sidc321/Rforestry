@@ -5,11 +5,12 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
   set.seed(23322)
 
   n <- 1000
-  x <- matrix(runif(n,min=-2,max=2), ncol=1)
+  x <- matrix(runif(2*n,min=-2,max=2), ncol=2)
 
   #y <- ifelse(x[,1] > 1,2,ifelse(x[,1] < -1, -2,0))
     y <- x[,1]**3
   colnames(x) <- c("V1")
+  # colnames(x) <- c("V1","V2")
   # plot(x[,1],y)
   # x[135:235,1] <- NA
 
@@ -19,7 +20,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
                  seed=2131,
                  OOBhonest = TRUE,
                  scale = FALSE,
-                 monotonicConstraints = c(1),
+                 monotonicConstraints = c(1,0),
                  monotoneAvg = TRUE,
                  symmetric = TRUE)
 

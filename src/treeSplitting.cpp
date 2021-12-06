@@ -2252,9 +2252,15 @@ void findBestSplitSymmetricOuter(
   // does not include zero, and results in two further partitions by the
   // absolute value of the feature.
 
+  // holds information about a data point for the split, specifically of the form:
+  // {symmetric feature value,
+  //  if (splitting on symmetric feature): std::fabs(current feature value) else: current feature value,
+  //  current outcome value}
   typedef std::tuple<double,double,double> dataPair;
   std::vector<dataPair> splittingData;
   std::vector<dataPair> averagingData;
+
+  size_t symmetricFeature = 0;
 
   double sLP = 0;
   double sRP = 0;
@@ -2281,6 +2287,8 @@ void findBestSplitSymmetricOuter(
     getPoint((*splittingSampleIndex)[j], currentFeature);
     double tmpOutcomeValue = (*trainingData).
     getOutcomePoint((*splittingSampleIndex)[j]);
+    double tmpSymmetricfeatureValue = (*trainingData).
+    getPoint((*splittingSampleIndex)[j], symmetricFeature);
 
     // If feature data is missing, push back to missingData vector
     if (std::isnan(tmpFeatureValue)) {
@@ -2297,8 +2305,8 @@ void findBestSplitSymmetricOuter(
       // Adding data to the internal data vector (Note: R index)
       splittingData.push_back(
         std::make_tuple(
-          tmpFeatureValue,
-          std::fabs(tmpFeatureValue),
+          tmpSymmetricfeatureValue,
+          symmetricFeature == currentFeature ? std::fabs(tmpFeatureValue) : tmpFeatureValue,
           tmpOutcomeValue
         )
       );
@@ -2317,6 +2325,8 @@ void findBestSplitSymmetricOuter(
     getPoint((*averagingSampleIndex)[j], currentFeature);
     double tmpOutcomeValue = (*trainingData).
     getOutcomePoint((*averagingSampleIndex)[j]);
+    double tmpSymmetricfeatureValue = (*trainingData).
+    getPoint((*splittingSampleIndex)[j], symmetricFeature);
 
     if (std::isnan(tmpFeatureValue)) {
       naAvgTotalSum += tmpOutcomeValue;
@@ -2332,8 +2342,8 @@ void findBestSplitSymmetricOuter(
       // Adding data to the internal data vector (Note: R index)
       averagingData.push_back(
         std::make_tuple(
-          tmpFeatureValue,
-          std::fabs(tmpFeatureValue),
+          tmpSymmetricfeatureValue,
+          symmetricFeature == currentFeature ? std::fabs(tmpFeatureValue) : tmpFeatureValue,
           tmpOutcomeValue
         )
       );

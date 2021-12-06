@@ -386,7 +386,7 @@ void RFNode::predict(
 
 
         } else {
-          if (getTrinary()) {
+          if (getTrinary() && (getSplitFeature() == 0)) {
             // If trinary splits, we split based on absolute values of the feat
             if (std::fabs(currentValue) < getSplitValue()) {
               (*leftPartitionIndex).push_back(*it);
