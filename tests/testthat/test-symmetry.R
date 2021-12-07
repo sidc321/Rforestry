@@ -11,7 +11,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
     y <- x[,2]**3
   # colnames(x) <- c("V1")
   colnames(x) <- c("V1","V2")
-  # plot(x[,1],y)
+  # plot(x[,2],y)
   # x[135:235,1] <- NA
 
   rf <- forestry(x=x,
@@ -33,7 +33,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
   # p_new <- predict(rf, newdata = x_new)
   # plot(x_new[,1],p_new)
 
-  # plot(x[,1],p)
+  # plot(x[,2],p)
   # plot(x[,1], y)
 
   # Test with Iris now
