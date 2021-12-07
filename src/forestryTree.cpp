@@ -1336,7 +1336,9 @@ void forestryTree::selectBestFeature(
         gtotal,
         stotal
       );
-    } else if (trinary && centerSplit && (i==trainingData->getSymmetricIndex())) {
+    } else if (trinary &&
+               centerSplit &&
+               (currentFeature==trainingData->getSymmetricIndex())) {
       // Run symmetric splitting algorithm
       findBestSplitSymmetric(
         averagingSampleIndex,

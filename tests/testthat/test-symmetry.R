@@ -1,23 +1,46 @@
 test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone Avg", {
 
   library(Rforestry)
-  context("Test symmetry + advanced options")
+  context("1-dimensional example")
+
   set.seed(23322)
-
   n <- 1000
-  x <- matrix(runif(2*n,min=-2,max=2), ncol=2)
-
-  #y <- ifelse(x[,1] > 1,2,ifelse(x[,1] < -1, -2,0))
-    y <- x[,2]**3
-  # colnames(x) <- c("V1")
-  colnames(x) <- c("V1","V2")
-  # plot(x[,2],y)
+  x <- matrix(runif(n,min=-2,max=2), ncol=1)
+  y <- x[,1]**3
+  colnames(x) <- c("V1")
+  # colnames(x) <- c("V1","V2")
+  # plot(x[,1],y)
   # x[135:235,1] <- NA
 
   rf <- forestry(x=x,
                  y=y,
                  ntree=500,
-                 seed=212,
+                 seed=212342,
+                 #maxDepth = 3,
+                 #mtry=2,
+                 OOBhonest = TRUE,
+                 scale = FALSE,
+                 monotonicConstraints = c(1),
+                 monotoneAvg = TRUE,
+                 symmetric = c(1))
+
+  p <- predict(rf, newdata = x)
+  plot(x[,1],p)
+
+  context("2-dimensional example")
+
+  set.seed(23322)
+  n <- 1000
+  x <- matrix(runif(2*n,min=-2,max=2), ncol=2)
+  y <- x[,2]**3
+  colnames(x) <- c("V1","V2")
+  # plot(x[,1],y)
+  # x[135:235,1] <- NA
+
+  rf <- forestry(x=x,
+                 y=y,
+                 ntree=500,
+                 seed=212342,
                  #maxDepth = 3,
                  #mtry=2,
                  OOBhonest = TRUE,
@@ -27,13 +50,39 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
                  symmetric = c(0,1))
 
   p <- predict(rf, newdata = x)
+  plot(x[,2],p)
+
+  context("2-dimensional example in second feature")
+
+  set.seed(23322)
+  n <- 1000
+  x <- matrix(runif(2*n,min=-2,max=2), ncol=2)
+  y <- x[,1]**3
+  colnames(x) <- c("V1","V2")
+  # plot(x[,2],y)
+  # x[135:235,1] <- NA
+
+  rf <- forestry(x=x,
+                 y=y,
+                 ntree=500,
+                 seed=212342,
+                 #maxDepth = 3,
+                 #mtry=2,
+                 OOBhonest = TRUE,
+                 scale = FALSE,
+                 monotonicConstraints = c(1,0),
+                 monotoneAvg = TRUE,
+                 symmetric = c(1,0))
+
+  p <- predict(rf, newdata = x)
+  plot(x[,1],p)
 
   # Make synthetic data set with V2 fixed
   # x_new <- data.frame(V1 = seq(-2,2,length.out = 1000), V2 = rep(.2,n))
   # p_new <- predict(rf, newdata = x_new)
   # plot(x_new[,1],p_new)
 
-  # plot(x[,2],p)
+  #
   # plot(x[,1], y)
 
   # Test with Iris now
