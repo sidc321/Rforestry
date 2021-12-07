@@ -208,7 +208,7 @@ void RFNode::predict(
           if (getTrinary()) {
             // In this case, we test the feature value and use the correct
             // pseudo outcome by weight
-            if ((*xNew)[0][*it] > 0) {
+            if ((*xNew)[trainingData->getSymmetricIndex()][*it] > 0) {
               outputPrediction[*it] = getPositiveWeight();
             } else {
               outputPrediction[*it] = getNegativeWeight();

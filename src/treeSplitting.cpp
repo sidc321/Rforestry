@@ -2260,7 +2260,7 @@ void findBestSplitSymmetricOuter(
   std::vector<dataPair> splittingData;
   std::vector<dataPair> averagingData;
 
-  size_t symmetricFeature = 0;
+  size_t symmetricFeature = trainingData->getSymmetricIndex();
 
   double sLP = 0;
   double sRP = 0;
@@ -2986,7 +2986,7 @@ void getSplitCounts(
     double &sRN
 ) {
 
-  size_t currentSymmetricFeature = 0;
+  size_t currentSymmetricFeature = trainingData->getSymmetricIndex();
 
   for (
       std::vector<size_t>::iterator it = averagingSampleIndex->begin();

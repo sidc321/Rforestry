@@ -899,7 +899,7 @@ void forestryTree::recursivePartition(
       ) != categorialCols.end(),
         gethasNas(),
         trinary,
-        0
+        trainingData->getSymmetricIndex()
     );
 
 

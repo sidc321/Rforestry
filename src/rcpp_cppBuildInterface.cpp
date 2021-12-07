@@ -42,7 +42,8 @@ SEXP rcpp_cppDataFrameInterface(
     Rcpp::NumericVector observationWeights,
     Rcpp::NumericVector monotonicConstraints,
     Rcpp::NumericVector groupMemberships,
-    bool monotoneAvg
+    bool monotoneAvg,
+    int symmetricIndex
 ){
 
   try {
@@ -129,7 +130,8 @@ SEXP rcpp_cppDataFrameInterface(
         std::move(observationWeightsRcpp),
         std::move(monotonicConstraintsRcpp),
         std::move(groupMembershipsRcpp),
-        (bool) monotoneAvg
+        (bool) monotoneAvg,
+        (int) symmetricIndex
     );
 
     Rcpp::XPtr<DataFrame> ptr(trainingData, true) ;
@@ -323,7 +325,8 @@ SEXP rcpp_cppBuildInterface(
           std::move(observationWeightsRcpp),
           std::move(monotoneConstraintsRcpp),
           std::move(groupMembershipsRcpp),
-          (bool) monotoneAvg
+          (bool) monotoneAvg,
+          (int) 0
       );
 
       forestry* testFullForest = new forestry(
@@ -1090,9 +1093,10 @@ Rcpp::List rcpp_reconstructree(
   Rcpp::NumericVector monotonicConstraints,
   Rcpp::NumericVector groupMemberships,
   bool monotoneAvg,
+  int symmetricIndex,
   bool hasNas,
   bool linear,
-  bool symmetric,
+  Rcpp::NumericVector symmetric,
   double overfitPenalty,
   bool doubleTree
 ){
@@ -1258,7 +1262,8 @@ Rcpp::List rcpp_reconstructree(
     std::move(observationWeightsRcpp),
     std::move(monotonicConstraintsRcpp),
     std::move(groupMembershipsRcpp),
-    (bool) monotoneAvg
+    (bool) monotoneAvg,
+    (int) symmetricIndex
   );
 
   forestry* testFullForest = new forestry(
@@ -1353,8 +1358,9 @@ Rcpp::List rcpp_reconstruct_forests(
     Rcpp::NumericVector groupMemberships,
     Rcpp::NumericVector gammas,
     bool monotoneAvg,
+    int symmetricIndex,
     bool linear,
-    bool symmetric,
+    Rcpp::NumericVector symmetric,
     double overfitPenalty,
     bool doubleTree
 ){
@@ -1557,7 +1563,8 @@ Rcpp::List rcpp_reconstruct_forests(
       std::move(observationWeightsRcpp),
       std::move(monotonicConstraintsRcpp),
       std::move(groupMembershipsRcpp),
-      (bool) monotoneAvg
+      (bool) monotoneAvg,
+      (int) symmetricIndex
     );
 
     // std::cout << "Making a forest \n";
@@ -1701,7 +1708,8 @@ Rcpp::List rcpp_reconstruct_forests(
     std::move(observationWeightsRcpp),
     std::move(monotonicConstraintsRcpp),
     std::move(groupMembershipsRcpp),
-    (bool) monotoneAvg
+    (bool) monotoneAvg,
+    (int) symmetricIndex
   );
 
 

@@ -141,12 +141,12 @@ training_data_checker <- function(x,
     stop("There must be at least one non-zero weight in observationWeights")
   }
 
-  if (symmetric && linear) {
+  if (any(symmetric!=0) && linear) {
     stop(paste0("Symmetric forests cannot be combined with linear aggregation",
                 " please set either symmetric = FALSE or linear = FALSE."))
   }
 
-  if (symmetric && scale) {
+  if (any(symmetric!=0) && scale) {
     scale = FALSE
     warning(paste0("As symmetry is implementing pseudo outcomes, this causes ",
                    " problems when the Y values are scaled. Setting scale = FALSE"))
@@ -214,7 +214,16 @@ training_data_checker <- function(x,
     stop("splitratio must in between 0 and 1.")
   }
 
-  if (symmetric) {
+  if (any(symmetric!=0)) {
+    if (length(which(symmetric!=0))>1) {
+      stop("symmetry is only implemented for one feature right now")
+    }
+    if (sum(symmetric) != 1) {
+      stop("Entries of the symmetric argument must be zero one")
+    }
+  }
+
+  if (any(symmetric!=0)) {
     # for now don't scale when we run symmetric splitting since we use pseudo outcomes
     # and wnat to retain the scaling of Y
     scale <- FALSE
@@ -374,7 +383,7 @@ setClass(
     maxObs = "numeric",
     hasNas = "logical",
     linear = "logical",
-    symmetric = "logical",
+    symmetric = "numeric",
     linFeats = "numeric",
     monotonicConstraints = "numeric",
     monotoneAvg = "logical",
@@ -424,7 +433,7 @@ setClass(
     y = "vector",
     maxObs = "numeric",
     linear = "logical",
-    symmetric = "logical",
+    symmetric = "numeric",
     linFeats = "numeric",
     monotonicConstraints = "numeric",
     monotoneAvg = "logical",
@@ -530,9 +539,10 @@ setClass(
 #' @param linear Indicator that enables Ridge penalized splits and linear aggregation
 #'   functions in the leaf nodes. This is recommended for data with linear outcomes.
 #'   For implementation details, see: https://arxiv.org/abs/1906.06463. Default is FALSE.
-#' @param symmetric An indicator for the eperimental feature which imposes symmetric
+#' @param symmetric An indicator for the experimental feature which imposes symmetric
 #'   structure on the forest through only selecting symmetric splits with symmetric
-#'   aggregation functions. Default is FALSE.
+#'   aggregation functions. Should be a vector of size ncol(x) with a single
+#'   1 entry denoting the feature to enforce symmetry on. Defaults to all zeroes.
 #' @param linFeats A vector containing the indices of which features to split
 #'   linearly on when using linear penalized splits (defaults to use all numerical features).
 #' @param monotonicConstraints Specifies monotonic relationships between the continuous
@@ -646,7 +656,7 @@ forestry <- function(x,
                      middleSplit = FALSE,
                      maxObs = length(y),
                      linear = FALSE,
-                     symmetric = FALSE,
+                     symmetric = rep(0,ncol(x)),
                      linFeats = 0:(ncol(x)-1),
                      monotonicConstraints = rep(0, ncol(x)),
                      groups = NULL,
@@ -804,6 +814,12 @@ forestry <- function(x,
       y <- (y-colMeans[ncol(processed_x)+1]) / colSd[ncol(processed_x)+1]
     }
 
+    # Get the symmetric feature if one is set
+    symmetricIndex <- 0
+    if (any(symmetric != 0)) {
+      symmetricIndex <- which(symmetric != 0)
+    }
+
     # Create rcpp object
     # Create a forest object
     forest <- tryCatch({
@@ -821,7 +837,8 @@ forestry <- function(x,
         observationWeights = observationWeights,
         monotonicConstraints = monotonicConstraints,
         groupMemberships = groupVector,
-        monotoneAvg = monotoneAvg
+        monotoneAvg = monotoneAvg,
+        symmetricIndex = symmetricIndex
       )
 
       rcppForest <- rcpp_cppBuildInterface(
@@ -861,7 +878,7 @@ forestry <- function(x,
         monotoneAvg,
         hasNas,
         linear,
-        symmetric,
+        any(symmetric != 0),
         overfitPenalty,
         doubleTree,
         TRUE,
@@ -1009,7 +1026,7 @@ forestry <- function(x,
         monotoneAvg,
         hasNas,
         linear,
-        symmetric,
+        any(symmetric != 0),
         overfitPenalty,
         doubleTree,
         TRUE,
@@ -1111,7 +1128,7 @@ multilayerForestry <- function(x,
                      middleSplit = TRUE,
                      maxObs = length(y),
                      linear = FALSE,
-                     symmetric = FALSE,
+                     symmetric = rep(0,ncol(x)),
                      linFeats = 0:(ncol(x)-1),
                      monotonicConstraints = rep(0, ncol(x)),
                      groups = NULL,
@@ -1276,7 +1293,8 @@ multilayerForestry <- function(x,
         observationWeights = observationWeights,
         monotonicConstraints = monotonicConstraints,
         groupMemberships = groupVector,
-        monotoneAvg = monotoneAvg
+        monotoneAvg = monotoneAvg,
+        symmetricIndex = symmetricIndex
       )
 
       rcppForest <- rcpp_cppMultilayerBuildInterface(
@@ -2910,6 +2928,7 @@ relinkCPP_prt <- function(object) {
           monotoneAvg = object@monotoneAvg,
           linear = object@linear,
           symmetric = object@symmetric,
+          symmetricIndex = as.integer(ifelse(any(object@symmetric != 0), which(object@symmetric != 0), 0)),
           overfitPenalty = object@overfitPenalty,
           doubleTree = object@doubleTree)
 
@@ -2962,6 +2981,7 @@ relinkCPP_prt <- function(object) {
           gammas = object@gammas,
           linear = object@linear,
           symmetric = object@symmetric,
+          symmetricIndex = as.integer(ifelse(any(object@symmetric != 0), which(object@symmetric != 0), 0)),
           overfitPenalty = object@overfitPenalty,
           doubleTree = object@doubleTree)
 

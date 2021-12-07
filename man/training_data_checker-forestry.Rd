@@ -31,6 +31,7 @@ training_data_checker(
   observationWeights,
   linear,
   symmetric,
+  scale,
   hasNas
 )
 }
@@ -132,9 +133,14 @@ This option is not allowed when sampling is done without replacement.}
 functions in the leaf nodes. This is recommended for data with linear outcomes.
 For implementation details, see: https://arxiv.org/abs/1906.06463. Default is FALSE.}
 
-\item{symmetric}{An indicator for the eperimental feature which imposes symmetric
+\item{symmetric}{An indicator for the experimental feature which imposes symmetric
 structure on the forest through only selecting symmetric splits with symmetric
-aggregation functions. Default is FALSE.}
+aggregation functions. Should be a vector of size ncol(x) with a single
+1 entry denoting the feature to enforce symmetry on. Defaults to all zeroes.}
+
+\item{scale}{A parameter which indicates whether or not we want to scale and center
+the covariates and outcome before doing the regression. This can help with
+stability, so by default is TRUE.}
 
 \item{hasNas}{indicates if there is any missingness in x.}
 }

@@ -5,12 +5,12 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
   set.seed(23322)
 
   n <- 1000
-  x <- matrix(runif(1*n,min=-2,max=2), ncol=1)
+  x <- matrix(runif(2*n,min=-2,max=2), ncol=2)
 
   #y <- ifelse(x[,1] > 1,2,ifelse(x[,1] < -1, -2,0))
-    y <- x[,1]**3
-  colnames(x) <- c("V1")
-  # colnames(x) <- c("V1","V2")
+    y <- x[,2]**3
+  # colnames(x) <- c("V1")
+  colnames(x) <- c("V1","V2")
   # plot(x[,1],y)
   # x[135:235,1] <- NA
 
@@ -22,9 +22,9 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
                  #mtry=2,
                  OOBhonest = TRUE,
                  scale = FALSE,
-                 monotonicConstraints = c(1),
+                 monotonicConstraints = c(0,1),
                  monotoneAvg = TRUE,
-                 symmetric = TRUE)
+                 symmetric = c(0,1))
 
   p <- predict(rf, newdata = x)
 
@@ -194,7 +194,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
                  monotonicConstraints = c(1),
                  seed = 298,
                  symmetric = TRUE,
-                 scale = FALSE
+                 scale = FALSE,
                  ntree = 1)
 
   preds <- predict(rf, newdata = x)
@@ -208,7 +208,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
                  seed = 298,
                  monotonicConstraints = c(1),
                  symmetric = TRUE,
-                 scale = FALSE
+                 scale = FALSE,
                  ntree = 1)
 
   preds_overall <- predict(rf, newdata = x)
@@ -228,7 +228,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
     monotonicConstraints = c(-1,0),
     monotoneAvg = TRUE,
     ntree=1000,
-    scale = FALSE
+    scale = FALSE,
     OOBhonest = TRUE,
     symmetric = TRUE
   )
