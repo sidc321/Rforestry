@@ -25,7 +25,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
                  symmetric = c(1))
 
   p <- predict(rf, newdata = x)
-  plot(x[,1],p)
+  # plot(x[,1],p)
 
   context("2-dimensional example")
 
@@ -50,7 +50,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
                  symmetric = c(0,1))
 
   p <- predict(rf, newdata = x)
-  plot(x[,2],p)
+  # plot(x[,2],p)
 
   context("2-dimensional example in second feature")
 
@@ -75,7 +75,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
                  symmetric = c(1,0))
 
   p <- predict(rf, newdata = x)
-  plot(x[,1],p)
+  # plot(x[,1],p)
 
   # Make synthetic data set with V2 fixed
   # x_new <- data.frame(V1 = seq(-2,2,length.out = 1000), V2 = rep(.2,n))
@@ -108,7 +108,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
                    OOBhonest = TRUE,
                    monotonicConstraints = c(1),
                    monotoneAvg = TRUE,
-                   symmetric = TRUE,
+                   symmetric = c(1),
                    scale = FALSE
     )
 
@@ -145,8 +145,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
                    OOBhonest = TRUE,
                    scale = FALSE,
                    monotonicConstraints = c(1,1,-1,rep(0,7)),
-                   monotoneAvg = TRUE,
-                   symmetric = TRUE
+                   monotoneAvg = TRUE
     )
 
     # predict
@@ -174,7 +173,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
                  scale = FALSE,
                  monotonicConstraints = c(1),
                  monotoneAvg = TRUE,
-                 symmetric = TRUE
+                 symmetric = c(1)
   )
 
   # predict
@@ -189,7 +188,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
                  scale = FALSE,
                  monotonicConstraints = c(1),
                  monotoneAvg = TRUE,
-                 symmetric = FALSE
+                 symmetric = c(0)
   )
 
   # predict
@@ -199,8 +198,8 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
   mse_sym <- mean((preds_na-y)**2)
   mse_std <- mean((preds_old-y)**2)
 
-  expect_equal(mse_sym, 7.7125026705, tolerance = 1e-4)
-  expect_equal(mse_std, 2.16587110963, tolerance = 1e-4)
+  expect_equal(mse_sym, 7.5058636474109, tolerance = 1e-4)
+  expect_equal(mse_std, 2.16613136977747, tolerance = 1e-4)
 
 
   # Test that predictions follow monotone constraints
@@ -223,7 +222,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
                  ntree=1,
                  seed=23,
                  scale = FALSE,
-                 symmetric = TRUE,
+                 symmetric = c(1),
                  maxDepth = 1)
 
   preds_sym <- predict(rf, newdata = x)
@@ -242,7 +241,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
                  maxDepth = 1,
                  monotonicConstraints = c(1),
                  seed = 298,
-                 symmetric = TRUE,
+                 symmetric = c(1),
                  scale = FALSE,
                  ntree = 1)
 
@@ -256,7 +255,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
                  maxDepth = 1,
                  seed = 298,
                  monotonicConstraints = c(1),
-                 symmetric = TRUE,
+                 symmetric = c(1),
                  scale = FALSE,
                  ntree = 1)
 
@@ -279,7 +278,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
     ntree=1000,
     scale = FALSE,
     OOBhonest = TRUE,
-    symmetric = TRUE
+    symmetric = c(1,0)
   )
 
   context("Test missing data with several other features")
@@ -325,7 +324,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
   rf <- forestry(x = x,
                  y = y,
                  monotonicConstraints = c(1),
-                 symmetric = TRUE,
+                 symmetric = c(1),
                  scale=FALSE,
                  seed = 2323,
                  ntree=1,
@@ -353,7 +352,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
     scale = FALSE,
     ntree=1000,
     OOBhonest = TRUE,
-    symmetric = TRUE
+    symmetric = c(1,0)
   )
 
   preds2 <- predict(rf, newdata = x)
@@ -380,7 +379,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
   rf <- forestry(x = x,
                  y = y,
                  monotonicConstraints = c(1),
-                 symmetric = TRUE,
+                 symmetric = c(1),
                  scale=FALSE,
                  seed = 2323,
                  ntree=1,

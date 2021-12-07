@@ -1276,6 +1276,12 @@ multilayerForestry <- function(x,
       y <- (y-colMeans[ncol(processed_x)+1]) / colSd[ncol(processed_x)+1]
     }
 
+    # Get the symmetric feature if one is set
+    symmetricIndex <- 0
+    if (any(symmetric != 0)) {
+      symmetricIndex <- which(symmetric != 0)
+    }
+
     # Create rcpp object
     # Create a forest object
     multilayerForestry <- tryCatch({
@@ -1436,6 +1442,12 @@ multilayerForestry <- function(x,
       colMeans[ncol(processed_x)+1] <- mean(y, na.rm = TRUE)
       colSd[ncol(processed_x)+1] <- sd(y, na.rm = TRUE)
       y <- (y-colMeans[ncol(processed_x)+1]) / colSd[ncol(processed_x)+1]
+    }
+
+    # Get the symmetric feature if one is set
+    symmetricIndex <- 0
+    if (any(symmetric != 0)) {
+      symmetricIndex <- which(symmetric != 0)
     }
 
     # Create rcpp object
