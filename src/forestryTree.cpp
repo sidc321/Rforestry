@@ -874,8 +874,7 @@ void forestryTree::recursivePartition(
     monotone_splits,
     monotone_details,
     centerSplit,
-    symmetric_details.pseudooutcomes[1],
-    symmetric_details.pseudooutcomes[0]
+    symmetric_details
   );
 
   // Create a leaf node if the current bestSplitValue is NA
@@ -1256,8 +1255,7 @@ void forestryTree::selectBestFeature(
     bool monotone_splits,
     monotonic_info &monotone_details,
     bool centerSplit,
-    double positiveWeight,
-    double negativeWeight
+    symmetric_info symmetric_details
 ){
 
   // Get the number of total features
@@ -1408,8 +1406,7 @@ void forestryTree::selectBestFeature(
         maxObs,
         monotone_splits,
         monotone_details,
-        positiveWeight,
-        negativeWeight
+        symmetric_details
       );
     } else if (gethasNas()) {
       // Run impute split

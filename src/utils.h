@@ -33,6 +33,10 @@ void group_out_sample(
     std::mt19937_64& random_number_generator
 );
 
+size_t bin_to_idx(
+    std::vector<bool> binary
+);
+
 struct tree_info {
   std::vector< int > var_id;
   // contains the variable id for a splitting node and the negative number of

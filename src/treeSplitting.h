@@ -284,8 +284,7 @@ void findBestSplitSymmetricOuter(
         size_t maxObs,
         bool monotone_splits,
         monotonic_info monotone_details,
-        double positiveParentWeight,
-        double negativeParentWeight
+        symmetric_info symmetric_details
 );
 
 double calcSymmetricLoss(

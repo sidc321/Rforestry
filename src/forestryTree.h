@@ -148,8 +148,7 @@ public:
       bool monotone_splits,
       monotonic_info &monotone_details,
       bool centerSplit,
-      double positiveWeight,
-      double negativeWeight
+      symmetric_info symmetric_details
   );
 
   void initializelinear(

@@ -2235,8 +2235,7 @@ void findBestSplitSymmetricOuter(
     size_t maxObs,
     bool monotone_splits,
     monotonic_info monotone_details,
-    double positiveParentWeight,
-    double negativeParentWeight
+    symmetric_info symmetric_details
 ) {
   // In order to revise the symmetry implementation, we now work with two
   // splitting functions, one that is called when we are splitting on an interval
@@ -2279,6 +2278,9 @@ void findBestSplitSymmetricOuter(
   typedef std::tuple<size_t, double> naPair;
   std::vector<naPair> missingSplit;
   std::vector<naPair> missingAvg;
+
+  double negativeParentWeight = symmetric_details.pseudooutcomes[0];
+  double positiveParentWeight = symmetric_details.pseudooutcomes[1];
 
 
   for (size_t j=0; j<(*splittingSampleIndex).size(); j++) {

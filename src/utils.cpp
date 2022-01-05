@@ -85,3 +85,16 @@ void group_out_sample(
   }
 }
 
+// helper function converting vector of binary flags to the size_t index
+size_t bin_to_idx(
+    std::vector<bool> binary
+) {
+  size_t idx = 0;
+  size_t base = 1;
+  for (const auto i : binary){
+    if (i)
+      idx += base;
+    base *= 2;
+  }
+  return idx;
+}
