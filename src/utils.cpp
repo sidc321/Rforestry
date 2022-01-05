@@ -98,3 +98,26 @@ size_t bin_to_idx(
   }
   return idx;
 }
+
+// Given a feature vector and a list of symmetric features
+// returns a vector of booleans indicating whether the symmetric feature
+// at each index in symmmetric_indices is positive or negative
+std::vector<bool> get_symmetric_feat_signs (
+    std::vector<double> feature_vector,
+    std::vector<size_t> symmmetric_indices
+) {
+  std::vector<bool> ret;
+  for (const auto i : symmmetric_indices) {
+    if (i >= feature_vector.size()) {
+      return ret;
+    } else {
+      if (feature_vector[i] > 0) {
+        ret.push_back(true);
+      } else {
+        ret.push_back(false);
+      }
+    }
+  }
+  return ret;
+}
+

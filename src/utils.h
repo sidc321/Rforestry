@@ -37,6 +37,11 @@ size_t bin_to_idx(
     std::vector<bool> binary
 );
 
+std::vector<bool> get_symmetric_feat_signs (
+    std::vector<double> feature_vector,
+    std::vector<size_t> symmmetric_indices
+);
+
 struct tree_info {
   std::vector< int > var_id;
   // contains the variable id for a splitting node and the negative number of

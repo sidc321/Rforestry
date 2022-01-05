@@ -2255,20 +2255,32 @@ void findBestSplitSymmetricOuter(
   // {symmetric feature value,
   //  if (splitting on symmetric feature): std::fabs(current feature value) else: current feature value,
   //  current outcome value}
-  typedef std::tuple<double,double,double> dataPair;
+  typedef std::tuple<double,double,double,size_t> dataPair;
   std::vector<dataPair> splittingData;
   std::vector<dataPair> averagingData;
 
   size_t symmetricFeature = (*trainingData->getSymmetricIndices())[0];
 
-  double sLP = 0;
-  double sRP = 0;
-  double sLN = 0;
-  double sRN = 0;
-  double sAvgLP = 0;
-  double sAvgRP = 0;
-  double sAvgLN = 0;
-  double sAvgRN = 0;
+
+  // Vector to hold the 2^|S| sums for each combination of feature signs
+  std::vector<double> SumsRight((size_t) pow(2.0,symmetric_details.symmetric_variables.size()));
+  std::vector<double> SumsRightAvg((size_t) pow(2.0,symmetric_details.symmetric_variables.size()));
+  std::vector<double> SumsLeft((size_t) pow(2.0,symmetric_details.symmetric_variables.size()));
+  std::vector<double> SumsLeftAvg((size_t) pow(2.0,symmetric_details.symmetric_variables.size()));
+
+  // Vectors to hold the 2^|S| counts for each combination of feature signs
+  std::vector<size_t> CtsRight((size_t) pow(2.0,symmetric_details.symmetric_variables.size()));
+  std::vector<size_t> CtsRightAvg((size_t) pow(2.0,symmetric_details.symmetric_variables.size()));
+  std::vector<size_t> CtsLeft((size_t) pow(2.0,symmetric_details.symmetric_variables.size()));
+  std::vector<size_t> CtsLeftAvg((size_t) pow(2.0,symmetric_details.symmetric_variables.size()));
+
+  // Vectors to hold the 2^|S| pseudo_outcomes for each combination of feature signs
+  std::vector<size_t> WtsRight((size_t) pow(2.0,symmetric_details.symmetric_variables.size()));
+  std::vector<size_t> WtsRightAvg((size_t) pow(2.0,symmetric_details.symmetric_variables.size()));
+  std::vector<size_t> WtsLeft((size_t) pow(2.0,symmetric_details.symmetric_variables.size()));
+  std::vector<size_t> WtsLeftAvg((size_t) pow(2.0,symmetric_details.symmetric_variables.size()));
+
+
   double naTotalSum = 0;
   double naAvgTotalSum = 0;
   size_t naAvgTotalCount = 0;
@@ -2309,7 +2321,8 @@ void findBestSplitSymmetricOuter(
         std::make_tuple(
           tmpSymmetricfeatureValue,
           symmetricFeature == currentFeature ? std::fabs(tmpFeatureValue) : tmpFeatureValue,
-          tmpOutcomeValue
+          tmpOutcomeValue,
+          (*splittingSampleIndex)[j]
         )
       );
     }
@@ -2346,7 +2359,8 @@ void findBestSplitSymmetricOuter(
         std::make_tuple(
           tmpSymmetricfeatureValue,
           symmetricFeature == currentFeature ? std::fabs(tmpFeatureValue) : tmpFeatureValue,
-          tmpOutcomeValue
+          tmpOutcomeValue,
+          (*splittingSampleIndex)[j]
         )
       );
     }
@@ -2374,41 +2388,38 @@ void findBestSplitSymmetricOuter(
     }
   );
 
-  size_t nLP = 0;
-  size_t nRP = 0;
-  size_t nLN = 0;
-  size_t nRN = 0;
-
-  size_t nAvgLP = 0;
-  size_t nAvgRP = 0;
-  size_t nAvgLN = 0;
-  size_t nAvgRN = 0;
-
-  double wLP = 0;
-  double wRP = 0;
-  double wLN = 0;
-  double wRN = 0;
-
   double newFeatureValue;
   bool oneValueDistinctFlag = true;
 
-  // Now iterate through split points, and initialize rhs sums
+  // For each point in the splitting data, we initialize the
+  // sum of RHS Y values, and RHS Y counts for that
+  // combination of signs
   for (const auto& dataPoint : splittingData) {
-    if (std::get<0>(dataPoint) > 0) {
-      sRP += std::get<2>(dataPoint);
-      nRP++;
-    } else {
-      sRN += std::get<2>(dataPoint);
-      nRN++;
-    }
+    // For each data point in splitting value, check the signs of the symmetric
+    // features and add the outcome to the correct entry of SumsRight + increment
+    // the correct entry of CtsRight
+    std::vector<double> obs;
+    trainingData->getObservationData(obs, std::get<3>(dataPoint));
+    std::vector<bool> feat_signs = get_symmetric_feat_signs(
+      obs,
+      symmetric_details.symmetric_variables);
+    size_t idx = bin_to_idx(feat_signs);
+
+    SumsRight[idx] += std::get<2>(dataPoint);
+    CtsRight[idx] += 1;
   }
 
   for (const auto& dataPoint : averagingData) {
-    if (std::get<0>(dataPoint) > 0) {
-      nAvgRP++;
-    } else {
-      nAvgRN++;
-    }
+    // Do the same for the averaging set
+    std::vector<double> obs;
+    trainingData->getObservationData(obs, std::get<3>(dataPoint));
+    std::vector<bool> feat_signs = get_symmetric_feat_signs(
+      obs,
+      symmetric_details.symmetric_variables);
+    size_t idx = bin_to_idx(feat_signs);
+
+    SumsRightAvg[idx] += std::get<2>(dataPoint);
+    CtsRightAvg[idx] += 1;
   }
 
   // Now work on determining the optimal split
@@ -2432,18 +2443,23 @@ void findBestSplitSymmetricOuter(
         splittingDataIter < splittingData.end() &&
           std::get<1>(*splittingDataIter) == featureValue
     ) {
-      // We check if the current value is in the left or right partition
-      if (std::get<0>(*splittingDataIter) > 0) {
-        nLP++;
-        nRP--;
-        sRP -= std::get<2>(*splittingDataIter);
-        sLP += std::get<2>(*splittingDataIter);
-      } else {
-        nLN++;
-        nRN--;
-        sRN -= std::get<2>(*splittingDataIter);
-        sLN += std::get<2>(*splittingDataIter);
-      }
+      // Pull the observation, and based on the signs of its symmetric
+      // features, get the idx for us to move outcome value from
+      // SumsRight -> SumsLeft
+      // and CtsRight -> CtsLeft
+      std::vector<double> obs;
+      trainingData->getObservationData(obs, std::get<3>(*splittingDataIter));
+      std::vector<bool> feat_signs = get_symmetric_feat_signs(
+        obs,
+        symmetric_details.symmetric_variables);
+      size_t idx = bin_to_idx(feat_signs);
+
+      // Update the counts for that combination of feature signs
+      SumsRight[idx] -= std::get<2>(*splittingDataIter);
+      SumsLeft[idx] += std::get<2>(*splittingDataIter);
+      CtsRight[idx] -= 1;
+      CtsLeft[idx] += 1;
+
       splittingDataIter++;
     }
 
@@ -2452,18 +2468,23 @@ void findBestSplitSymmetricOuter(
         averagingDataIter < averagingData.end() &&
           std::get<1>(*averagingDataIter) == featureValue
     ) {
-      // We check if the current value is in the left or right partition
-      if (std::get<0>(*averagingDataIter) > 0) {
-        nAvgLP++;
-        nAvgRP--;
-        sAvgRP -= std::get<2>(*averagingDataIter);
-        sAvgLP += std::get<2>(*averagingDataIter);
-      } else {
-        nAvgLN++;
-        nAvgRN--;
-        sAvgRN -= std::get<2>(*averagingDataIter);
-        sAvgLN += std::get<2>(*averagingDataIter);
-      }
+      // Pull the observation, and based on the signs of its symmetric
+      // features, get the idx for us to move outcome value from
+      // SumsRightAvg -> SumsLeftAvg
+      // and CtsRightAvg -> CtsLeftAvg
+      std::vector<double> obs;
+      trainingData->getObservationData(obs, std::get<3>(*averagingDataIter));
+      std::vector<bool> feat_signs = get_symmetric_feat_signs(
+        obs,
+        symmetric_details.symmetric_variables);
+      size_t idx = bin_to_idx(feat_signs);
+
+      // Update the counts for that combination of feature signs
+      SumsRightAvg[idx] -= std::get<2>(*averagingDataIter);
+      SumsLeftAvg[idx] += std::get<2>(*averagingDataIter);
+      CtsRightAvg[idx] -= 1;
+      CtsLeftAvg[idx] += 1;
+
       averagingDataIter++;
     }
 
