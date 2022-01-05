@@ -121,8 +121,7 @@ public:
     monotonic_info monotone_details,
     bool trinary,
     bool centerSplit,
-    double positiveWeight,
-    double negativeWeight
+    symmetric_info symmetric_details
   );
 
   void selectBestFeature(

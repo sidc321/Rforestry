@@ -178,6 +178,39 @@ forestryTree::forestryTree(
   monotonic_details.lower_bound_neg = -std::numeric_limits<double>::max();
 
 
+  // When doing symmetric splits, we need to create the struct for the symmetric
+  // splitting constraints
+  struct symmetric_info symmetric_details;
+
+  if (symmetric) {
+    // Initialize the symmetric indices based on those stored in trainingData
+    std::vector<size_t> indices;
+    for (size_t i = 0; i < trainingData->getSymmetricIndices()->size(); i++) {
+      if (trainingData->getSymmetricIndices()->at(i) == 1) {
+        indices.push_back(i);
+      }
+    }
+
+    // Initialize the centersplits
+    std::vector<size_t> centersplits;
+    for (size_t j = 0; j < indices.size();j++) {
+      centersplits[j] = 1;
+    }
+
+    // Initialize the pseudo outcomes to be mean of averaging set
+    std::vector<double> outcomes;
+    size_t size = (size_t) std::pow(2.0, indices.size());
+    for (size_t j = 0; j < size; j++) {
+      outcomes[j] = trainingData->partitionMean(getAveragingIndex());
+    }
+
+    // Fill in the parts of the struct
+    symmetric_details.symmetric_variables = indices;
+    symmetric_details.centerSplits = centersplits;
+    symmetric_details.pseudooutcomes = outcomes;
+  }
+
+
   /* Recursively grow the tree */
   recursivePartition(
     getRoot(),
@@ -196,8 +229,7 @@ forestryTree::forestryTree(
     monotonic_details,
     symmetric,
     true,
-    trainingData->partitionMean(getAveragingIndex()),
-    trainingData->partitionMean(getAveragingIndex())
+    symmetric_details
   );
 }
 
@@ -745,8 +777,7 @@ void forestryTree::recursivePartition(
     monotonic_info monotone_details,
     bool trinary,
     bool centerSplit,
-    double positiveWeight,
-    double negativeWeight
+    symmetric_info symmetric_details
 ){
   if ((*averagingSampleIndex).size() < getMinNodeSizeAvg() ||
       (*splittingSampleIndex).size() < getMinNodeSizeSpt() ||
@@ -766,8 +797,8 @@ void forestryTree::recursivePartition(
         std::move(splittingSampleIndex_),
         node_id,
         trinary,
-        positiveWeight,
-        centerSplit ? positiveWeight : negativeWeight
+        symmetric_details.pseudooutcomes[1],
+        centerSplit ? symmetric_details.pseudooutcomes[1] : symmetric_details.pseudooutcomes[0]
     );
     return;
   }
@@ -843,8 +874,8 @@ void forestryTree::recursivePartition(
     monotone_splits,
     monotone_details,
     centerSplit,
-    positiveWeight,
-    negativeWeight
+    symmetric_details.pseudooutcomes[1],
+    symmetric_details.pseudooutcomes[0]
   );
 
   // Create a leaf node if the current bestSplitValue is NA
@@ -864,8 +895,8 @@ void forestryTree::recursivePartition(
         std::move(splittingSampleIndex_),
         node_id,
         trinary,
-        positiveWeight,
-        centerSplit ? positiveWeight : negativeWeight
+        symmetric_details.pseudooutcomes[1],
+        centerSplit ? symmetric_details.pseudooutcomes[1] : symmetric_details.pseudooutcomes[0]
     );
 
   } else {
@@ -899,7 +930,7 @@ void forestryTree::recursivePartition(
       ) != categorialCols.end(),
         gethasNas(),
         trinary,
-        trainingData->getSymmetricIndex()
+        (*trainingData->getSymmetricIndices())[0]
     );
 
 
@@ -927,8 +958,8 @@ void forestryTree::recursivePartition(
           std::move(splittingSampleIndex_),
           node_id,
           trinary,
-          positiveWeight,
-          centerSplit ? positiveWeight : negativeWeight
+          symmetric_details.pseudooutcomes[1],
+          centerSplit ? symmetric_details.pseudooutcomes[1] : symmetric_details.pseudooutcomes[0]
       );
       return;
     }
@@ -959,8 +990,8 @@ void forestryTree::recursivePartition(
             std::move(splittingSampleIndex_),
             node_id,
             trinary,
-            positiveWeight,
-            centerSplit ? positiveWeight : negativeWeight
+            symmetric_details.pseudooutcomes[1],
+            centerSplit ? symmetric_details.pseudooutcomes[1] : symmetric_details.pseudooutcomes[0]
         );
         return;
       }
@@ -1053,8 +1084,8 @@ void forestryTree::recursivePartition(
         );
 
         updatePartitionWeightsOuter(
-          negativeWeight,
-          positiveWeight,
+          symmetric_details.pseudooutcomes[0],
+          symmetric_details.pseudooutcomes[1],
           nLP,
           nRP,
           nLN,
@@ -1086,8 +1117,8 @@ void forestryTree::recursivePartition(
           std::move(splittingSampleIndex_),
           node_id,
           trinary,
-          positiveWeight,
-          centerSplit ? positiveWeight : negativeWeight
+          symmetric_details.pseudooutcomes[1],
+          centerSplit ? symmetric_details.pseudooutcomes[1] : symmetric_details.pseudooutcomes[0]
       );
     }
 
@@ -1139,8 +1170,7 @@ void forestryTree::recursivePartition(
       monotonic_details_left,
       trinary,
       centerSplit,
-      wLP,
-      wLN
+      symmetric_details
     );
 
     // Recursively split on the right child node
@@ -1161,8 +1191,7 @@ void forestryTree::recursivePartition(
       monotonic_details_right,
       trinary,
       false,
-      wRP,
-      wRN
+      symmetric_details
     );
 
     (*rootNode).setSplitNode(
@@ -1338,7 +1367,7 @@ void forestryTree::selectBestFeature(
       );
     } else if (trinary &&
                centerSplit &&
-               (currentFeature==trainingData->getSymmetricIndex())) {
+               (currentFeature==(*trainingData->getSymmetricIndices())[0])) {
       // Run symmetric splitting algorithm
       findBestSplitSymmetric(
         averagingSampleIndex,

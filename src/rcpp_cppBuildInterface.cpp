@@ -43,7 +43,7 @@ SEXP rcpp_cppDataFrameInterface(
     Rcpp::NumericVector monotonicConstraints,
     Rcpp::NumericVector groupMemberships,
     bool monotoneAvg,
-    int symmetricIndex
+    Rcpp::NumericVector symmetricIndices
 ){
 
   try {
@@ -115,6 +115,11 @@ SEXP rcpp_cppDataFrameInterface(
         )
     );
 
+    std::unique_ptr< std::vector<size_t> > symmetricIndicesRcpp (
+        new std::vector<size_t>(
+            Rcpp::as< std::vector<size_t> >(symmetricIndices)
+        )
+    );
 
     DataFrame* trainingData = new DataFrame(
         std::move(featureDataRcpp),
@@ -131,7 +136,7 @@ SEXP rcpp_cppDataFrameInterface(
         std::move(monotonicConstraintsRcpp),
         std::move(groupMembershipsRcpp),
         (bool) monotoneAvg,
-        (int) symmetricIndex
+        std::move(symmetricIndicesRcpp)
     );
 
     Rcpp::XPtr<DataFrame> ptr(trainingData, true) ;
@@ -311,6 +316,12 @@ SEXP rcpp_cppBuildInterface(
           )
       );
 
+      std::unique_ptr< std::vector<size_t> > symmetricIndicesRcpp (
+          new std::vector<size_t>(
+              Rcpp::as< std::vector<size_t> >(groupMemberships)
+          )
+      );
+
       DataFrame* trainingData = new DataFrame(
           std::move(featureDataRcpp),
           std::move(outcomeDataRcpp),
@@ -326,7 +337,7 @@ SEXP rcpp_cppBuildInterface(
           std::move(monotoneConstraintsRcpp),
           std::move(groupMembershipsRcpp),
           (bool) monotoneAvg,
-          (int) 0
+          std::move(symmetricIndicesRcpp)
       );
 
       forestry* testFullForest = new forestry(
@@ -1248,6 +1259,12 @@ Rcpp::List rcpp_reconstructree(
       )
   );
 
+  std::unique_ptr< std::vector<size_t> > symmetricIndicesRcpp (
+      new std::vector<size_t>(
+          Rcpp::as< std::vector<size_t> >(groupMemberships)
+      )
+  );
+
   DataFrame* trainingData = new DataFrame(
     std::move(featureDataRcpp),
     std::move(outcomeDataRcpp),
@@ -1263,7 +1280,7 @@ Rcpp::List rcpp_reconstructree(
     std::move(monotonicConstraintsRcpp),
     std::move(groupMembershipsRcpp),
     (bool) monotoneAvg,
-    (int) symmetricIndex
+    std::move(symmetricIndicesRcpp)
   );
 
   forestry* testFullForest = new forestry(
@@ -1548,6 +1565,12 @@ Rcpp::List rcpp_reconstruct_forests(
         )
     );
 
+    std::unique_ptr< std::vector<size_t> > symmetricIndicesRcpp (
+        new std::vector<size_t>(
+            Rcpp::as< std::vector<size_t> >(symmetric)
+        )
+    );
+
 
     DataFrame* trainingData = new DataFrame(
       std::move(featureDataRcpp),
@@ -1564,7 +1587,7 @@ Rcpp::List rcpp_reconstruct_forests(
       std::move(monotonicConstraintsRcpp),
       std::move(groupMembershipsRcpp),
       (bool) monotoneAvg,
-      (int) symmetricIndex
+      std::move(symmetricIndicesRcpp)
     );
 
     // std::cout << "Making a forest \n";
@@ -1693,6 +1716,11 @@ Rcpp::List rcpp_reconstruct_forests(
           Rcpp::as< std::vector<size_t> >(groupMemberships)
       )
   );
+  std::unique_ptr< std::vector<size_t> > symmetricIndicesRcpp (
+      new std::vector<size_t>(
+          Rcpp::as< std::vector<size_t> >(symmetric)
+      )
+  );
 
   DataFrame* trainingData = new DataFrame(
     std::move(featureDataRcpp),
@@ -1709,7 +1737,7 @@ Rcpp::List rcpp_reconstruct_forests(
     std::move(monotonicConstraintsRcpp),
     std::move(groupMembershipsRcpp),
     (bool) monotoneAvg,
-    (int) symmetricIndex
+    std::move(symmetricIndicesRcpp)
   );
 
 

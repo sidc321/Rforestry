@@ -28,7 +28,7 @@ public:
     std::shared_ptr< std::vector<int> > monotonicConstraints,
     std::unique_ptr< std::vector<size_t> > groupMemberships,
     bool monotoneAvg,
-    int symmetricIndex
+    std::unique_ptr< std::vector<size_t> > symmetricIndices
   );
 
   double getPoint(size_t rowIndex, size_t colIndex);
@@ -102,8 +102,8 @@ public:
     return _monotoneAvg;
   }
 
-  int getSymmetricIndex() {
-    return _symmetricIndex;
+  std::vector<size_t>* getSymmetricIndices() {
+    return _symmetricIndices.get();
   }
 
   std::vector<size_t>* getRowNumbers() {
@@ -137,7 +137,7 @@ private:
   std::shared_ptr< std::vector<int> > _monotonicConstraints;
   std::unique_ptr< std::vector<size_t> > _groupMemberships;
   bool _monotoneAvg;
-  int _symmetricIndex;
+  std::unique_ptr< std::vector<size_t> > _symmetricIndices;
 };
 
 

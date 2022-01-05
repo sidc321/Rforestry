@@ -88,4 +88,27 @@ struct monotonic_info {
   };
 };
 
+// Contains the information for symmetric splitting options
+struct symmetric_info {
+
+  // Contains the (0 indexed) indices of the variables that we are enforcing
+  // symmetry on
+  std::vector<size_t> symmetric_variables;
+
+  // Indicators for each feature indicating whether or not the features
+  // are currently using the center split
+  std::vector<size_t> centerSplits;
+
+  // Contains the positive an negative pseudo outcomes for each combination of
+  // signs of the symmetric features.
+  // This is of size 2^|S| where S is the set of features with enforced symmetry
+  // The integer expansion of the feature signs gives the index of the corresponding
+  // pseudo outcome.
+  // i.e. for two features, 0 = 00 is both features negative, 1 = 10 is feature
+  // 1 positive feature 2 negative, 2 = 01 is feature 1 negative feature 2 positive,
+  // and 3 = 11 is feature 1 and 2 positive.
+  std::vector<double> pseudooutcomes;
+
+};
+
 #endif //FORESTRYCPP_UTILS_H

@@ -208,7 +208,7 @@ void RFNode::predict(
           if (getTrinary()) {
             // In this case, we test the feature value and use the correct
             // pseudo outcome by weight
-            if ((*xNew)[trainingData->getSymmetricIndex()][*it] > 0) {
+            if ((*xNew)[(*trainingData->getSymmetricIndices())[0]][*it] > 0) {
               outputPrediction[*it] = getPositiveWeight();
             } else {
               outputPrediction[*it] = getNegativeWeight();
@@ -386,7 +386,7 @@ void RFNode::predict(
 
 
         } else {
-          if (getTrinary() && (getSplitFeature() == trainingData->getSymmetricIndex())) {
+          if (getTrinary() && (getSplitFeature() == (*trainingData->getSymmetricIndices())[0])) {
             // If trinary splits, we split based on absolute values of the feat
             if (std::fabs(currentValue) < getSplitValue()) {
               (*leftPartitionIndex).push_back(*it);

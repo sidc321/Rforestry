@@ -215,15 +215,15 @@ training_data_checker <- function(x,
   }
 
   if (any(symmetric!=0)) {
-    if (length(which(symmetric!=0))>1) {
-      stop("symmetry is only implemented for one feature right now")
+    if (length(which(symmetric!=0))>10) {
+      warning("Running symmetric splits in more than 10 features is very slow")
     }
-    if (sum(symmetric) != 1) {
+    if (any(symmetric != 1 ) ) {
       stop("Entries of the symmetric argument must be zero one")
     }
   }
 
-  if (any(symmetric!=0)) {
+  if (any(symmetric !=0 )) {
     # for now don't scale when we run symmetric splitting since we use pseudo outcomes
     # and wnat to retain the scaling of Y
     scale <- FALSE
@@ -539,10 +539,14 @@ setClass(
 #' @param linear Indicator that enables Ridge penalized splits and linear aggregation
 #'   functions in the leaf nodes. This is recommended for data with linear outcomes.
 #'   For implementation details, see: https://arxiv.org/abs/1906.06463. Default is FALSE.
-#' @param symmetric An indicator for the experimental feature which imposes symmetric
-#'   structure on the forest through only selecting symmetric splits with symmetric
-#'   aggregation functions. Should be a vector of size ncol(x) with a single
+#' @param symmetric Used for the experimental feature which imposes strict symmetric
+#'   marginal structure on the predictions of the forest through only selecting
+#'   symmetric splits with symmetric aggregation functions. Should be a vector of size ncol(x) with a single
 #'   1 entry denoting the feature to enforce symmetry on. Defaults to all zeroes.
+#'   For version >= 0.9.0.83, we experimentally allow more than one feature to
+#'   enforce symmetry at a time. This should only be used for a small number of
+#'   features as it has a runtime that is exponential in the number of symmetric
+#'   features (O(N 2^|S|) where S is the set of symmetric features).
 #' @param linFeats A vector containing the indices of which features to split
 #'   linearly on when using linear penalized splits (defaults to use all numerical features).
 #' @param monotonicConstraints Specifies monotonic relationships between the continuous
@@ -838,7 +842,7 @@ forestry <- function(x,
         monotonicConstraints = monotonicConstraints,
         groupMemberships = groupVector,
         monotoneAvg = monotoneAvg,
-        symmetricIndex = symmetricIndex
+        symmetricIndices = symmetric
       )
 
       rcppForest <- rcpp_cppBuildInterface(
@@ -1300,7 +1304,7 @@ multilayerForestry <- function(x,
         monotonicConstraints = monotonicConstraints,
         groupMemberships = groupVector,
         monotoneAvg = monotoneAvg,
-        symmetricIndex = symmetricIndex
+        symmetricIndices = symmetric
       )
 
       rcppForest <- rcpp_cppMultilayerBuildInterface(

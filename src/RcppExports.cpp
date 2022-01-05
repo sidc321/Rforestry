@@ -12,8 +12,8 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // rcpp_cppDataFrameInterface
-SEXP rcpp_cppDataFrameInterface(Rcpp::List x, Rcpp::NumericVector y, Rcpp::NumericVector catCols, Rcpp::NumericVector linCols, int numRows, int numColumns, Rcpp::NumericVector featureWeights, Rcpp::NumericVector featureWeightsVariables, Rcpp::NumericVector deepFeatureWeights, Rcpp::NumericVector deepFeatureWeightsVariables, Rcpp::NumericVector observationWeights, Rcpp::NumericVector monotonicConstraints, Rcpp::NumericVector groupMemberships, bool monotoneAvg, int symmetricIndex);
-RcppExport SEXP _Rforestry_rcpp_cppDataFrameInterface(SEXP xSEXP, SEXP ySEXP, SEXP catColsSEXP, SEXP linColsSEXP, SEXP numRowsSEXP, SEXP numColumnsSEXP, SEXP featureWeightsSEXP, SEXP featureWeightsVariablesSEXP, SEXP deepFeatureWeightsSEXP, SEXP deepFeatureWeightsVariablesSEXP, SEXP observationWeightsSEXP, SEXP monotonicConstraintsSEXP, SEXP groupMembershipsSEXP, SEXP monotoneAvgSEXP, SEXP symmetricIndexSEXP) {
+SEXP rcpp_cppDataFrameInterface(Rcpp::List x, Rcpp::NumericVector y, Rcpp::NumericVector catCols, Rcpp::NumericVector linCols, int numRows, int numColumns, Rcpp::NumericVector featureWeights, Rcpp::NumericVector featureWeightsVariables, Rcpp::NumericVector deepFeatureWeights, Rcpp::NumericVector deepFeatureWeightsVariables, Rcpp::NumericVector observationWeights, Rcpp::NumericVector monotonicConstraints, Rcpp::NumericVector groupMemberships, bool monotoneAvg, Rcpp::NumericVector symmetricIndices);
+RcppExport SEXP _Rforestry_rcpp_cppDataFrameInterface(SEXP xSEXP, SEXP ySEXP, SEXP catColsSEXP, SEXP linColsSEXP, SEXP numRowsSEXP, SEXP numColumnsSEXP, SEXP featureWeightsSEXP, SEXP featureWeightsVariablesSEXP, SEXP deepFeatureWeightsSEXP, SEXP deepFeatureWeightsVariablesSEXP, SEXP observationWeightsSEXP, SEXP monotonicConstraintsSEXP, SEXP groupMembershipsSEXP, SEXP monotoneAvgSEXP, SEXP symmetricIndicesSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -31,8 +31,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type monotonicConstraints(monotonicConstraintsSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type groupMemberships(groupMembershipsSEXP);
     Rcpp::traits::input_parameter< bool >::type monotoneAvg(monotoneAvgSEXP);
-    Rcpp::traits::input_parameter< int >::type symmetricIndex(symmetricIndexSEXP);
-    rcpp_result_gen = Rcpp::wrap(rcpp_cppDataFrameInterface(x, y, catCols, linCols, numRows, numColumns, featureWeights, featureWeightsVariables, deepFeatureWeights, deepFeatureWeightsVariables, observationWeights, monotonicConstraints, groupMemberships, monotoneAvg, symmetricIndex));
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type symmetricIndices(symmetricIndicesSEXP);
+    rcpp_result_gen = Rcpp::wrap(rcpp_cppDataFrameInterface(x, y, catCols, linCols, numRows, numColumns, featureWeights, featureWeightsVariables, deepFeatureWeights, deepFeatureWeightsVariables, observationWeights, monotonicConstraints, groupMemberships, monotoneAvg, symmetricIndices));
     return rcpp_result_gen;
 END_RCPP
 }
