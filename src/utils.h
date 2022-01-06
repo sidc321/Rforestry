@@ -37,7 +37,7 @@ size_t bin_to_idx(
     std::vector<bool> binary
 );
 
-std::vector<bool> get_symmetric_feat_signs (
+std::vector<bool> get_symmetric_feat_signs(
     std::vector<double> feature_vector,
     std::vector<size_t> symmmetric_indices
 );

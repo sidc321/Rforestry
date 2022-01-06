@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <sstream>
 #include <tuple>
+#include <numeric>
 // [[Rcpp::plugins(cpp11)]]
 
 double calculateRSS(
@@ -2262,23 +2263,25 @@ void findBestSplitSymmetricOuter(
   size_t symmetricFeature = (*trainingData->getSymmetricIndices())[0];
 
 
+  size_t num_comb = (size_t) pow(2.0,symmetric_details.symmetric_variables.size());
+
   // Vector to hold the 2^|S| sums for each combination of feature signs
-  std::vector<double> SumsRight((size_t) pow(2.0,symmetric_details.symmetric_variables.size()));
-  std::vector<double> SumsRightAvg((size_t) pow(2.0,symmetric_details.symmetric_variables.size()));
-  std::vector<double> SumsLeft((size_t) pow(2.0,symmetric_details.symmetric_variables.size()));
-  std::vector<double> SumsLeftAvg((size_t) pow(2.0,symmetric_details.symmetric_variables.size()));
+  std::vector<double> SumsRight(num_comb,0.0);
+  std::vector<double> SumsRightAvg(num_comb,0.0);
+  std::vector<double> SumsLeft(num_comb,0.0);
+  std::vector<double> SumsLeftAvg(num_comb,0.0);
 
   // Vectors to hold the 2^|S| counts for each combination of feature signs
-  std::vector<size_t> CtsRight((size_t) pow(2.0,symmetric_details.symmetric_variables.size()));
-  std::vector<size_t> CtsRightAvg((size_t) pow(2.0,symmetric_details.symmetric_variables.size()));
-  std::vector<size_t> CtsLeft((size_t) pow(2.0,symmetric_details.symmetric_variables.size()));
-  std::vector<size_t> CtsLeftAvg((size_t) pow(2.0,symmetric_details.symmetric_variables.size()));
+  std::vector<size_t> CtsRight(num_comb,0);
+  std::vector<size_t> CtsRightAvg(num_comb,0);
+  std::vector<size_t> CtsLeft(num_comb,0);
+  std::vector<size_t> CtsLeftAvg(num_comb,0);
 
   // Vectors to hold the 2^|S| pseudo_outcomes for each combination of feature signs
-  std::vector<size_t> WtsRight((size_t) pow(2.0,symmetric_details.symmetric_variables.size()));
-  std::vector<size_t> WtsRightAvg((size_t) pow(2.0,symmetric_details.symmetric_variables.size()));
-  std::vector<size_t> WtsLeft((size_t) pow(2.0,symmetric_details.symmetric_variables.size()));
-  std::vector<size_t> WtsLeftAvg((size_t) pow(2.0,symmetric_details.symmetric_variables.size()));
+  std::vector<size_t> WtsRight(num_comb,0);
+  std::vector<size_t> WtsRightAvg(num_comb,0);
+  std::vector<size_t> WtsLeft(num_comb,0);
+  std::vector<size_t> WtsLeftAvg(num_comb,0);
 
 
   double naTotalSum = 0;
@@ -2519,12 +2522,12 @@ void findBestSplitSymmetricOuter(
     // Check nodesize for all three partitions
     if (
         std::min(
-          std::min(nLP, nRP),
-          std::min(nLN, nRN)
+          std::accumulate(CtsRight.begin(), CtsRight.end(), 0),
+          std::accumulate(CtsLeft.begin(), CtsLeft.end(), 0)
         ) < splitNodeSize ||
           std::min(
-            std::min(nAvgLP, nAvgRP),
-            std::min(nAvgLN, nAvgRN)
+            std::accumulate(CtsRightAvg.begin(), CtsRightAvg.end(), 0),
+            std::accumulate(CtsLeftAvg.begin(), CtsLeftAvg.end(), 0)
           ) < averageNodeSize
     ) {
       featureValue = newFeatureValue;
@@ -2532,23 +2535,29 @@ void findBestSplitSymmetricOuter(
     }
 
 
+    // Now we need to loop through all of the indices and update them
+    // from their previous versions.
     // Get the appropriate partition weights given the means and counts
-    updatePartitionWeightsOuter(
-      negativeParentWeight,
-      positiveParentWeight,
-      nLP,
-      nRP,
-      nLN,
-      nRN,
-      sLP/ (double) nLP,
-      sRP/ (double) nRP,
-      sLN/ (double) nLN,
-      sRN/ (double) nRN,
-      wLP,
-      wRP,
-      wLN,
-      wRN
-    );
+    for (size_t idx = 0; idx < num_comb; idx++) {
+      //updatePartitionWeightsOuter(
+      //  negativeParentWeight,
+      //  positiveParentWeight,
+      //  nLP,
+      //  nRP,
+      //  nLN,
+      //  nRN,
+      //  sLP/ (double) nLP,
+      //  sRP/ (double) nRP,
+      //  sLN/ (double) nLN,
+      //  sRN/ (double) nRN,
+      //  wLP,
+      //  wRP,
+      //  wLN,
+      //  wRN
+      //);
+    }
+
+
 
     // If we are using monotonic constraints, we need to work out whether
     // the monotone constraints will reject a split
