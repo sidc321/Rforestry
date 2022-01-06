@@ -50,11 +50,15 @@ void updateBestSplitTrinary(
         size_t* bestSplitFeatureAll,
         size_t* bestSplitCountAll,
         int* bestSplitNaDirectionAll,
+        std::vector<double>* bestSplitLeftWts,
+        std::vector<double>* bestSplitRightWts,
         double currentSplitLoss,
         double currentSplitValue,
         size_t currentFeature,
         size_t bestSplitTableIndex,
         int currentSplitNaDirection,
+        std::vector<double> currentSplitLeftWts,
+        std::vector<double> currentSplitRightWts,
         std::mt19937_64& random_number_generator
 );
 
@@ -263,7 +267,8 @@ void findBestSplitSymmetric(
         bool splitMiddle,
         size_t maxObs,
         bool monotone_splits,
-        monotonic_info monotone_details
+        monotonic_info monotone_details,
+        symmetric_info symmetric_details
 );
 
 void findBestSplitSymmetricOuter(
@@ -276,6 +281,8 @@ void findBestSplitSymmetricOuter(
         size_t* bestSplitFeatureAll,
         size_t* bestSplitCountAll,
         int* bestSplitNaDirectionAll,
+        std::vector<double>* bestSplitLeftWtsAll,
+        std::vector<double>* bestSplitRightWtsAll,
         DataFrame* trainingData,
         size_t splitNodeSize,
         size_t averageNodeSize,
@@ -367,12 +374,16 @@ void determineBestSplit(
         double &bestSplitValue,
         double &bestSplitLoss,
         int &bestSplitNaDir,
+        std::vector<double> &bestSplitLeftWts,
+        std::vector<double> &bestSplitRightWts,
         size_t mtry,
         double* bestSplitLossAll,
         double* bestSplitValueAll,
         size_t* bestSplitFeatureAll,
         size_t* bestSplitCountAll,
         int* bestSplitNaDirectionAll,
+        std::vector<double>* bestSplitLeftWtsAll,
+        std::vector<double>* bestSplitRightWtsAll,
         std::mt19937_64& random_number_generator
 );
 

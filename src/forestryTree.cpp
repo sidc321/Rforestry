@@ -363,8 +363,7 @@ void splitDataIntoTwoParts(
     bool hasNas,
     bool trinary,
     size_t &naLeftCount,
-    size_t &naRightCount,
-    size_t symmetricFeature
+    size_t &naRightCount
 ){
 
   if (hasNas) {
@@ -394,7 +393,11 @@ void splitDataIntoTwoParts(
         } else {
 
           // If trinary splits, we only split by absolute value of the feature value
-          if (trinary && (splitFeature == symmetricFeature)) {
+          if (trinary && (std::find(
+              trainingData->getSymmetricIndices()->begin(),
+              trainingData->getSymmetricIndices()->end(),
+              splitFeature
+          ) != trainingData->getSymmetricIndices()->end())) {
             currentFeatureValue = std::fabs(currentFeatureValue);
           }
 
@@ -441,7 +444,11 @@ void splitDataIntoTwoParts(
         double tmpFeatureValue = (*trainingData).getPoint(*it, splitFeature);
 
         // If trinary splits, we only split by absolute value of the feature value
-        if (trinary && (splitFeature == symmetricFeature)) {
+        if (trinary && (std::find(
+          trainingData->getSymmetricIndices()->begin(),
+          trainingData->getSymmetricIndices()->end(),
+          splitFeature
+        ) != trainingData->getSymmetricIndices()->end())) {
           tmpFeatureValue = std::fabs(tmpFeatureValue);
         }
         if (tmpFeatureValue < splitValue) {
@@ -644,8 +651,7 @@ void splitData(
     size_t &naRightCount,
     bool categoical,
     bool hasNas,
-    bool trinary,
-    size_t symmetricFeature
+    bool trinary
 ) {
   size_t avgL = 0;
   size_t avgR = 0;
@@ -662,8 +668,7 @@ void splitData(
     hasNas,
     trinary,
     avgL,
-    avgR,
-    symmetricFeature
+    avgR
   );
 
   // splitting data
@@ -679,8 +684,7 @@ void splitData(
     hasNas,
     trinary,
     naLeftCount,
-    naRightCount,
-    symmetricFeature
+    naRightCount
   );
 }
 
@@ -833,6 +837,8 @@ void forestryTree::recursivePartition(
   size_t naRightCount = 0;
   size_t naCenterCount = 0;
   int bestSplitNaDir = 0;
+  std::vector<double> bestSplitLeftWts = std::vector<double>();
+  std::vector<double> bestSplitRightWts = std::vector<double>();
 
   /* Arma mat memory is uninitialized now */
   arma::Mat<double> bestSplitGL;
@@ -854,6 +860,8 @@ void forestryTree::recursivePartition(
     bestSplitValue,
     bestSplitLoss,
     bestSplitNaDir,
+    bestSplitLeftWts,
+    bestSplitRightWts,
     bestSplitGL,
     bestSplitGR,
     bestSplitSL,
@@ -872,14 +880,13 @@ void forestryTree::recursivePartition(
     stotal,
     monotone_splits,
     monotone_details,
-    centerSplit,
     symmetric_details
   );
 
   // Create a leaf node if the current bestSplitValue is NA
   if (std::isnan(bestSplitValue)) {
 
-    // Create two lists on heap and transfer the owernship to the node
+    // Create two lists on heap and transfer the ownership to the node
     std::unique_ptr<std::vector<size_t> > averagingSampleIndex_(
         new std::vector<size_t>(*averagingSampleIndex)
     );
@@ -926,12 +933,8 @@ void forestryTree::recursivePartition(
         bestSplitFeature
       ) != categorialCols.end(),
         gethasNas(),
-        trinary,
-        (*trainingData->getSymmetricIndices())[0]
+        trinary
     );
-
-
-
 
     size_t lAvgSize = averagingLeftPartitionIndex.size();
     size_t rAvgSize = averagingRightPartitionIndex.size();
@@ -1231,6 +1234,8 @@ void forestryTree::selectBestFeature(
     double &bestSplitValue,
     double &bestSplitLoss,
     int &bestSplitNaDir,
+    std::vector<double> &bestSplitLeftWts,
+    std::vector<double> &bestSplitRightWts,
     arma::Mat<double> &bestSplitGL,
     arma::Mat<double> &bestSplitGR,
     arma::Mat<double> &bestSplitSL,
@@ -1249,8 +1254,7 @@ void forestryTree::selectBestFeature(
     std::shared_ptr< arma::Mat<double> > stotal,
     bool monotone_splits,
     monotonic_info &monotone_details,
-    bool centerSplit,
-    symmetric_info symmetric_details
+    symmetric_info &symmetric_details
 ){
 
   // Get the number of total features
@@ -1262,6 +1266,8 @@ void forestryTree::selectBestFeature(
   size_t* bestSplitFeatureAll = new size_t[mtry];
   size_t* bestSplitCountAll = new size_t[mtry];
   int* bestSplitNaDirectionAll = new int[mtry];
+  std::vector<double>* bestSplitLeftWtsAll = new std::vector<double>[mtry];
+  std::vector<double>* bestSplitRightWtsAll = new std::vector<double>[mtry];
 
   for (size_t i=0; i<mtry; i++) {
     bestSplitLossAll[i] = -std::numeric_limits<double>::infinity();
@@ -1269,6 +1275,8 @@ void forestryTree::selectBestFeature(
     bestSplitFeatureAll[i] = std::numeric_limits<size_t>::quiet_NaN();
     bestSplitCountAll[i] = 0;
     bestSplitNaDirectionAll[i] = 0;
+    bestSplitLeftWtsAll[i] = std::vector<double>();
+    bestSplitRightWtsAll[i] = std::vector<double>();
   }
 
   // Iterate each selected features
@@ -1358,29 +1366,6 @@ void forestryTree::selectBestFeature(
         gtotal,
         stotal
       );
-    } else if (trinary &&
-               centerSplit &&
-               (currentFeature==(*trainingData->getSymmetricIndices())[0])) {
-      // Run symmetric splitting algorithm
-      findBestSplitSymmetric(
-        averagingSampleIndex,
-        splittingSampleIndex,
-        i,
-        currentFeature,
-        bestSplitLossAll,
-        bestSplitValueAll,
-        bestSplitFeatureAll,
-        bestSplitCountAll,
-        bestSplitNaDirectionAll,
-        trainingData,
-        getMinNodeSizeToSplitSpt(),
-        getMinNodeSizeToSplitAvg(),
-        random_number_generator,
-        splitMiddle,
-        maxObs,
-        monotone_splits,
-        monotone_details
-      );
     } else if (trinary) {
       // Run symmetric splitting algorithm
       findBestSplitSymmetricOuter(
@@ -1393,6 +1378,8 @@ void forestryTree::selectBestFeature(
         bestSplitFeatureAll,
         bestSplitCountAll,
         bestSplitNaDirectionAll,
+        bestSplitLeftWtsAll,
+        bestSplitRightWtsAll,
         trainingData,
         getMinNodeSizeToSplitSpt(),
         getMinNodeSizeToSplitAvg(),
@@ -1452,12 +1439,16 @@ void forestryTree::selectBestFeature(
     bestSplitValue,
     bestSplitLoss,
     bestSplitNaDir,
+    bestSplitLeftWts,
+    bestSplitRightWts,
     mtry,
     bestSplitLossAll,
     bestSplitValueAll,
     bestSplitFeatureAll,
     bestSplitCountAll,
     bestSplitNaDirectionAll,
+    bestSplitLeftWtsAll,
+    bestSplitRightWtsAll,
     random_number_generator
   );
 
@@ -1485,6 +1476,8 @@ void forestryTree::selectBestFeature(
   delete[](bestSplitFeatureAll);
   delete[](bestSplitCountAll);
   delete[](bestSplitNaDirectionAll);
+  delete[](bestSplitLeftWtsAll);
+  delete[](bestSplitRightWtsAll);
 }
 
 void forestryTree::printTree(){

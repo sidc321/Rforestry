@@ -188,11 +188,15 @@ void updateBestSplitTrinary(
     size_t* bestSplitFeatureAll,
     size_t* bestSplitCountAll,
     int* bestSplitNaDirectionAll,
+    std::vector<double>* bestSplitLeftWts,
+    std::vector<double>* bestSplitRightWts,
     double currentSplitLoss,
     double currentSplitValue,
     size_t currentFeature,
     size_t bestSplitTableIndex,
     int currentSplitNaDirection,
+    std::vector<double> currentSplitLeftWts,
+    std::vector<double> currentSplitRightWts,
     std::mt19937_64& random_number_generator
 ) {
 
@@ -203,6 +207,8 @@ void updateBestSplitTrinary(
     bestSplitValueAll[bestSplitTableIndex] = currentSplitValue;
     bestSplitCountAll[bestSplitTableIndex] = 1;
     bestSplitNaDirectionAll[bestSplitTableIndex] = currentSplitNaDirection;
+    bestSplitLeftWts[bestSplitTableIndex] = currentSplitLeftWts;
+    bestSplitRightWts[bestSplitTableIndex] = currentSplitRightWts;
   } else {
 
     //If we are as good as the best split
@@ -218,6 +224,8 @@ void updateBestSplitTrinary(
         bestSplitFeatureAll[bestSplitTableIndex] = currentFeature;
         bestSplitValueAll[bestSplitTableIndex] = currentSplitValue;
         bestSplitNaDirectionAll[bestSplitTableIndex] = currentSplitNaDirection;
+        bestSplitLeftWts[bestSplitTableIndex] = currentSplitLeftWts;
+        bestSplitRightWts[bestSplitTableIndex] = currentSplitRightWts;
       }
     }
   }
@@ -1843,7 +1851,8 @@ void findBestSplitSymmetric(
     bool splitMiddle,
     size_t maxObs,
     bool monotone_splits,
-    monotonic_info monotone_details
+    monotonic_info monotone_details,
+    symmetric_info symmetric_details
 ) {
   // In order to model an outcome which is a symmetric function of the inputs
   // we devise a way to select nonlinear splits which (when given appropriate
@@ -1867,9 +1876,29 @@ void findBestSplitSymmetric(
   // The size of these three partitions are checked against the nodesizeStrict
   // and the pseudo outcomes are also taken for predictions.
 
-  typedef std::tuple<double,double,double> dataPair;
+  typedef std::tuple<double,double,double,size_t> dataPair;
   std::vector<dataPair> splittingData;
   std::vector<dataPair> averagingData;
+
+  size_t num_comb = (size_t) pow(2.0,symmetric_details.symmetric_variables.size());
+
+  // Vector to hold the 2^|S| sums for each combination of feature signs
+  std::vector<double> SumsRight(num_comb,0.0);
+  std::vector<double> SumsRightAvg(num_comb,0.0);
+  std::vector<double> SumsLeft(num_comb,0.0);
+  std::vector<double> SumsLeftAvg(num_comb,0.0);
+
+  // Vectors to hold the 2^|S| counts for each combination of feature signs
+  std::vector<size_t> CtsRight(num_comb,0);
+  std::vector<size_t> CtsRightAvg(num_comb,0);
+  std::vector<size_t> CtsLeft(num_comb,0);
+  std::vector<size_t> CtsLeftAvg(num_comb,0);
+
+  // Vectors to hold the 2^|S| pseudo_outcomes for each combination of feature signs
+  std::vector<double> WtsRight(num_comb,0.0);
+  std::vector<double> WtsRightAvg(num_comb,0.0);
+  std::vector<double> WtsLeft(num_comb,0.0);
+  std::vector<double> WtsLeftAvg(num_comb,0.0);
 
   double leftRunningSum = 0;
   double rightRunningSum = 0;
@@ -1877,6 +1906,7 @@ void findBestSplitSymmetric(
   double leftAvgRunningSum = 0;
   double rightAvgRunningSum = 0;
   double midAvgRunningSum = 0;
+
   double naTotalSum = 0;
   double naAvgTotalSum = 0;
   size_t naAvgTotalCount = 0;
@@ -1914,7 +1944,8 @@ void findBestSplitSymmetric(
         std::make_tuple(
           tmpFeatureValue,
           std::fabs(tmpFeatureValue),
-          tmpOutcomeValue
+          tmpOutcomeValue,
+          (*splittingSampleIndex)[j]
         )
       );
     }
@@ -1949,7 +1980,8 @@ void findBestSplitSymmetric(
         std::make_tuple(
           tmpFeatureValue,
           std::fabs(tmpFeatureValue),
-          tmpOutcomeValue
+          tmpOutcomeValue,
+          (*splittingSampleIndex)[j]
         )
       );
     }
@@ -2196,22 +2228,25 @@ void findBestSplitSymmetric(
     // values, so it is okay to use the half values
     double currentSplitValue = featureValue;
 
-    updateBestSplitTrinary(
-      bestSplitLossAll,
-      bestSplitValueAll,
-      bestSplitFeatureAll,
-      bestSplitCountAll,
-      bestSplitNaDirectionAll,
-      -currentSplitLoss,        // Standard RF split loss we want to maximize due to
-      currentSplitValue,        // the splitting trick, here we want to minimize, so we
-      currentFeature,           // flip the sign when picking the best.
-      bestSplitTableIndex,
-      calculateNaDirection(NaMean,
-                           leftWeight,
-                           midWeight,
-                           rightWeight),
-      random_number_generator
-    );
+    //updateBestSplitTrinary(
+    //  bestSplitLossAll,
+    //  bestSplitValueAll,
+    //  bestSplitFeatureAll,
+    //  bestSplitCountAll,
+    //  bestSplitNaDirectionAll,
+    //  bestSpl
+    //  -currentSplitLoss,        // Standard RF split loss we want to maximize due to
+    //  currentSplitValue,        // the splitting trick, here we want to minimize, so we
+    //  currentFeature,           // flip the sign when picking the best.
+    //  bestSplitTableIndex,
+    //  1,//calculateNaDirection(NaMean,
+    //    //                   leftWeight,
+    //    //                   midWeight,
+    //    //                   rightWeight),
+    //  WtsLeft,
+    //  WtsRight,
+    //  random_number_generator
+    //);
 
     // Update the old feature value
     featureValue = newFeatureValue;
@@ -2228,6 +2263,8 @@ void findBestSplitSymmetricOuter(
     size_t* bestSplitFeatureAll,
     size_t* bestSplitCountAll,
     int* bestSplitNaDirectionAll,
+    std::vector<double>* bestSplitLeftWtsAll,
+    std::vector<double>* bestSplitRightWtsAll,
     DataFrame* trainingData,
     size_t splitNodeSize,
     size_t averageNodeSize,
@@ -2617,6 +2654,8 @@ void findBestSplitSymmetricOuter(
       bestSplitFeatureAll,
       bestSplitCountAll,
       bestSplitNaDirectionAll,
+      bestSplitLeftWtsAll,
+      bestSplitRightWtsAll,
       -currentSplitLoss,                 // Standard RF split loss we want to maximize due to
       currentSplitValue,                 // the splitting trick, here we want to minimize, so we
       currentFeature,                    // flip the sign when picking the best.
@@ -2626,6 +2665,8 @@ void findBestSplitSymmetricOuter(
       //                          wLN,
       //                          wRP,
       //                          wRN),
+      WtsLeft,
+      WtsRight,
       random_number_generator
     );
 
@@ -2835,12 +2876,16 @@ void determineBestSplit(
     double &bestSplitValue,
     double &bestSplitLoss,
     int &bestSplitNaDir,
+    std::vector<double> &bestSplitLeftWts,
+    std::vector<double> &bestSplitRightWts,
     size_t mtry,
     double* bestSplitLossAll,
     double* bestSplitValueAll,
     size_t* bestSplitFeatureAll,
     size_t* bestSplitCountAll,
     int* bestSplitNaDirectionAll,
+    std::vector<double>* bestSplitLeftWtsAll,
+    std::vector<double>* bestSplitRightWtsAll,
     std::mt19937_64& random_number_generator
 ) {
 
@@ -2876,6 +2921,8 @@ void determineBestSplit(
     bestSplitFeature = bestSplitFeatureAll[bestFeatureIndex];
     bestSplitValue = bestSplitValueAll[bestFeatureIndex];
     bestSplitNaDir = bestSplitNaDirectionAll[bestFeatureIndex];
+    bestSplitLeftWts = bestSplitLeftWtsAll[bestFeatureIndex];
+    bestSplitRightWts = bestSplitRightWtsAll[bestFeatureIndex];
     bestSplitLoss = bestSplitLoss_;
   } else {
     // If none of the features are possible, return NA

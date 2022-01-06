@@ -129,6 +129,8 @@ public:
       double &bestSplitValue,
       double &bestSplitLoss,
       int &bestSplitNaDir,
+      std::vector<double> &bestSplitLeftWts,
+      std::vector<double> &bestSplitRightWts,
       arma::Mat<double> &bestSplitGL,
       arma::Mat<double> &bestSplitGR,
       arma::Mat<double> &bestSplitSL,
@@ -147,8 +149,7 @@ public:
       std::shared_ptr< arma::Mat<double> > stotal,
       bool monotone_splits,
       monotonic_info &monotone_details,
-      bool centerSplit,
-      symmetric_info symmetric_details
+      symmetric_info &symmetric_details
   );
 
   void initializelinear(
