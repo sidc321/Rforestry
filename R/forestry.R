@@ -146,6 +146,11 @@ training_data_checker <- function(x,
                 " please set either symmetric = FALSE or linear = FALSE."))
   }
 
+  if (any(symmetric!=0) && hasNas) {
+    stop(paste0("Symmetric forests cannot be combined with missing values",
+                " please impute the missing features before training a forest with symmetry"))
+  }
+
   if (any(symmetric!=0) && scale) {
     scale = FALSE
     warning(paste0("As symmetry is implementing pseudo outcomes, this causes ",

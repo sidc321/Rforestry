@@ -104,10 +104,6 @@ struct symmetric_info {
   // symmetry on
   std::vector<size_t> symmetric_variables;
 
-  // Indicators for each feature indicating whether or not the features
-  // are currently using the center split
-  std::vector<size_t> centerSplits;
-
   // Contains the positive an negative pseudo outcomes for each combination of
   // signs of the symmetric features.
   // This is of size 2^|S| where S is the set of features with enforced symmetry

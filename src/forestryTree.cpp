@@ -191,12 +191,6 @@ forestryTree::forestryTree(
       }
     }
 
-    // Initialize the centersplits
-    std::vector<size_t> centersplits;
-    for (size_t j = 0; j < indices.size();j++) {
-      centersplits[j] = 1;
-    }
-
     // Initialize the pseudo outcomes to be mean of averaging set
     std::vector<double> outcomes;
     size_t size = (size_t) std::pow(2.0, indices.size());
@@ -206,7 +200,6 @@ forestryTree::forestryTree(
 
     // Fill in the parts of the struct
     symmetric_details.symmetric_variables = indices;
-    symmetric_details.centerSplits = centersplits;
     symmetric_details.pseudooutcomes = outcomes;
   }
 
@@ -1019,135 +1012,48 @@ void forestryTree::recursivePartition(
     // uncle mean, and right and left child indicators
     struct monotonic_info monotonic_details_left;
     struct monotonic_info monotonic_details_right;
-    struct monotonic_info monotonic_details_center;
 
-    // Update the weights we give to different nodes
-    double wLP=0;
-    double wLN=0;
-    double wRP=0;
-    double wRN=0;
-
-    double sLP=0;
-    double sLN=0;
-    double sRP=0;
-    double sRN=0;
-
-    size_t nLP=0;
-    size_t nLN=0;
-    size_t nRP=0;
-    size_t nRN=0;
+    // Symmetric details to be passed to child nodes
+    struct symmetric_info symmetric_details_left;
+    struct symmetric_info symmetric_details_right;
 
     if (trinary) {
-      if (centerSplit) {
-        getSplitCounts(
-          trainingData,
-          averagingSampleIndex,
-          bestSplitFeature,
-          bestSplitValue,
-          nLP,
-          nRP,
-          nLN,
-          nRN,
-          sLP,
-          sRP,
-          sLN,
-          sRN
-        );
+      symmetric_details_left.pseudooutcomes = bestSplitLeftWts;
+      symmetric_details_left.symmetric_variables = symmetric_details.symmetric_variables;
 
-        updatePartitionWeights(
-          sRN / nRN,
-          (sLP + sLN) / ((double) nLP + nLN),
-          sRP / nRP,
-          nRN,
-          nRP,
-          nLP + nLN,
-          wRN,
-          wRP,
-          wLP);
-
-      } else {
-        getSplitCounts(
-          trainingData,
-          averagingSampleIndex,
-          bestSplitFeature,
-          bestSplitValue,
-          nLP,
-          nRP,
-          nLN,
-          nRN,
-          sLP,
-          sRP,
-          sLN,
-          sRN
-        );
-
-        updatePartitionWeightsOuter(
-          symmetric_details.pseudooutcomes[0],
-          symmetric_details.pseudooutcomes[1],
-          nLP,
-          nRP,
-          nLN,
-          nRN,
-          sLP / nLP,
-          sRP / nRP,
-          sLN / nLN,
-          sRN / nRN,
-          wLP,
-          wRP,
-          wLN,
-          wRN);
-      }
-    }
-
-    // Check if any pseudo outcomes are NaN
-    if (std::isnan(wLP) || std::isnan(wRP) || std::isnan(wLN) || std::isnan(wRN)) {
-      // Create two lists on heap and transfer the owernship to the node
-      std::unique_ptr<std::vector<size_t> > averagingSampleIndex_(
-          new std::vector<size_t>(*averagingSampleIndex)
-      );
-      std::unique_ptr<std::vector<size_t> > splittingSampleIndex_(
-          new std::vector<size_t>(*splittingSampleIndex)
-      );
-      size_t node_id;
-      assignNodeId(node_id);
-      (*rootNode).setLeafNode(
-          std::move(averagingSampleIndex_),
-          std::move(splittingSampleIndex_),
-          node_id,
-          trinary,
-          symmetric_details.pseudooutcomes
-      );
+      symmetric_details_right.pseudooutcomes = bestSplitRightWts;
+      symmetric_details_right.symmetric_variables = symmetric_details.symmetric_variables;
     }
 
     // Update the monotonity constraints before we recursively split
-    if (monotone_splits) {
-      if (trinary && !centerSplit) {
-        updateMonotoneConstraintsOuter(
-          monotone_details,
-          monotonic_details_left,
-          monotonic_details_right,
-          (*trainingData->getMonotonicConstraints()),
-          wLP,
-          wLN,
-          wRP,
-          wRN,
-          bestSplitFeature,
-          trinary
-        );
-      } else {
-        updateMonotoneConstraints(
-          monotone_details,
-          monotonic_details_left,
-          monotonic_details_right,
-          (*trainingData->getMonotonicConstraints()),
-          trinary ? wRN : trainingData->partitionMean(&splittingLeftPartitionIndex),
-          trinary ? wRP : trainingData->partitionMean(&splittingRightPartitionIndex),
-          trinary ? wLN : 0,
-          bestSplitFeature,
-          trinary
-        );
-      }
-    }
+    //if (monotone_splits) {
+    //  if (trinary && !centerSplit) {
+    //    updateMonotoneConstraintsOuter(
+    //      monotone_details,
+    //      monotonic_details_left,
+    //      monotonic_details_right,
+    //      (*trainingData->getMonotonicConstraints()),
+    //      wLP,
+    //      wLN,
+    //      wRP,
+    //      wRN,
+    //      bestSplitFeature,
+    //      trinary
+    //    );
+    //  } else {
+    //    updateMonotoneConstraints(
+    //      monotone_details,
+    //      monotonic_details_left,
+    //      monotonic_details_right,
+    //      (*trainingData->getMonotonicConstraints()),
+    //      trinary ? wRN : trainingData->partitionMean(&splittingLeftPartitionIndex),
+    //      trinary ? wRP : trainingData->partitionMean(&splittingRightPartitionIndex),
+    //      trinary ? wLN : 0,
+    //      bestSplitFeature,
+    //      trinary
+    //    );
+    //  }
+    //}
 
     // Recursively split on the left child node
     recursivePartition(
@@ -1167,7 +1073,7 @@ void forestryTree::recursivePartition(
       monotonic_details_left,
       trinary,
       centerSplit,
-      symmetric_details
+      symmetric_details_left
     );
 
     // Recursively split on the right child node
@@ -1188,7 +1094,7 @@ void forestryTree::recursivePartition(
       monotonic_details_right,
       trinary,
       false,
-      symmetric_details
+      symmetric_details_right
     );
 
     (*rootNode).setSplitNode(
