@@ -13,8 +13,7 @@ std::mutex mutex_weightMatrix;
 RFNode::RFNode():
   _averagingSampleIndex(nullptr), _splittingSampleIndex(nullptr),
   _splitFeature(0), _splitValue(0),_trinary(false),
-  _weightNegative(0),_weightPositive(0),_leftChild(nullptr),
-  _rightChild(nullptr),_naLeftCount(0), _naRightCount(0),
+  _leftChild(nullptr),_rightChild(nullptr),_naLeftCount(0), _naRightCount(0),
   _averageCount(0), _splitCount(0) {}
 
 RFNode::~RFNode() {
@@ -26,8 +25,7 @@ void RFNode::setLeafNode(
   std::unique_ptr< std::vector<size_t> > splittingSampleIndex,
   size_t nodeId,
   bool trinary,
-  double weightPositive,
-  double weightNegative
+  std::vector<double> weights
 ) {
   if (
       (*averagingSampleIndex).size() == 0 &&
@@ -45,8 +43,7 @@ void RFNode::setLeafNode(
   this->_splitCount = (*_splittingSampleIndex).size();
   if (trinary) {
     this->_trinary = trinary;
-    this->_weightNegative = weightNegative;
-    this->_weightPositive = weightPositive;
+    this->_weights = weights;
   }
 }
 
@@ -208,11 +205,19 @@ void RFNode::predict(
           if (getTrinary()) {
             // In this case, we test the feature value and use the correct
             // pseudo outcome by weight
-            if ((*xNew)[(*trainingData->getSymmetricIndices())[0]][*it] > 0) {
-              outputPrediction[*it] = getPositiveWeight();
-            } else {
-              outputPrediction[*it] = getNegativeWeight();
+            std::vector<bool> signs;
+            for (const auto sym_idx : (*trainingData->getSymmetricIndices())) {
+              if ((*xNew)[(*trainingData->getSymmetricIndices())[sym_idx]][*it] > 0) {
+                signs.push_back(true);
+              } else {
+                signs.push_back(false);
+              }
             }
+
+            // Pull the correct pseudo outcome
+            size_t weight_idx = bin_to_idx(signs);
+            outputPrediction[*it] = this->getWeights()[weight_idx];
+
           } else {
             outputPrediction[*it] = predictedMean;
           }
@@ -481,10 +486,6 @@ void RFNode::printSubtree(int indentSpace) {
               << getSplitCount()
               << ", # of average samples = "
               << getAverageCount()
-              << ", Positive weight = "
-              << getPositiveWeight()
-              << ", Negative weight = "
-              << getNegativeWeight()
               << std::endl;
     R_FlushConsole();
     R_ProcessEvents();

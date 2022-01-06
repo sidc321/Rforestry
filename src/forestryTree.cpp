@@ -797,8 +797,7 @@ void forestryTree::recursivePartition(
         std::move(splittingSampleIndex_),
         node_id,
         trinary,
-        symmetric_details.pseudooutcomes[1],
-        centerSplit ? symmetric_details.pseudooutcomes[1] : symmetric_details.pseudooutcomes[0]
+        symmetric_details.pseudooutcomes
     );
     return;
   }
@@ -894,8 +893,7 @@ void forestryTree::recursivePartition(
         std::move(splittingSampleIndex_),
         node_id,
         trinary,
-        symmetric_details.pseudooutcomes[1],
-        centerSplit ? symmetric_details.pseudooutcomes[1] : symmetric_details.pseudooutcomes[0]
+        symmetric_details.pseudooutcomes
     );
 
   } else {
@@ -957,8 +955,7 @@ void forestryTree::recursivePartition(
           std::move(splittingSampleIndex_),
           node_id,
           trinary,
-          symmetric_details.pseudooutcomes[1],
-          centerSplit ? symmetric_details.pseudooutcomes[1] : symmetric_details.pseudooutcomes[0]
+          symmetric_details.pseudooutcomes
       );
       return;
     }
@@ -989,8 +986,7 @@ void forestryTree::recursivePartition(
             std::move(splittingSampleIndex_),
             node_id,
             trinary,
-            symmetric_details.pseudooutcomes[1],
-            centerSplit ? symmetric_details.pseudooutcomes[1] : symmetric_details.pseudooutcomes[0]
+            symmetric_details.pseudooutcomes
         );
         return;
       }
@@ -1116,8 +1112,7 @@ void forestryTree::recursivePartition(
           std::move(splittingSampleIndex_),
           node_id,
           trinary,
-          symmetric_details.pseudooutcomes[1],
-          centerSplit ? symmetric_details.pseudooutcomes[1] : symmetric_details.pseudooutcomes[0]
+          symmetric_details.pseudooutcomes
       );
     }
 
@@ -2014,14 +2009,14 @@ void forestryTree::recursive_reconstruction(
       (*leafSplidxs).erase((*leafSplidxs).begin());
     }
     size_t node_id;
+    std::vector<double> wts;
     assignNodeId(node_id);
     (*currentNode).setLeafNode(
         std::move(averagingSampleIndex_),
         std::move(splittingSampleIndex_),
         node_id,
         false,
-        0,
-        0
+        wts
     );
     return;
   } else {

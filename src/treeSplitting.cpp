@@ -2278,10 +2278,10 @@ void findBestSplitSymmetricOuter(
   std::vector<size_t> CtsLeftAvg(num_comb,0);
 
   // Vectors to hold the 2^|S| pseudo_outcomes for each combination of feature signs
-  std::vector<size_t> WtsRight(num_comb,0);
-  std::vector<size_t> WtsRightAvg(num_comb,0);
-  std::vector<size_t> WtsLeft(num_comb,0);
-  std::vector<size_t> WtsLeftAvg(num_comb,0);
+  std::vector<double> WtsRight(num_comb,0);
+  std::vector<double> WtsRightAvg(num_comb,0);
+  std::vector<double> WtsLeft(num_comb,0);
+  std::vector<double> WtsLeftAvg(num_comb,0);
 
 
   double naTotalSum = 0;
@@ -2293,10 +2293,6 @@ void findBestSplitSymmetricOuter(
   typedef std::tuple<size_t, double> naPair;
   std::vector<naPair> missingSplit;
   std::vector<naPair> missingAvg;
-
-  double negativeParentWeight = symmetric_details.pseudooutcomes[0];
-  double positiveParentWeight = symmetric_details.pseudooutcomes[1];
-
 
   for (size_t j=0; j<(*splittingSampleIndex).size(); j++) {
     // Retrieve the current feature value
@@ -2539,90 +2535,77 @@ void findBestSplitSymmetricOuter(
     // from their previous versions.
     // Get the appropriate partition weights given the means and counts
     for (size_t idx = 0; idx < num_comb; idx++) {
-      //updatePartitionWeightsOuter(
-      //  negativeParentWeight,
-      //  positiveParentWeight,
-      //  nLP,
-      //  nRP,
-      //  nLN,
-      //  nRN,
-      //  sLP/ (double) nLP,
-      //  sRP/ (double) nRP,
-      //  sLN/ (double) nLN,
-      //  sRN/ (double) nRN,
-      //  wLP,
-      //  wRP,
-      //  wLN,
-      //  wRN
-      //);
+      updatePartitionWeightsSingle(
+        symmetric_details.pseudooutcomes[idx],
+        CtsLeft[idx],
+        CtsRight[idx],
+        SumsLeft[idx] / (CtsLeft[idx] == 0 ? 1 : CtsLeft[idx]),
+        SumsRight[idx] / (CtsRight[idx] == 0 ? 1 : CtsRight[idx]),
+        WtsLeft[idx],
+        WtsRight[idx]
+      );
     }
-
-
 
     // If we are using monotonic constraints, we need to work out whether
     // the monotone constraints will reject a split
-    if (monotone_splits) {
-      bool keepMonotoneSplit = acceptMonotoneOuterSplit(monotone_details,
-                                                          currentFeature,
-                                                          wLP,
-                                                          wLN,
-                                                          wRP,
-                                                          wRN);
-
-      bool avgKeepMonotoneSplit = true;
-      // If monotoneAvg, we also need to check the monotonicity of the avg set
-      if (monotone_details.monotoneAvg) {
-        double wAvgLP;
-        double wAvgLN;
-        double wAvgRP;
-        double wAvgRN;
-
-        updatePartitionWeightsOuter(
-            negativeParentWeight,
-            positiveParentWeight,
-            nLP,
-            nRP,
-            nLN,
-            nRN,
-            sAvgLP / (double) nAvgLP,
-            sAvgRP / (double) nAvgRP,
-            sAvgLN / (double) nAvgLN,
-            sAvgRN / (double) nAvgRN,
-            wAvgLP,
-            wAvgRP,
-            wAvgLN,
-            wAvgRN
-        );
-
-        avgKeepMonotoneSplit = acceptMonotoneOuterSplit(monotone_details,
-                                                        currentFeature,
-                                                        wAvgLP,
-                                                        wAvgLN,
-                                                        wAvgRP,
-                                                        wAvgRN);
-
-      }
-
-      if (!(keepMonotoneSplit && avgKeepMonotoneSplit)) {
-        // Update the oldFeature value before proceeding
-        featureValue = newFeatureValue;
-        continue;
-      }
-    }
+    // if (monotone_splits) {
+    //   bool keepMonotoneSplit = acceptMonotoneOuterSplit(monotone_details,
+    //                                                     currentFeature,
+    //                                                     wLP,
+    //                                                     wLN,
+    //                                                     wRP,
+    //                                                     wRN);
+    //
+    //   bool avgKeepMonotoneSplit = true;
+    //   // If monotoneAvg, we also need to check the monotonicity of the avg set
+    //   if (monotone_details.monotoneAvg) {
+    //     double wAvgLP;
+    //     double wAvgLN;
+    //     double wAvgRP;
+    //     double wAvgRN;
+    //
+    //     updatePartitionWeightsOuter(
+    //         negativeParentWeight,
+    //         positiveParentWeight,
+    //         nLP,
+    //         nRP,
+    //         nLN,
+    //         nRN,
+    //         sAvgLP / (double) nAvgLP,
+    //         sAvgRP / (double) nAvgRP,
+    //         sAvgLN / (double) nAvgLN,
+    //         sAvgRN / (double) nAvgRN,
+    //         wAvgLP,
+    //         wAvgRP,
+    //         wAvgLN,
+    //         wAvgRN
+    //     );
+    //
+    //     avgKeepMonotoneSplit = acceptMonotoneOuterSplit(monotone_details,
+    //                                                     currentFeature,
+    //                                                     wAvgLP,
+    //                                                     wAvgLN,
+    //                                                     wAvgRP,
+    //                                                     wAvgRN);
+    //
+    //   }
+    //
+    //   if (!(keepMonotoneSplit && avgKeepMonotoneSplit)) {
+    //     // Update the oldFeature value before proceeding
+    //     featureValue = newFeatureValue;
+    //     continue;
+    //   }
+    // }
 
     // Calculate the variance of the splitting
-    double currentSplitLoss = calcSymmetricLossOuter(sLP,
-                                                     sLN,
-                                                     sRP,
-                                                     sRN,
-                                                     nLP,
-                                                     nLN,
-                                                     nRP,
-                                                     nRN,
-                                                     wLP,
-                                                     wLN,
-                                                     wRP,
-                                                     wRN);
+    double currentSplitLoss = calcSymmetricLossVectorized(
+      SumsLeft,
+      SumsRight,
+      WtsLeft,
+      WtsRight,
+      CtsLeft,
+      CtsRight
+    );
 
     // This is a little weird, but basically we are working with the absolute
     // values, so it is okay to use the half values
@@ -2638,17 +2621,49 @@ void findBestSplitSymmetricOuter(
       currentSplitValue,                 // the splitting trick, here we want to minimize, so we
       currentFeature,                    // flip the sign when picking the best.
       bestSplitTableIndex,
-      calculateNaDirectionOuter(NaMean,
-                                wLP,
-                                wLN,
-                                wRP,
-                                wRN),
+      1,//calculateNaDirectionOuter(NaMean,
+      //                          wLP,
+      //                          wLN,
+      //                          wRP,
+      //                          wRN),
       random_number_generator
     );
 
     // Update the old feature value
     featureValue = newFeatureValue;
   }
+}
+
+// For an arbitrarily large number of sign combinations, we
+// evaluate the MSE of the symmetric split resulting in the
+// two vectors of pseudo outcomes: WtsLeft and WtsRight
+double calcSymmetricLossVectorized(
+  std::vector<double> SumsLeft,
+  std::vector<double> SumsRight,
+  std::vector<double> WtsLeft,
+  std::vector<double> WtsRight,
+  std::vector<size_t> CtsLeft,
+  std::vector<size_t> CtsRight
+) {
+  double mse = 0.0;
+  // Add left portion to MSE
+  for (size_t idx = 0; idx < SumsLeft.size(); idx++) {
+    if (CtsLeft[idx] == 0) {
+      continue;
+    } else {
+      mse += ((double) CtsLeft[idx])*WtsLeft[idx]*WtsLeft[idx] - 2.0 * WtsLeft[idx] * SumsLeft[idx];
+    }
+  }
+
+  // Add right portion to MSE
+  for (size_t idx = 0; idx < SumsRight.size(); idx++) {
+    if (CtsRight[idx] == 0) {
+      continue;
+    } else {
+      mse += ((double) CtsRight[idx])*WtsRight[idx]*WtsRight[idx] - 2.0 * WtsRight[idx] * SumsRight[idx];
+    }
+  }
+  return mse;
 }
 
 // Function to evaluate splitting loss on symmetric splits done on the
@@ -2778,6 +2793,40 @@ void updatePartitionWeightsOuter(
   {
     wLN = negativeParentWeight + average_diff;
     wRN = negativeParentWeight - average_diff;
+  }
+}
+
+// Given a single pseudo outcome, and the left sum and right sum, we update the
+// left and right pseudo outcomes with the correct signed magnitude of the sum
+void updatePartitionWeightsSingle(
+    double parentWeight,
+    size_t nL,
+    size_t nR,
+    double uL,
+    double uR,
+    double &wL,
+    double &wR
+) {
+  double avg_diff = (((double) nL) * std::fabs(parentWeight - uL) +
+                     ((double) nR) * std::fabs(parentWeight - uR))/
+    ((double) nL + (double) nR);
+
+  // Based on the relative size of parentWeight, uL, and uR, we
+  // Set the right and left weights
+  if (nL == 0) {
+    wL = parentWeight;
+  } else if (parentWeight > uL) {
+    wL = parentWeight - avg_diff;
+  } else {
+    wL = parentWeight + avg_diff;
+  }
+
+  if (nR == 0) {
+    wR = parentWeight;
+  } else if (parentWeight > uR) {
+    wR = parentWeight - avg_diff;
+  } else {
+    wR = parentWeight + avg_diff;
   }
 }
 

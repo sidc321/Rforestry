@@ -287,6 +287,15 @@ void findBestSplitSymmetricOuter(
         symmetric_info symmetric_details
 );
 
+double calcSymmetricLossVectorized(
+        std::vector<double> SumsLeft,
+        std::vector<double> SumsRight,
+        std::vector<double> WtsLeft,
+        std::vector<double> WtsRight,
+        std::vector<size_t> CtsLeft,
+        std::vector<size_t> CtsRight
+);
+
 double calcSymmetricLoss(
         double leftSum,
         double midSum,
@@ -341,6 +350,16 @@ void updatePartitionWeightsOuter(
         double &wRP,
         double &wLN,
         double &wRN
+);
+
+void updatePartitionWeightsSingle(
+        double parentWeight,
+        size_t nL,
+        size_t nR,
+        double uL,
+        double uR,
+        double &wL,
+        double &wR
 );
 
 void determineBestSplit(
