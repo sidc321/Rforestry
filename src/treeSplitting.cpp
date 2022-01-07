@@ -2597,6 +2597,47 @@ bool acceptMonotoneTrinarySplit(
   }
 }
 
+// Helper function to accept/reject potential splitting points
+// for two specific pseudo outcomes when we enforce symmetry in multiple features
+bool acceptMonotoneSplitSingle(
+    monotonic_info &monotone_details,
+    std::vector<size_t> symmetricFeatures,
+    size_t currentFeature,
+    double Lweight,
+    double Rweight,
+    size_t symmetric_idx
+) {
+  // First get whether the currentFeature has monotonicity constraints
+
+  // First find if current feature is in symmetric features
+  if (std::find(symmetricFeatures.begin(),
+                symmetricFeatures.end(),
+                currentFeature) != symmetricFeatures.end()) {
+
+    // Get the index of the current feature in the symmetric feats list
+    size_t idx_in_list = *std::find(symmetricFeatures.begin(),
+                                    symmetricFeatures.end(),
+                                    currentFeature);
+
+    // Convert the index in the list to the sign of the current feature
+    size_t sign = idx_to_bin(symmetric_idx,
+                             idx_in_list);
+
+    // Now using the sign of the feature, the relative ordering of the left
+    // and right weights,
+    return true;
+
+  // Now if the current feature is not in symmetric features,
+  } else {
+    return true;
+  }
+
+  // Now check overall that both of the pseudo outcomes obey the weight bounds in
+  // monotone constraints
+
+  return true;
+}
+
 bool acceptMonotoneOuterSplit(
     monotonic_info &monotone_details,
     size_t currentFeature,

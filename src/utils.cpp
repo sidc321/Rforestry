@@ -99,6 +99,19 @@ size_t bin_to_idx(
   return idx;
 }
 
+// Returns the binary entry at index i of the size_t idx
+size_t idx_to_bin(
+    size_t idx,
+    size_t i
+) {
+  size_t bit = (size_t) pow(2, i); //(ith bit)
+  if (i > 31) {
+    return 0;
+  } else {
+    return (size_t (idx & bit) >= 1);
+  }
+}
+
 // Given a feature vector and a list of symmetric features
 // returns a vector of booleans indicating whether the symmetric feature
 // at each index in symmmetric_indices is positive or negative

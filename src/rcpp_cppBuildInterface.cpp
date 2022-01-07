@@ -1567,7 +1567,7 @@ Rcpp::List rcpp_reconstruct_forests(
 
     std::unique_ptr< std::vector<size_t> > symmetricIndicesRcpp (
         new std::vector<size_t>(
-            Rcpp::as< std::vector<size_t> >(symmetric)
+            Rcpp::as< std::vector<size_t> >(groupMemberships)
         )
     );
 
@@ -1718,7 +1718,7 @@ Rcpp::List rcpp_reconstruct_forests(
   );
   std::unique_ptr< std::vector<size_t> > symmetricIndicesRcpp (
       new std::vector<size_t>(
-          Rcpp::as< std::vector<size_t> >(symmetric)
+          Rcpp::as< std::vector<size_t> >(groupMemberships)
       )
   );
 
