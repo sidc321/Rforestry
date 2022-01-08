@@ -187,7 +187,7 @@ void RFNode::predict(
 
         double predictedMean;
         // Calculate the mean of current node
-        if (getAverageCount() == 0) {
+        if (getAverageCount() == 0 && !getTrinary()) {
           predictedMean = std::numeric_limits<double>::quiet_NaN();
         } else if (getTrinary()) {
           predictedMean = 0;

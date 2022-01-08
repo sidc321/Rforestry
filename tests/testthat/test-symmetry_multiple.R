@@ -4,7 +4,7 @@ test_that("Tests symmetry in multiple features", {
   context("1-dimensional example")
 
   set.seed(23322)
-  n <- 1000
+  n <- 100
   x <- matrix(runif(n,min=-2,max=2), ncol=1)
   y <- x[,1]**3
   colnames(x) <- c("V1")
@@ -14,15 +14,16 @@ test_that("Tests symmetry in multiple features", {
 
   rf <- forestry(x=x,
                  y=y,
-                 ntree=500,
+                 ntree=1,
                  seed=212342,
-                 #maxDepth = 3,
+                 maxDepth = 1,
                  #mtry=2,
-                 OOBhonest = TRUE,
+                 #OOBhonest = TRUE,
                  scale = FALSE,
-                 monotonicConstraints = c(1),
-                 monotoneAvg = TRUE,
-                 symmetric = c(1))
+                 #monotonicConstraints = c(1),
+                 #monotoneAvg = TRUE,
+                 symmetric = c(1)
+                 )
 
   p <- predict(rf, newdata = x)
   # plot(x[,1],p)
