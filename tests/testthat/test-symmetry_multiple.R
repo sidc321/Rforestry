@@ -16,7 +16,7 @@ test_that("Tests symmetry in multiple features", {
                  y=y,
                  ntree=1,
                  seed=212342,
-                 maxDepth = 1,
+                 maxDepth = 2,
                  #mtry=2,
                  #OOBhonest = TRUE,
                  scale = FALSE,

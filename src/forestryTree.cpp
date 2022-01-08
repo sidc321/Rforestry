@@ -186,23 +186,25 @@ forestryTree::forestryTree(
     // Initialize the symmetric indices based on those stored in trainingData
     std::vector<size_t> indices;
     for (size_t i = 0; i < trainingData->getSymmetricIndices()->size(); i++) {
-      if (trainingData->getSymmetricIndices()->at(i) == 1) {
-        indices.push_back(i);
-      }
+     if (trainingData->getSymmetricIndices()->at(i) == 1) {
+       indices.push_back(i);
+     }
     }
+    //indices.push_back(1);
 
     // Initialize the pseudo outcomes to be mean of averaging set
     std::vector<double> outcomes;
     size_t size = (size_t) std::pow(2.0, indices.size());
+
+    // Move this down lol
     for (size_t j = 0; j < size; j++) {
-      outcomes[j] = trainingData->partitionMean(getAveragingIndex());
+      outcomes.push_back(trainingData->partitionMean(getAveragingIndex()));
     }
 
     // Fill in the parts of the struct
     symmetric_details.symmetric_variables = indices;
     symmetric_details.pseudooutcomes = outcomes;
   }
-
 
   /* Recursively grow the tree */
   recursivePartition(
