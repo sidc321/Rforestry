@@ -380,6 +380,15 @@ bool acceptMonotoneTrinarySplit(
         double centerPartitionMean
 );
 
+bool acceptMonotoneSplitSingle(
+        monotonic_info &monotone_details,
+        std::vector<size_t> symmetricFeatures,
+        size_t currentFeature,
+        double Lweight,
+        double Rweight,
+        size_t symmetric_idx
+);
+
 bool acceptMonotoneOuterSplit(
         monotonic_info &monotone_details,
         size_t currentFeature,

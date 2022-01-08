@@ -2164,56 +2164,54 @@ void findBestSplitSymmetricOuter(
       );
     }
 
+    for (size_t idx = 0; idx < num_comb; idx++) {
+      updatePartitionWeightsSingle(
+        symmetric_details.pseudooutcomes[idx],
+        CtsLeftAvg[idx],
+        CtsRightAvg[idx],
+        SumsLeftAvg[idx] / (CtsLeftAvg[idx] == 0 ? 1 : CtsLeftAvg[idx]),
+        SumsRightAvg[idx] / (CtsRightAvg[idx] == 0 ? 1 : CtsRightAvg[idx]),
+        WtsLeftAvg[idx],
+        WtsRightAvg[idx]
+      );
+    }
+
     // If we are using monotonic constraints, we need to work out whether
     // the monotone constraints will reject a split
-    // if (monotone_splits) {
-    //   bool keepMonotoneSplit = acceptMonotoneOuterSplit(monotone_details,
-    //                                                     currentFeature,
-    //                                                     wLP,
-    //                                                     wLN,
-    //                                                     wRP,
-    //                                                     wRN);
-    //
-    //   bool avgKeepMonotoneSplit = true;
-    //   // If monotoneAvg, we also need to check the monotonicity of the avg set
-    //   if (monotone_details.monotoneAvg) {
-    //     double wAvgLP;
-    //     double wAvgLN;
-    //     double wAvgRP;
-    //     double wAvgRN;
-    //
-    //     updatePartitionWeightsOuter(
-    //         negativeParentWeight,
-    //         positiveParentWeight,
-    //         nLP,
-    //         nRP,
-    //         nLN,
-    //         nRN,
-    //         sAvgLP / (double) nAvgLP,
-    //         sAvgRP / (double) nAvgRP,
-    //         sAvgLN / (double) nAvgLN,
-    //         sAvgRN / (double) nAvgRN,
-    //         wAvgLP,
-    //         wAvgRP,
-    //         wAvgLN,
-    //         wAvgRN
-    //     );
-    //
-    //     avgKeepMonotoneSplit = acceptMonotoneOuterSplit(monotone_details,
-    //                                                     currentFeature,
-    //                                                     wAvgLP,
-    //                                                     wAvgLN,
-    //                                                     wAvgRP,
-    //                                                     wAvgRN);
-    //
-    //   }
-    //
-    //   if (!(keepMonotoneSplit && avgKeepMonotoneSplit)) {
-    //     // Update the oldFeature value before proceeding
-    //     featureValue = newFeatureValue;
-    //     continue;
-    //   }
-    // }
+     if (monotone_splits) {
+       bool keepMonotoneSplit = true;
+       for (size_t i = 0; i < WtsLeft.size(); i++) {
+         keepMonotoneSplit = keepMonotoneSplit && (acceptMonotoneSplitSingle(
+           monotone_details,
+           symmetric_details.symmetric_variables,
+           currentFeature,
+           WtsLeft[i],
+           WtsRight[i],
+           i
+         ));
+       }
+
+       bool avgKeepMonotoneSplit = true;
+       // If monotoneAvg, we also need to check the monotonicity of the avg set
+       if (monotone_details.monotoneAvg) {
+         for (size_t i = 0; i < WtsLeftAvg.size(); i++) {
+           avgKeepMonotoneSplit = avgKeepMonotoneSplit && (acceptMonotoneSplitSingle(
+             monotone_details,
+             symmetric_details.symmetric_variables,
+             currentFeature,
+             WtsLeftAvg[i],
+             WtsRightAvg[i],
+             i
+           ));
+         }
+       }
+
+       if (!(keepMonotoneSplit && avgKeepMonotoneSplit)) {
+         // Update the oldFeature value before proceeding
+         featureValue = newFeatureValue;
+         continue;
+       }
+     }
 
     // Calculate the variance of the splitting
     double currentSplitLoss = calcSymmetricLossVectorized(
@@ -2609,6 +2607,21 @@ bool acceptMonotoneSplitSingle(
 ) {
   // First get whether the currentFeature has monotonicity constraints
 
+  int monotone_direction = monotone_details.monotonic_constraints[currentFeature];
+  double upper_bound = monotone_details.upper_bound;
+  double lower_bound = monotone_details.lower_bound;
+
+  // Now check overall that both of the pseudo outcomes obey the weight bounds in
+  // monotone constraints
+  if (std::min(std::fabs(Lweight), std::fabs(Lweight)) <
+    std::min(std::fabs(upper_bound), std::fabs(lower_bound))) {
+    return false;
+  } else if (std::max(std::fabs(Lweight), std::fabs(Lweight)) <
+    std::max(std::fabs(upper_bound), std::fabs(lower_bound))) {
+    return false;
+  }
+
+
   // First find if current feature is in symmetric features
   if (std::find(symmetricFeatures.begin(),
                 symmetricFeatures.end(),
@@ -2625,15 +2638,24 @@ bool acceptMonotoneSplitSingle(
 
     // Now using the sign of the feature, the relative ordering of the left
     // and right weights,
-    return true;
+    if (sign == 1 && monotone_direction == 1) {
+      return Lweight < Rweight;
+    } else if (sign == 0 && monotone_direction == 1) {
+      return Lweight > Rweight;
+    } else if (sign == 1 && monotone_direction == -1) {
+      return Lweight < Rweight;
+    } else if (sign == 0 && monotone_direction == -1) {
+      return Lweight > Rweight;
+    }
 
   // Now if the current feature is not in symmetric features,
   } else {
-    return true;
+    if (monotone_direction == 1) {
+      return Lweight < Rweight;
+    } else if (monotone_direction == -1) {
+      return Lweight > Rweight;
+    }
   }
-
-  // Now check overall that both of the pseudo outcomes obey the weight bounds in
-  // monotone constraints
 
   return true;
 }
