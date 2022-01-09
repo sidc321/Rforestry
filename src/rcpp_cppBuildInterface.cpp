@@ -185,6 +185,7 @@ SEXP rcpp_cppBuildInterface(
   Rcpp::NumericVector observationWeights,
   Rcpp::NumericVector monotonicConstraints,
   Rcpp::NumericVector groupMemberships,
+  Rcpp::NumericVector symmetricIndices,
   int minTreesPerGroup,
   bool monotoneAvg,
   bool hasNas,
@@ -318,7 +319,7 @@ SEXP rcpp_cppBuildInterface(
 
       std::unique_ptr< std::vector<size_t> > symmetricIndicesRcpp (
           new std::vector<size_t>(
-              Rcpp::as< std::vector<size_t> >(groupMemberships)
+              Rcpp::as< std::vector<size_t> >(symmetricIndices)
           )
       );
 
