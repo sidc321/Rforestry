@@ -847,7 +847,7 @@ forestry <- function(x,
         monotonicConstraints = monotonicConstraints,
         groupMemberships = groupVector,
         monotoneAvg = monotoneAvg,
-        symmetricIndices = symmetric
+        symmetricIndices = symmetricIndex-1
       )
 
       rcppForest <- rcpp_cppBuildInterface(
