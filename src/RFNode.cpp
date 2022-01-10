@@ -216,7 +216,8 @@ void RFNode::predict(
 
             // Pull the correct pseudo outcome
             size_t weight_idx = bin_to_idx(signs);
-            outputPrediction[*it] = this->getWeights()[weight_idx];
+
+            outputPrediction[*it] =(this->getWeights())[weight_idx];
 
           } else {
             outputPrediction[*it] = predictedMean;

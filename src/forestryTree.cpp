@@ -197,11 +197,15 @@ forestryTree::forestryTree(
 
     // Initialize the pseudo outcomes to be mean of averaging set
 
-    size_t size = (size_t) std::pow(2.0, indices.size());
 
-    // Move this down lol
+    size_t size = 1;
+    for (size_t i = 0; i < indices.size(); i++) {
+      size *= 2;
+    }
+
+    // Move this down
     for (size_t j = 0; j < size; j++) {
-      outcomes.push_back(trainingData->partitionMean(getAveragingIndex()));
+     outcomes.push_back(trainingData->partitionMean(getAveragingIndex()));
     }
   }
 
@@ -1078,7 +1082,7 @@ void forestryTree::recursivePartition(
       monotonic_details_left,
       trinary,
       centerSplit,
-      symmetric_details_left
+      symmetric_details//symmetric_details_left
     );
 
     // Recursively split on the right child node
@@ -1099,7 +1103,7 @@ void forestryTree::recursivePartition(
       monotonic_details_right,
       trinary,
       false,
-      symmetric_details_right
+      symmetric_details//symmetric_details_right
     );
 
     (*rootNode).setSplitNode(
