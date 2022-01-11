@@ -2629,11 +2629,11 @@ bool acceptMonotoneSplitSingle(
   // Now check overall that both of the pseudo outcomes obey the weight bounds in
   // monotone constraints
   if (std::min(std::fabs(Lweight), std::fabs(Lweight)) <
-    std::min(std::fabs(upper_bound), std::fabs(lower_bound))) {
-    return false;
-  } else if (std::max(std::fabs(Lweight), std::fabs(Lweight)) <
-    std::max(std::fabs(upper_bound), std::fabs(lower_bound))) {
-    return false;
+   std::min(std::fabs(upper_bound), std::fabs(lower_bound))) {
+   return false;
+  } else if (std::max(std::fabs(Lweight), std::fabs(Lweight)) >
+   std::max(std::fabs(upper_bound), std::fabs(lower_bound))) {
+   return false;
   }
 
 
