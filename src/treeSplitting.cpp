@@ -1957,7 +1957,7 @@ void findBestSplitSymmetricOuter(
     double tmpOutcomeValue = (*trainingData).
     getOutcomePoint((*averagingSampleIndex)[j]);
     double tmpSymmetricfeatureValue = (*trainingData).
-    getPoint((*splittingSampleIndex)[j], symmetricFeature);
+    getPoint((*averagingSampleIndex)[j], symmetricFeature);
 
     if (std::isnan(tmpFeatureValue)) {
       naAvgTotalSum += tmpOutcomeValue;
@@ -1976,7 +1976,7 @@ void findBestSplitSymmetricOuter(
           tmpSymmetricfeatureValue,
           symmetricFeature == currentFeature ? std::fabs(tmpFeatureValue) : tmpFeatureValue,
           tmpOutcomeValue,
-          (*splittingSampleIndex)[j]
+          (*averagingSampleIndex)[j]
         )
       );
     }

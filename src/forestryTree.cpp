@@ -442,6 +442,8 @@ void splitDataIntoTwoParts(
         ) != trainingData->getSymmetricIndices()->end())) {
           tmpFeatureValue = std::fabs(tmpFeatureValue);
         }
+
+        // Now split into left and right partitions based on feature value
         if (tmpFeatureValue < splitValue) {
           (*leftPartitionIndex).push_back(*it);
         } else {
