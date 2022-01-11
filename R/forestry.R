@@ -997,6 +997,12 @@ forestry <- function(x,
       y <- (y-colMeans[ncol(processed_x)+1]) / colSd[ncol(processed_x)+1]
     }
 
+    # Get the symmetric feature if one is set
+    symmetricIndex <- 0
+    if (any(symmetric != 0)) {
+      symmetricIndex <- which(symmetric != 0)
+    }
+
     # Create rcpp object
     # Create a forest object
     forest <- tryCatch({
