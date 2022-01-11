@@ -2242,7 +2242,23 @@ void findBestSplitSymmetricOuter(
 
     // This is a little weird, but basically we are working with the absolute
     // values, so it is okay to use the half values
-    double currentSplitValue = featureValue;
+    double currentSplitValue;
+    if (splitMiddle) {
+      currentSplitValue = (newFeatureValue + featureValue) / 2.0;
+    } else {
+      std::uniform_real_distribution<double> unif_dist;
+      double tmp_random = unif_dist(random_number_generator) *
+        (newFeatureValue - featureValue);
+      double epsilon_lower = std::nextafter(featureValue, newFeatureValue);
+      double epsilon_upper = std::nextafter(newFeatureValue, featureValue);
+      currentSplitValue = tmp_random + featureValue;
+      if (currentSplitValue > epsilon_upper) {
+        currentSplitValue = epsilon_upper;
+      }
+      if (currentSplitValue < epsilon_lower) {
+        currentSplitValue = epsilon_lower;
+      }
+    }
 
     updateBestSplitTrinary(
       bestSplitLossAll,
@@ -2256,11 +2272,7 @@ void findBestSplitSymmetricOuter(
       currentSplitValue,                 // the splitting trick, here we want to minimize, so we
       currentFeature,                    // flip the sign when picking the best.
       bestSplitTableIndex,
-      1,//calculateNaDirectionOuter(NaMean,
-      //                          wLP,
-      //                          wLN,
-      //                          wRP,
-      //                          wRN),
+      1,
       WtsLeft,
       WtsRight,
       random_number_generator
