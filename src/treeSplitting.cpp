@@ -2622,20 +2622,20 @@ bool acceptMonotoneSplitSingle(
 ) {
   // First get whether the currentFeature has monotonicity constraints
 
+
   int monotone_direction = monotone_details.monotonic_constraints[currentFeature];
   double upper_bound = monotone_details.upper_bound;
   double lower_bound = monotone_details.lower_bound;
 
   // Now check overall that both of the pseudo outcomes obey the weight bounds in
   // monotone constraints
-  if (std::min(std::fabs(Lweight), std::fabs(Lweight)) <
+  if (std::min(std::fabs(Lweight), std::fabs(Rweight)) <
    std::min(std::fabs(upper_bound), std::fabs(lower_bound))) {
    return false;
-  } else if (std::max(std::fabs(Lweight), std::fabs(Lweight)) >
+  } else if (std::max(std::fabs(Lweight), std::fabs(Rweight)) >
    std::max(std::fabs(upper_bound), std::fabs(lower_bound))) {
    return false;
   }
-
 
   // First find if current feature is in symmetric features
   if (std::find(symmetricFeatures.begin(),
