@@ -109,6 +109,9 @@ struct symmetric_info {
   // symmetry on
   std::vector<size_t> symmetric_variables;
 
+  std::vector<double> upper_bounds;
+  std::vector<double> lower_bounds;
+
   // Contains the positive an negative pseudo outcomes for each combination of
   // signs of the symmetric features.
   // This is of size 2^|S| where S is the set of features with enforced symmetry

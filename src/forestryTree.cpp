@@ -184,6 +184,8 @@ forestryTree::forestryTree(
 
   std::vector<double> outcomes;
   std::vector<size_t> indices;
+  std::vector<double> ub;
+  std::vector<double> lb;
 
   if (symmetric) {
     // Initialize the symmetric indices based on those stored in trainingData
@@ -194,13 +196,17 @@ forestryTree::forestryTree(
 
     // Move this down
     for (size_t j = 0; j < size; j++) {
-    outcomes.push_back(trainingData->partitionMean(getAveragingIndex()));
+      outcomes.push_back(trainingData->partitionMean(getAveragingIndex()));
+      ub.push_back(std::numeric_limits<double>::max());
+      lb.push_back(-std::numeric_limits<double>::max());
     }
   }
 
   // Fill in the parts of the struct
   symmetric_details.symmetric_variables = indices;
   symmetric_details.pseudooutcomes = outcomes;
+  symmetric_details.upper_bounds = ub;
+  symmetric_details.lower_bounds = lb;
 
   /* Recursively grow the tree */
   recursivePartition(
@@ -1020,40 +1026,58 @@ void forestryTree::recursivePartition(
     if (trinary) {
       symmetric_details_left.pseudooutcomes = bestSplitLeftWts;
       symmetric_details_left.symmetric_variables = symmetric_details.symmetric_variables;
+      symmetric_details_left.lower_bounds = symmetric_details.lower_bounds;
+      symmetric_details_left.upper_bounds = symmetric_details.upper_bounds;
 
       symmetric_details_right.pseudooutcomes = bestSplitRightWts;
       symmetric_details_right.symmetric_variables = symmetric_details.symmetric_variables;
+      symmetric_details_right.lower_bounds = symmetric_details.lower_bounds;
+      symmetric_details_right.upper_bounds = symmetric_details.upper_bounds;
     }
 
     // Update the monotonity constraints before we recursively split
-    //if (monotone_splits) {
-    //  if (trinary && !centerSplit) {
-    //    updateMonotoneConstraintsOuter(
-    //      monotone_details,
-    //      monotonic_details_left,
-    //      monotonic_details_right,
-    //      (*trainingData->getMonotonicConstraints()),
-    //      wLP,
-    //      wLN,
-    //      wRP,
-    //      wRN,
-    //      bestSplitFeature,
-    //      trinary
-    //    );
-    //  } else {
-    //    updateMonotoneConstraints(
-    //      monotone_details,
-    //      monotonic_details_left,
-    //      monotonic_details_right,
-    //      (*trainingData->getMonotonicConstraints()),
-    //      trinary ? wRN : trainingData->partitionMean(&splittingLeftPartitionIndex),
-    //      trinary ? wRP : trainingData->partitionMean(&splittingRightPartitionIndex),
-    //      trinary ? wLN : 0,
-    //      bestSplitFeature,
-    //      trinary
-    //    );
-    //  }
-    //}
+    if (monotone_splits) {
+      //if (trinary) {
+      //  updateMonotoneConstraintsOuter(
+      //    monotone_details,
+      //    monotonic_details_left,
+      //    monotonic_details_right,
+      //    (*trainingData->getMonotonicConstraints()),
+      //    0,
+      //    0,
+      //    0,
+      //    0,
+      //    bestSplitFeature,
+      //    trinary
+      //  );
+      //} else {
+      //  updateMonotoneConstraints(
+      //    monotone_details,
+      //    monotonic_details_left,
+      //    monotonic_details_right,
+      //    (*trainingData->getMonotonicConstraints()),
+      //    trainingData->partitionMean(&splittingLeftPartitionIndex),
+      //    trainingData->partitionMean(&splittingRightPartitionIndex),
+      //    0,
+      //    bestSplitFeature,
+      //    trinary
+      //  );
+      monotonic_details_left.upper_bound = monotone_details.upper_bound;
+      monotonic_details_left.lower_bound = monotone_details.lower_bound;
+      monotonic_details_left.upper_bound_neg = monotone_details.upper_bound_neg;
+      monotonic_details_left.lower_bound_neg = monotone_details.lower_bound_neg;
+      monotonic_details_left.monotoneAvg = monotone_details.monotoneAvg;
+      monotonic_details_left.monotonic_constraints = monotone_details.monotonic_constraints;
+
+      monotonic_details_right.upper_bound = monotone_details.upper_bound;
+      monotonic_details_right.lower_bound = monotone_details.lower_bound;
+      monotonic_details_right.upper_bound_neg = monotone_details.upper_bound_neg;
+      monotonic_details_right.lower_bound_neg = monotone_details.lower_bound_neg;
+      monotonic_details_right.monotoneAvg = monotone_details.monotoneAvg;
+      monotonic_details_right.monotonic_constraints = monotone_details.monotonic_constraints;
+
+      //}
+    }
 
     // Recursively split on the left child node
     recursivePartition(

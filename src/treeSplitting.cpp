@@ -2202,7 +2202,9 @@ void findBestSplitSymmetricOuter(
            currentFeature,
            WtsLeft[i],
            WtsRight[i],
-           i
+           i,
+           symmetric_details.upper_bounds[i],
+           symmetric_details.lower_bounds[i]
          ));
        }
 
@@ -2618,22 +2620,20 @@ bool acceptMonotoneSplitSingle(
     size_t currentFeature,
     double Lweight,
     double Rweight,
-    size_t symmetric_idx
+    size_t symmetric_idx,
+    double upper_bound,
+    double lower_bound
 ) {
   // First get whether the currentFeature has monotonicity constraints
 
 
   int monotone_direction = monotone_details.monotonic_constraints[currentFeature];
-  double upper_bound = monotone_details.upper_bound;
-  double lower_bound = monotone_details.lower_bound;
 
   // Now check overall that both of the pseudo outcomes obey the weight bounds in
   // monotone constraints
-  if (std::min(std::fabs(Lweight), std::fabs(Rweight)) <
-   std::min(std::fabs(upper_bound), std::fabs(lower_bound))) {
+  if (std::min(Lweight, Rweight) < lower_bound) {
    return false;
-  } else if (std::max(std::fabs(Lweight), std::fabs(Rweight)) >
-   std::max(std::fabs(upper_bound), std::fabs(lower_bound))) {
+  } else if (std::max(Lweight, Rweight) > upper_bound) {
    return false;
   }
 

@@ -386,7 +386,9 @@ bool acceptMonotoneSplitSingle(
         size_t currentFeature,
         double Lweight,
         double Rweight,
-        size_t symmetric_idx
+        size_t symmetric_idx,
+        double upper_bound,
+        double lower_bound
 );
 
 bool acceptMonotoneOuterSplit(
