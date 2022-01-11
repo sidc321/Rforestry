@@ -392,7 +392,10 @@ void RFNode::predict(
 
 
         } else {
-          if (getTrinary() && (getSplitFeature() == (*trainingData->getSymmetricIndices())[0])) {
+          if (getTrinary() && (std::find(
+              trainingData->getSymmetricIndices()->begin(),
+              trainingData->getSymmetricIndices()->end(),
+              getSplitFeature()) != trainingData->getSymmetricIndices()->end())) {
             // If trinary splits, we split based on absolute values of the feat
             if (std::fabs(currentValue) < getSplitValue()) {
               (*leftPartitionIndex).push_back(*it);

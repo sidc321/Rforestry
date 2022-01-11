@@ -946,6 +946,7 @@ void forestryTree::recursivePartition(
     );
     size_t node_id;
     assignNodeId(node_id);
+
     (*rootNode).setLeafNode(
         std::move(averagingSampleIndex_),
         std::move(splittingSampleIndex_),
