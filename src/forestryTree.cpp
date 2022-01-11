@@ -188,24 +188,15 @@ forestryTree::forestryTree(
   if (symmetric) {
     // Initialize the symmetric indices based on those stored in trainingData
 
-    for (size_t i = 0; i < trainingData->getSymmetricIndices()->size(); i++) {
-     if (trainingData->getSymmetricIndices()->at(i) == 1) {
-       indices.push_back(i);
-     }
-    }
-    //indices.push_back(1);
 
-    // Initialize the pseudo outcomes to be mean of averaging set
+    indices = (*trainingData->getSymmetricIndices());
 
 
-    size_t size = 1;
-    for (size_t i = 0; i < indices.size(); i++) {
-      size *= 2;
-    }
+    size_t size = (size_t) pow(2.0, indices.size());
 
     // Move this down
     for (size_t j = 0; j < size; j++) {
-     outcomes.push_back(trainingData->partitionMean(getAveragingIndex()));
+    outcomes.push_back(trainingData->partitionMean(getAveragingIndex()));
     }
   }
 
