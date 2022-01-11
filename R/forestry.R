@@ -223,7 +223,7 @@ training_data_checker <- function(x,
     if (length(which(symmetric!=0))>10) {
       warning("Running symmetric splits in more than 10 features is very slow")
     }
-    if (any(symmetric != 1 ) ) {
+    if (any(! (symmetric %in% c(0,1)))) {
       stop("Entries of the symmetric argument must be zero one")
     }
   }
