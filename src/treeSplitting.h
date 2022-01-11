@@ -420,6 +420,12 @@ double calculateMonotonicBound(
     monotonic_info& monotone_details
 );
 
+double calculateMonotonicBoundSymmetric(
+        double node_mean,
+        double lower_bound,
+        double upper_bound
+);
+
 void getSplitCounts(
         DataFrame* trainingData,
         std::vector<size_t>* averagingSampleIndex,

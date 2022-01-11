@@ -553,6 +553,58 @@ void updateMonotoneConstraints(
   }
 }
 
+void updateMonotoneConstraintsSingle(
+    monotonic_info& monotone_details,
+    monotonic_info& monotone_details_left,
+    monotonic_info& monotone_details_right,
+    symmetric_info& symmetric_details,
+    symmetric_info& symmetric_details_left,
+    symmetric_info& symmetric_details_right,
+    size_t cur_idx,
+    size_t bestSplitFeature
+) {
+  // Given a current set of pseudo outcomes, and the previous monotonic bounds
+  // update the new bounds for that pseudo outcome based on the split.
+  // The index cur_idx gives the pseudooutcomes to update, the bestSplitFeature
+  // gives the current feature (in order to work out the direction of the)
+  // monotonic constraints.
+
+  // pull monotonicity direction for current feature
+  int monotone_direction = monotone_details.monotonic_constraints[bestSplitFeature];
+
+  // Calculate the midMeans
+  double leftNodeMean = calculateMonotonicBoundSymmetric(symmetric_details_left.pseudooutcomes[cur_idx],
+                                                         symmetric_details.lower_bounds[cur_idx],
+                                                         symmetric_details.upper_bounds[cur_idx]);
+
+  double rightNodeMean = calculateMonotonicBoundSymmetric(symmetric_details_right.pseudooutcomes[cur_idx],
+                                                          symmetric_details.lower_bounds[cur_idx],
+                                                          symmetric_details.upper_bounds[cur_idx]);
+
+  double midMean = (leftNodeMean + rightNodeMean)/(2);
+
+  // Update the monotone constraints for the positive observations
+  if (monotone_direction == -1) {
+    symmetric_details_left.lower_bounds[cur_idx] = midMean;
+    symmetric_details_right.upper_bounds[cur_idx] = midMean;
+
+    symmetric_details_left.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
+    symmetric_details_right.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
+  } else if (monotone_direction == 1) {
+    symmetric_details_left.upper_bounds[cur_idx] = midMean;
+    symmetric_details_right.lower_bounds[cur_idx] = midMean;
+
+    symmetric_details_left.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
+    symmetric_details_right.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
+  } else {
+    // otherwise keep the old ones
+    symmetric_details_left.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
+    symmetric_details_left.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
+    symmetric_details_right.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
+    symmetric_details_right.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
+  }
+}
+
 void updateMonotoneConstraintsOuter(
     monotonic_info& monotone_details,
     monotonic_info& monotonic_details_left,
@@ -1037,20 +1089,19 @@ void forestryTree::recursivePartition(
 
     // Update the monotonity constraints before we recursively split
     if (monotone_splits) {
-      //if (trinary) {
-      //  updateMonotoneConstraintsOuter(
-      //    monotone_details,
-      //    monotonic_details_left,
-      //    monotonic_details_right,
-      //    (*trainingData->getMonotonicConstraints()),
-      //    0,
-      //    0,
-      //    0,
-      //    0,
-      //    bestSplitFeature,
-      //    trinary
-      //  );
-      //} else {
+      if (trinary) {
+        for (size_t idx = 0; idx < symmetric_details.pseudooutcomes.size(); idx++) {
+          updateMonotoneConstraintsSingle(monotone_details,
+                                          monotonic_details_left,
+                                          monotonic_details_right,
+                                          symmetric_details,
+                                          symmetric_details_left,
+                                          symmetric_details_right,
+                                          idx,
+                                          bestSplitFeature
+                                          );
+        }
+      } else {
         updateMonotoneConstraints(
           monotone_details,
           monotonic_details_left,
@@ -1062,7 +1113,7 @@ void forestryTree::recursivePartition(
           bestSplitFeature,
           trinary
         );
-      //}
+      }
     }
 
     // Recursively split on the left child node

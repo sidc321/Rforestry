@@ -2758,6 +2758,20 @@ double calculateMonotonicBound(
   }
 }
 
+double calculateMonotonicBoundSymmetric(
+    double node_mean,
+    double lower_bound,
+    double upper_bound
+) {
+  if (node_mean < lower_bound) {
+    return lower_bound;
+  } else if (node_mean > upper_bound) {
+    return upper_bound;
+  } else {
+    return node_mean;
+  }
+}
+
 void getSplitCounts(
     DataFrame* trainingData,
     std::vector<size_t>* averagingSampleIndex,
