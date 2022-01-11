@@ -187,8 +187,6 @@ forestryTree::forestryTree(
 
   if (symmetric) {
     // Initialize the symmetric indices based on those stored in trainingData
-
-
     indices = (*trainingData->getSymmetricIndices());
 
 
@@ -1073,7 +1071,7 @@ void forestryTree::recursivePartition(
       monotonic_details_left,
       trinary,
       centerSplit,
-      symmetric_details//symmetric_details_left
+      symmetric_details_left
     );
 
     // Recursively split on the right child node
@@ -1094,7 +1092,7 @@ void forestryTree::recursivePartition(
       monotonic_details_right,
       trinary,
       false,
-      symmetric_details//symmetric_details_right
+      symmetric_details_right
     );
 
     (*rootNode).setSplitNode(
