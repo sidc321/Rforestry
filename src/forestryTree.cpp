@@ -1051,31 +1051,17 @@ void forestryTree::recursivePartition(
       //    trinary
       //  );
       //} else {
-      //  updateMonotoneConstraints(
-      //    monotone_details,
-      //    monotonic_details_left,
-      //    monotonic_details_right,
-      //    (*trainingData->getMonotonicConstraints()),
-      //    trainingData->partitionMean(&splittingLeftPartitionIndex),
-      //    trainingData->partitionMean(&splittingRightPartitionIndex),
-      //    0,
-      //    bestSplitFeature,
-      //    trinary
-      //  );
-      monotonic_details_left.upper_bound = monotone_details.upper_bound;
-      monotonic_details_left.lower_bound = monotone_details.lower_bound;
-      monotonic_details_left.upper_bound_neg = monotone_details.upper_bound_neg;
-      monotonic_details_left.lower_bound_neg = monotone_details.lower_bound_neg;
-      monotonic_details_left.monotoneAvg = monotone_details.monotoneAvg;
-      monotonic_details_left.monotonic_constraints = monotone_details.monotonic_constraints;
-
-      monotonic_details_right.upper_bound = monotone_details.upper_bound;
-      monotonic_details_right.lower_bound = monotone_details.lower_bound;
-      monotonic_details_right.upper_bound_neg = monotone_details.upper_bound_neg;
-      monotonic_details_right.lower_bound_neg = monotone_details.lower_bound_neg;
-      monotonic_details_right.monotoneAvg = monotone_details.monotoneAvg;
-      monotonic_details_right.monotonic_constraints = monotone_details.monotonic_constraints;
-
+        updateMonotoneConstraints(
+          monotone_details,
+          monotonic_details_left,
+          monotonic_details_right,
+          (*trainingData->getMonotonicConstraints()),
+          trainingData->partitionMean(&splittingLeftPartitionIndex),
+          trainingData->partitionMean(&splittingRightPartitionIndex),
+          0,
+          bestSplitFeature,
+          trinary
+        );
       //}
     }
 
