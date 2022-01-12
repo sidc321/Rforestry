@@ -47,7 +47,6 @@ test_that("Tests symmetry in multiple features", {
                  OOBhonest = TRUE,
                  scale = FALSE,
                  monotonicConstraints = c(0,1),
-                 monotoneAvg = TRUE,
                  symmetric = c(0,1))
 
   p <- predict(rf, newdata = x)

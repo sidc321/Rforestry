@@ -21,7 +21,6 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
                  OOBhonest = TRUE,
                  scale = FALSE,
                  monotonicConstraints = c(1),
-                 monotoneAvg = TRUE,
                  symmetric = c(1))
 
   p <- predict(rf, newdata = x)
@@ -46,7 +45,7 @@ test_that("Tests symmetry + monotonicity + missing data + OOBhonest + Monotone A
                  OOBhonest = TRUE,
                  scale = FALSE,
                  monotonicConstraints = c(0,1),
-                 monotoneAvg = TRUE,
+                 #monotoneAvg = TRUE,
                  symmetric = c(0,1))
 
   p <- predict(rf, newdata = x)

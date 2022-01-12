@@ -206,8 +206,8 @@ void RFNode::predict(
             // In this case, we test the feature value and use the correct
             // pseudo outcome by weight
             std::vector<bool> signs;
-            for (const auto sym_idx : (*trainingData->getSymmetricIndices())) {
-              if ((*xNew)[(*trainingData->getSymmetricIndices())[sym_idx]][*it] > 0) {
+            for (size_t i = 0; i < (*trainingData->getSymmetricIndices()).size(); i++) {
+              if ((*xNew)[(*trainingData->getSymmetricIndices())[i]][*it] > 0) {
                 signs.push_back(true);
               } else {
                 signs.push_back(false);
