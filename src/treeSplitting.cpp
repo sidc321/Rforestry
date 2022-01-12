@@ -2210,18 +2210,20 @@ void findBestSplitSymmetricOuter(
 
        bool avgKeepMonotoneSplit = true;
        // If monotoneAvg, we also need to check the monotonicity of the avg set
-       //if (monotone_details.monotoneAvg) {
-       //  for (size_t i = 0; i < WtsLeftAvg.size(); i++) {
-       //    avgKeepMonotoneSplit = avgKeepMonotoneSplit && (acceptMonotoneSplitSingle(
-       //      monotone_details,
-       //      symmetric_details.symmetric_variables,
-       //      currentFeature,
-       //      WtsLeftAvg[i],
-       //      WtsRightAvg[i],
-       //      i
-       //    ));
-       //  }
-       //}
+       if (monotone_details.monotoneAvg) {
+        for (size_t i = 0; i < WtsLeftAvg.size(); i++) {
+          avgKeepMonotoneSplit = avgKeepMonotoneSplit && (acceptMonotoneSplitSingle(
+            monotone_details,
+            symmetric_details.symmetric_variables,
+            currentFeature,
+            WtsLeftAvg[i],
+            WtsRightAvg[i],
+            i,
+            symmetric_details.upper_bounds[i],
+                                          symmetric_details.lower_bounds[i]
+          ));
+        }
+       }
 
        if (!(keepMonotoneSplit && avgKeepMonotoneSplit)) {
          // Update the oldFeature value before proceeding

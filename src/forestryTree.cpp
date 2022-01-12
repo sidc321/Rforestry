@@ -609,24 +609,31 @@ void updateMonotoneConstraintsSingle(
     // Now using the sign of the feature, the relative ordering of the left
     // and right weights,
     if (sign == 1 && monotone_direction == 1) {
+      // If the current feature we are splitting on is always positive for this
+      // set of pseudo outcomes, we should have right > left
       symmetric_details_left.upper_bounds[cur_idx] = midMean;
       symmetric_details_right.lower_bounds[cur_idx] = midMean;
 
       symmetric_details_left.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
       symmetric_details_right.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
     } else if (sign == 0 && monotone_direction == 1) {
+      // If the current feature we are splitting on is always negative,
+      // for this set of pseudo outcomes, we should have left > right
       symmetric_details_left.lower_bounds[cur_idx] = midMean;
       symmetric_details_right.upper_bounds[cur_idx] = midMean;
 
       symmetric_details_left.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
       symmetric_details_right.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
     } else if (sign == 1 && monotone_direction == -1) {
+      // Now if sign is positive, but monotone direction is negative, we
+      // should have left > right
       symmetric_details_left.lower_bounds[cur_idx] = midMean;
       symmetric_details_right.upper_bounds[cur_idx] = midMean;
 
       symmetric_details_left.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
       symmetric_details_right.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
     } else if (sign == 0 && monotone_direction == -1) {
+      // Should have left < right
       symmetric_details_left.upper_bounds[cur_idx] = midMean;
       symmetric_details_right.lower_bounds[cur_idx] = midMean;
 
@@ -639,12 +646,14 @@ void updateMonotoneConstraintsSingle(
   // If current feature is a normal feature, we need to evaluate the split
   // based on the split being on not the absolute value of the feature value
     if (monotone_direction == -1) {
+      // Should be left > right
       symmetric_details_left.lower_bounds[cur_idx] = midMean;
       symmetric_details_right.upper_bounds[cur_idx] = midMean;
 
       symmetric_details_left.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
       symmetric_details_right.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
     } else if (monotone_direction == 1) {
+      // should be right > left
       symmetric_details_left.upper_bounds[cur_idx] = midMean;
       symmetric_details_right.lower_bounds[cur_idx] = midMean;
 
