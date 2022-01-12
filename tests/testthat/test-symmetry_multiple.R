@@ -27,6 +27,7 @@ test_that("Tests symmetry in multiple features", {
 
   p <- predict(rf, newdata = x)
   # plot(x[,1],p)
+  expect_equal(length(p), n)
 
   context("2-dimensional example")
 
@@ -51,6 +52,7 @@ test_that("Tests symmetry in multiple features", {
 
   p <- predict(rf, newdata = x)
   # plot(x[,2],p)
+  expect_equal(length(p), n)
 
   context("2-dimensional example in second feature")
 
@@ -70,11 +72,41 @@ test_that("Tests symmetry in multiple features", {
                  #mtry=2,
                  OOBhonest = TRUE,
                  scale = FALSE,
-                 monotonicConstraints = c(1,0),
+                 monotonicConstraints = c(1,1),
                  monotoneAvg = TRUE,
-                 symmetric = c(1,0))
+                 symmetric = c(1,1))
 
   p <- predict(rf, newdata = x)
   # plot(x[,1],p)
+  expect_equal(length(p), n)
+
+
+  context("5-dimensional example in second feature + 5 non symmetric features")
+
+  set.seed(23322)
+  n <- 1000
+  x <- matrix(runif(10*n,min=-2,max=2), ncol=10)
+  y <- 2*x[,1]**3 + .2*x[,2]**5 + 3*x[,3]**3 - 4*x[,4] + x[,5]
+  colnames(x) <- c("V1","V2","V3","V4","V5","V6","V7","V8","V9","V10")
+  # plot(x[,2],y)
+  # x[135:235,1] <- NA
+
+  rf <- forestry(x=x,
+                 y=y,
+                 ntree=500,
+                 seed=212342,
+                 #maxDepth = 3,
+                 #mtry=2,
+                 #OOBhonest = TRUE,
+                 scale = FALSE,
+                 monotonicConstraints = c(1,1,1,-1,1,rep(0,5)),
+                 #monotoneAvg = TRUE,
+                 symmetric = c(rep(1,5), rep(0,5)))
+
+  p <- predict(rf, newdata = x)
+  # plot(x[,2],p)
+  expect_equal(length(p), n)
+
+
 
 })
