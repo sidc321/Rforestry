@@ -390,13 +390,15 @@ void RFNode::predict(
             }
           }
 
-
         } else {
+          // Check if the current split feature is a symmetric feature
           if (getTrinary() && (std::find(
               trainingData->getSymmetricIndices()->begin(),
               trainingData->getSymmetricIndices()->end(),
               getSplitFeature()) != trainingData->getSymmetricIndices()->end())) {
-            // If trinary splits, we split based on absolute values of the feat
+
+            // If this is a symmetric feature, have to use the absolute value
+            // of the feature value
             if (std::fabs(currentValue) < getSplitValue()) {
               (*leftPartitionIndex).push_back(*it);
             } else {

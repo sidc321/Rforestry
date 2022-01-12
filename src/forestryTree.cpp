@@ -571,6 +571,12 @@ void updateMonotoneConstraintsSingle(
 
   // pull monotonicity direction for current feature
   int monotone_direction = monotone_details.monotonic_constraints[bestSplitFeature];
+  monotone_details_left.monotonic_constraints = monotone_details.monotonic_constraints;
+  monotone_details_right.monotonic_constraints = monotone_details.monotonic_constraints;
+
+  // Also need to pass down the monotone Average Flag
+  monotone_details_left.monotoneAvg = monotone_details.monotoneAvg;
+  monotone_details_right.monotoneAvg = monotone_details.monotoneAvg;
 
   // Calculate the midMeans
   double leftNodeMean = calculateMonotonicBoundSymmetric(symmetric_details_left.pseudooutcomes[cur_idx],
@@ -583,25 +589,74 @@ void updateMonotoneConstraintsSingle(
 
   double midMean = (leftNodeMean + rightNodeMean)/(2);
 
-  // Update the monotone constraints for the positive observations
-  if (monotone_direction == -1) {
-    symmetric_details_left.lower_bounds[cur_idx] = midMean;
-    symmetric_details_right.upper_bounds[cur_idx] = midMean;
+  // Update the monotone constraints for the current pseudo outcome space
 
-    symmetric_details_left.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
-    symmetric_details_right.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
-  } else if (monotone_direction == 1) {
-    symmetric_details_left.upper_bounds[cur_idx] = midMean;
-    symmetric_details_right.lower_bounds[cur_idx] = midMean;
+  // If the current feature is a symmetric feature, split is done on abs() of the
+  // feature value and we need to check the outcomes accordingly
+  if (std::find(symmetric_details.symmetric_variables.begin(),
+                symmetric_details.symmetric_variables.end(),
+                bestSplitFeature) != symmetric_details.symmetric_variables.end()) {
 
-    symmetric_details_left.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
-    symmetric_details_right.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
+    // Get the index of the current feature in the symmetric feats list
+    size_t idx_in_list = *std::find(symmetric_details.symmetric_variables.begin(),
+                                    symmetric_details.symmetric_variables.end(),
+                                    bestSplitFeature);
+
+    // Convert the index in the list to the sign of the current feature
+    size_t sign = idx_to_bin(cur_idx,
+                             idx_in_list);
+
+    // Now using the sign of the feature, the relative ordering of the left
+    // and right weights,
+    if (sign == 1 && monotone_direction == 1) {
+      symmetric_details_left.upper_bounds[cur_idx] = midMean;
+      symmetric_details_right.lower_bounds[cur_idx] = midMean;
+
+      symmetric_details_left.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
+      symmetric_details_right.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
+    } else if (sign == 0 && monotone_direction == 1) {
+      symmetric_details_left.lower_bounds[cur_idx] = midMean;
+      symmetric_details_right.upper_bounds[cur_idx] = midMean;
+
+      symmetric_details_left.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
+      symmetric_details_right.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
+    } else if (sign == 1 && monotone_direction == -1) {
+      symmetric_details_left.lower_bounds[cur_idx] = midMean;
+      symmetric_details_right.upper_bounds[cur_idx] = midMean;
+
+      symmetric_details_left.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
+      symmetric_details_right.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
+    } else if (sign == 0 && monotone_direction == -1) {
+      symmetric_details_left.upper_bounds[cur_idx] = midMean;
+      symmetric_details_right.lower_bounds[cur_idx] = midMean;
+
+      symmetric_details_left.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
+      symmetric_details_right.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
+    }
+
   } else {
-    // otherwise keep the old ones
-    symmetric_details_left.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
-    symmetric_details_left.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
-    symmetric_details_right.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
-    symmetric_details_right.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
+
+  // If current feature is a normal feature, we need to evaluate the split
+  // based on the split being on not the absolute value of the feature value
+    if (monotone_direction == -1) {
+      symmetric_details_left.lower_bounds[cur_idx] = midMean;
+      symmetric_details_right.upper_bounds[cur_idx] = midMean;
+
+      symmetric_details_left.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
+      symmetric_details_right.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
+    } else if (monotone_direction == 1) {
+      symmetric_details_left.upper_bounds[cur_idx] = midMean;
+      symmetric_details_right.lower_bounds[cur_idx] = midMean;
+
+      symmetric_details_left.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
+      symmetric_details_right.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
+    } else {
+      // otherwise keep the old ones
+      symmetric_details_left.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
+      symmetric_details_left.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
+      symmetric_details_right.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
+      symmetric_details_right.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
+    }
   }
 }
 
@@ -1698,8 +1753,6 @@ void forestryTree::getOOBPrediction(
       getOOBindex(OOBIndex, trainingData->getNumRows());
     }
   }
-
-
 
   // Xnew has first access being the feature selection and second access being
   // the observation selection.
