@@ -84,13 +84,21 @@ for the averaging set (This is not a good usage, however, since there will be no
 \item{OOBhonest}{In this version of honesty, the out-of-bag observations for each tree
 are used as the honest (averaging) set. This setting also changes how predictions
 are constructed. When predicting for observations that are out-of-sample
-(using Predict(..., aggregation = "average")), all the trees in the forest
+(using predict(..., aggregation = "average")), all the trees in the forest
 are used to construct predictions. When predicting for an observation that was in-sample (using
 predict(..., aggregation = "oob")), only the trees for which that observation
 was not in the averaging set are used to construct the prediction for that observation.
 aggregation="oob" (out-of-bag) ensures that the outcome value for an observation
 is never used to construct predictions for a given observation even when it is in sample.
-This property does not hold in standard honesty, which relies on an asymptotic subsampling argument.}
+This property does not hold in standard honesty, which relies on an asymptotic
+subsampling argument. By default, when OOBhonest = TRUE, the out-of-bag observations
+for each tree are resamples with replacement to be used for the honest (averaging)
+set. This results in a third set of observations that are left out of both
+the splitting and averaging set, we call these the double out-of-bag (doubleOOB)
+observations. In order to get the predictions of only the trees in which each
+observation fell into this doubleOOB set, one can run predict(... , aggregation = "doubleOOB").
+In order to not do this second bootstrap sample, the doubleBootstrap flag can
+be set to FALSE.}
 
 \item{nthread}{Number of threads to train and predict the forest. The default
 number is 0 which represents using all cores.}
