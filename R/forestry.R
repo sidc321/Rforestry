@@ -2304,6 +2304,28 @@ predictInfo <- function(object,
 #' @param num_quants Number of quantiles to use when doing quantile specific bias
 #'  correction. Will only be used if simple = FALSE. Default is 5.
 #' @return A vector of the bias corrected predictions
+#' @examples
+#'  library(Rforestry)
+#'  set.seed(121235312)
+#'  n <- 1000
+#'  p <- 100
+#'  x <- matrix(rnorm(n * p), ncol = p)
+#'  beta <- runif(p,min = 0, max = 1)
+#'  y <- as.matrix(x) %*% beta + rnorm(1000)
+#'
+#'
+#'  forest <- forestry(x =x,
+#'                     y = y[,1],
+#'                     OOBhonest = TRUE,
+#'                     doubleBootstrap = TRUE)
+#'  predict(rf, x)
+#'
+#'  # Corrected predictions
+#'  pred.bc <- correctedPredict(forest,
+#'                              newdata = x,
+#'                              simple = TRUE,
+#'                              nrounds = 1)
+#'
 #' @export
 correctedPredict <- function(object,
                              newdata=NULL,
