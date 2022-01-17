@@ -205,6 +205,9 @@ training_data_checker <- function(x,
     if (!is.factor(groups)) {
       stop("groups must be supplied as a vector of factors")
     }
+    if (length(levels(groups)) == 1) {
+      stop("groups must have more than 1 level to be left out from sampling")
+    }
   }
 
   if (OOBhonest && (splitratio != 1)) {
@@ -257,6 +260,7 @@ training_data_checker <- function(x,
               "splitratio" = splitratio,
               "OOBhonest" = OOBhonest,
               "nthread" = nthread,
+              "groups" = groups,
               "middleSplit" = middleSplit,
               "doubleTree" = doubleTree,
               "linFeats" = linFeats,

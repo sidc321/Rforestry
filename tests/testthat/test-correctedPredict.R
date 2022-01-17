@@ -174,4 +174,25 @@ test_that('Bias corrections', {
   #
   # rmse.bart <- sqrt(mean((p_bart - y)^2))
 
+  context("Test passing some features to the bias correction")
+
+  set.seed(121235312)
+  n <- 1000
+  p <- 100
+  x <- matrix(rnorm(n * p), ncol = p)
+  beta <- runif(p,min = 0, max = 1)
+  y <- as.matrix(x) %*% beta + rnorm(1000)
+
+
+  forest <- forestry(x =x,
+                     y = y[,1],
+                     OOBhonest = TRUE,
+                     doubleBootstrap = TRUE)
+
+  # preds <- correctedPredict(forest,
+  #                           newdata = x,
+  #                           feats = c(1),
+  #                           simple = TRUE,
+  #                           nrounds = 1)
+
 })
