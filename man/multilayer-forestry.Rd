@@ -168,10 +168,10 @@ the groups when sampling, however if this is set to a positive integer, we
 modify the bootstrap sampling scheme to ensure that exactly that many trees
 have the group left out. We do this by, for each group, creating minTreesPerGroup
 trees which are built on observations sampled from the set of training observations
-which are not in the current group. This means we create at least |groups|* minTreesPerGroup
-trees for the forest. If ntree > |groups|minTreesPerGroup, we create
-max(|groups|minTreesPerGroup,ntree) total trees, in which at least minTreesPerGroup
-are created leaving out each group. For debugging purposes, these groupless
+which are not in the current group. This means we create at least # groups * minTreesPerGroup
+trees for the forest. If ntree > # groups * minTreesPerGroup, we create
+max(# groups * minTreesPerGroup,ntree) total trees, in which at least minTreesPerGroup
+are created leaving out each group. For debugging purposes, these group sampling
 trees are stored at the end of the R forest, in blocks based on the left out group.}
 
 \item{monotoneAvg}{This is a boolean flag that indicates whether or not monotonic

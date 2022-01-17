@@ -34,8 +34,8 @@ taken. By default this is zero, so just a single linear correction is used.}
 \item{linear}{A flag indicating whether or not we want to do a final linear
 bias correction after doing the nonlinear corrections. Default is TRUE.}
 
-\item{double}{flag indicating if one should use doubleOOB for the initial
-predictions rather than "oob." Defalt is FALSE.}
+\item{double}{A flag indicating if one should use aggregation = "doubleOOB" for
+the initial predictions rather than aggregation = "oob." Default is FALSE.}
 
 \item{simple}{flag indicating whether we should do a simple linear adjustment
 or do different adjustments by quantiles. Default is TRUE.}
