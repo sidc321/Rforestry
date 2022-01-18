@@ -16,7 +16,9 @@ correctedPredict(
   use_residuals = FALSE,
   adaptive = FALSE,
   monotone = FALSE,
-  num_quants = 5
+  num_quants = 5,
+  params.forestry = list(),
+  keep_fits = FALSE
 )
 }
 \arguments{
@@ -56,6 +58,17 @@ original prediction of Y. Default is FALSE.}
 
 \item{num_quants}{Number of quantiles to use when doing quantile specific bias
 correction. Will only be used if simple = FALSE. Default is 5.}
+
+\item{params.forestry}{A list of parameters to pass to the subsequent forestry
+calls. Note that these forests will be trained on features of dimension
+length(feats) + 1 as the correction forests are trained on Y ~ cbind(newdata[,feats], Y.hat).
+so monotonic constraints etc given to this list should be of size length(feats) + 1.
+Defaults to the standard forestry parameters for any parameters that are
+not included in the list.}
+
+\item{keep_fits}{A flag that indicates if we should save the intermediate
+forests used for the bias correction. If this is TRUE, we return a list of
+the forestry objects for each iteration in the bias correction.}
 }
 \value{
 A vector of the bias corrected predictions
