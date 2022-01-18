@@ -36,6 +36,7 @@ test_that('Bias corrections', {
                               newdata = x,
                               simple = FALSE,
                               nrounds = 0)
+
   rmse.bc <- sqrt(mean((pred.bc - y)^2))
 
   pred.bc <- correctedPredict(forest,
@@ -177,11 +178,11 @@ test_that('Bias corrections', {
   context("Test passing some features to the bias correction")
 
   set.seed(121235312)
-  n <- 1000
+  n <- 100
   p <- 100
   x <- matrix(rnorm(n * p), ncol = p)
   beta <- runif(p,min = 0, max = 1)
-  y <- as.matrix(x) %*% beta + rnorm(1000)
+  y <- as.matrix(x) %*% beta + rnorm(100)
 
 
   forest <- forestry(x =x,
@@ -189,10 +190,19 @@ test_that('Bias corrections', {
                      OOBhonest = TRUE,
                      doubleBootstrap = TRUE)
 
-  # preds <- correctedPredict(forest,
-  #                           newdata = x,
-  #                           feats = c(1),
-  #                           simple = TRUE,
-  #                           nrounds = 1)
+  # Do out of sample bias correction
+  preds <- correctedPredict(forest,
+                            newdata = x[1:25,],
+                            feats = c(78),
+                            simple = TRUE,
+                            nrounds = 1)
+  expect_equal(length(preds), 25)
+
+  # In sample bias correction
+  preds <- correctedPredict(forest,
+                            feats = c(1,2,3,78),
+                            simple = TRUE,
+                            nrounds = 1)
+  expect_equal(length(preds), n)
 
 })

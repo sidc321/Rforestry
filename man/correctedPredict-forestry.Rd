@@ -74,13 +74,13 @@ Perform predictions given the forest using a bias correction based on
  x <- matrix(rnorm(n * p), ncol = p)
  beta <- runif(p,min = 0, max = 1)
  y <- as.matrix(x) \%*\% beta + rnorm(1000)
-
+ x <- data.frame(x)
 
  forest <- forestry(x =x,
                     y = y[,1],
                     OOBhonest = TRUE,
                     doubleBootstrap = TRUE)
- predict(rf, x)
+ p <- predict(forest, x)
 
  # Corrected predictions
  pred.bc <- correctedPredict(forest,

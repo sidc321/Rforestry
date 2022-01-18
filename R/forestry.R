@@ -2316,13 +2316,13 @@ predictInfo <- function(object,
 #'  x <- matrix(rnorm(n * p), ncol = p)
 #'  beta <- runif(p,min = 0, max = 1)
 #'  y <- as.matrix(x) %*% beta + rnorm(1000)
-#'
+#'  x <- data.frame(x)
 #'
 #'  forest <- forestry(x =x,
 #'                     y = y[,1],
 #'                     OOBhonest = TRUE,
 #'                     doubleBootstrap = TRUE)
-#'  predict(rf, x)
+#'  p <- predict(forest, x)
 #'
 #'  # Corrected predictions
 #'  pred.bc <- correctedPredict(forest,
@@ -2378,6 +2378,8 @@ correctedPredict <- function(object,
     adjust.data <- data.frame(object@processed_dta$processed_x[,feats],
                               Y = object@processed_dta$y,
                               Y.hat = oob.preds)
+    # give adjust data the column names from feats
+    colnames(adjust.data) <- c(paste0("V",feats), "Y","Y.hat")
   }
 
 
@@ -2433,7 +2435,13 @@ correctedPredict <- function(object,
       # Get initial predictions
       pred_data <- data.frame(newdata[,feats],
                               Y.hat = predict(object, newdata))
-      for ( iter in 1:nrounds) {
+
+      # Set column names to follow a format matching the features used
+      if (!is.null(feats)) {
+        colnames(pred_data) <- c(paste0("V",feats), "Y.hat")
+      }
+
+      for (iter in 1:nrounds) {
         adjusted.pred <- predict(rf_fits[[iter]], newdata = pred_data)
         pred_data$Y.hat <- adjusted.pred
       }
@@ -2476,9 +2484,14 @@ correctedPredict <- function(object,
         preds.adjusted <- loo_pred_helper(adjust.data)$insample_preds
       } else {
         model <- loo_pred_helper(adjust.data)$adjustment_model
+        data_pred <- data.frame(newdata[,feats],
+                                Y.hat = preds.initial)
+        if (!is.null(feats)) {
+          colnames(data_pred) <- c(paste0("V",feats),"Y.hat")
+        }
+
         preds.adjusted <- predict(model,
-                                  newdata = data.frame(newdata[,feats],
-                                                       Y.hat = preds.initial))
+                                  newdata = data_pred)
         preds.adjusted <- unname(preds.adjusted)
       }
 
@@ -2531,9 +2544,13 @@ correctedPredict <- function(object,
         # Now predict for each index set using the right model
         preds.adjusted <- rep(0, nrow(newdata))
         for ( i in 1:(length(training_quantiles)-1)) {
+          pred_df <- data.frame(newdata[which(testing.quantiles == i), feats],
+                                Y.hat = preds.initial[which(testing.quantiles == i)])
+          if (!is.null(feats)) {
+            colnames(pred_df) <- c(paste0("V",feats),"Y.hat")
+          }
           preds.adjusted[which(testing.quantiles == i)] <- predict(fits[[i]],
-                                                                   newdata = data.frame(newdata[which(testing.quantiles == i), feats],
-                                                                                        Y.hat = preds.initial[which(testing.quantiles == i)]))
+                                                                   newdata = pred_df)
         }
       } else {
         preds.adjusted <- new_pred
