@@ -205,4 +205,68 @@ test_that('Bias corrections', {
                             nrounds = 1)
   expect_equal(length(preds), n)
 
+
+  context("Test passing forestry parameters to the bias correction")
+
+  set.seed(121235312)
+  n <- 100
+  p <- 10
+  x <- matrix(rnorm(n * p), ncol = p)
+  beta <- runif(p,min = 1, max = 2)
+  beta[6:10] <- 0
+  y <- as.matrix(x) %*% beta
+  x <- as.data.frame(x)
+
+
+  rf <- forestry(x =x,
+                 y = y[,1],
+                 OOBhonest = TRUE,
+                 doubleBootstrap = TRUE)
+
+  params <- list(ntree = 1000,
+                 groups=as.factor(c(rep(1,50), rep(2,50))),
+                 minTreesPerGroup = 400,
+                 monotonicConstraints = c(rep(1,2),rep(0,3),1),
+                 seed = 12312
+                 )
+
+  preds.bc <- correctedPredict(rf,
+                               newdata = x,
+                               feats = c(1:5),
+                               params.forestry = params,
+                               nrounds = 3)
+
+  expect_equal(length(preds.bc), n)
+
+  # Now check the trained forests and make sure they get the right parameters
+  preds.bc2 <- correctedPredict(rf,
+                               newdata = x,
+                               feats = c(1:5),
+                               params.forestry = params,
+                               keep_fits = TRUE,
+                               nrounds = 3)
+
+  context("Check the parameters of the fitted forests")
+  for (fit_i in 1:3) {
+    rf_i <- preds.bc2$fits[[fit_i]]
+
+    # Make sure parameters are the same as in the params list
+    expect_equal(rf_i@ntree, params$ntree)
+    expect_equal(rf_i@minTreesPerGroup, params$minTreesPerGroup)
+    expect_equal(all.equal(rf_i@monotonicConstraints, params$monotonicConstraints),TRUE)
+    expect_equal(all.equal(as.factor(rf_i@groups), params$groups),TRUE)
+  }
+
+  context("Check adaptive forestry parameters")
+
+  params <- list(ntree.first = 250, ntree.second = 500, seed = 1397)
+
+  preds.bc3 <- correctedPredict(rf,
+                                newdata = x,
+                                feats = c(1:5),
+                                params.forestry = params,
+                                adaptive = TRUE,
+                                nrounds = 3)
+  expect_equal(length(preds.bc3), n)
+
 })

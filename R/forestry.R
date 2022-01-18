@@ -2307,6 +2307,10 @@ predictInfo <- function(object,
 #'  original prediction of Y. Default is FALSE.
 #' @param num_quants Number of quantiles to use when doing quantile specific bias
 #'  correction. Will only be used if simple = FALSE. Default is 5.
+#' @param params.forestry A list of parameters to pass to the subsequent forestry
+#'  calls. Note that these forests will be trained on features of dimension
+#'  length(feats) + 1 as the correction forests are trained on Y ~ cbind(newdata[,feats], Y.hat).
+#'  so monotonic constraints etc given to this list should be of size length(feats) + 1.
 #' @return A vector of the bias corrected predictions
 #' @examples
 #'  library(Rforestry)
@@ -2332,17 +2336,20 @@ predictInfo <- function(object,
 #'
 #' @export
 correctedPredict <- function(object,
-                             newdata=NULL,
-                             feats=NULL,
-                             nrounds=0,
-                             linear=TRUE,
-                             double=FALSE,
-                             simple=TRUE,
-                             verbose=FALSE,
-                             use_residuals=FALSE,
-                             adaptive=FALSE,
-                             monotone=FALSE,
-                             num_quants=5)
+                             newdata = NULL,
+                             feats = NULL,
+                             nrounds = 0,
+                             linear = TRUE,
+                             double = FALSE,
+                             simple = TRUE,
+                             verbose = FALSE,
+                             use_residuals = FALSE,
+                             adaptive = FALSE,
+                             monotone = FALSE,
+                             num_quants = 5,
+                             params.forestry = list(),
+                             keep_fits = FALSE
+                             )
 
 {
   # Check allowed settings for the bias correction
@@ -2396,23 +2403,34 @@ correctedPredict <- function(object,
       }
 
       if (adaptive) {
-        fit.i <- adaptiveForestry(x = adjust.data %>% dplyr::select(-Y),
-                                  y = y_reg,
-                                  OOBhonest = TRUE,
-                                  ntree.first = 100,
-                                  ntree.second = 500)
-        pred.i <- predict(fit.i, adjust.data %>% dplyr::select(-Y),
-                          aggregation = agg, weighting=1)
+        # Set default params for adaptive forestry
+        params.forestry.i <- params.forestry
+        params.forestry.i$x <- adjust.data %>% dplyr::select(-Y)
+        params.forestry.i$y <- y_reg
+
+        fit.i <- do.call(adaptiveForestry, c(params.forestry.i))
+
+        pred.i <- predict(fit.i, newdata = adjust.data %>% dplyr::select(-Y),
+                          aggregation = agg, weighting = 1)
       } else if (monotone) {
-        fit.i <- forestry(x = adjust.data %>% dplyr::select(-Y),
-                          y = y_reg,
-                          monotoneAvg = TRUE,
-                          monotonicConstraints = c(rep(0,ncol(adjust.data)-2),1),
-                          OOBhonest = TRUE)
+        # Set default params for monotonicity in the Y.hat feature
+        params.forestry.i <- params.forestry
+        params.forestry.i$x <- adjust.data %>% dplyr::select(-Y)
+        params.forestry.i$y <- y_reg
+        params.forestry.i$OOBhonest <- TRUE
+        params.forestry.i$monotoneAvg <- TRUE
+        params.forestry.i$monotonicConstraints <- c(rep(0,ncol(adjust.data)-2),1)
+
+
+        fit.i <- do.call(forestry,c(params.forestry.i))
       } else {
-        fit.i <- forestry(x = adjust.data %>% dplyr::select(-Y),
-                          y = y_reg,
-                          OOBhonest = TRUE)
+        # Set default forestry params
+        params.forestry.i <- params.forestry
+        params.forestry.i$x <- adjust.data %>% dplyr::select(-Y)
+        params.forestry.i$y <- y_reg
+        params.forestry.i$OOBhonest <- TRUE
+
+        fit.i <- do.call(forestry, c(params.forestry.i))
       }
       pred.i <- predict(fit.i, adjust.data %>% dplyr::select(-Y),
                           aggregation = agg)
@@ -2557,9 +2575,17 @@ correctedPredict <- function(object,
       }
     }
 
-    return(preds.adjusted)
+    if (!keep_fits) {
+      return(preds.adjusted)
+    } else {
+      return(list("predictions" = preds.adjusted, "fits" = rf_fits))
+    }
   } else {
-    return(adjust.data[,ncol(adjust.data)])
+    if (!keep_fits) {
+      return(adjust.data[,ncol(adjust.data)])
+    } else {
+      return(list("predictions" = adjust.data[,ncol(adjust.data)], "fits" = rf_fits))
+    }
   }
 }
 
