@@ -2369,6 +2369,19 @@ correctedPredict <- function(object,
     }
   }
 
+  # Check the parameters match parameters for forestry or adaptiveForestry
+  if (adaptive) {
+    valid_params <- names(as.list(args(Rforestry::adaptiveForestry)))
+  } else {
+    valid_params <- names(as.list(args(Rforestry::forestry)))
+  }
+  if (any(!(names(params.forestry) %in% valid_params))) {
+    bad_params <- paste(names(params.forestry)[which((!(names(params.forestry) %in% valid_params)))])
+    stop(paste0("Invalid parameter in params.forestry: ",
+                bad_params," "))
+  }
+
+
   if (double) {
     agg = "doubleOOB"
   } else {

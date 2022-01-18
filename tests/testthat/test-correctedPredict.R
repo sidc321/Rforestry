@@ -269,4 +269,21 @@ test_that('Bias corrections', {
                                 nrounds = 3)
   expect_equal(length(preds.bc3), n)
 
+
+  context("Try passing bad parameters to params.forestry")
+  # Now if we use the old params but don't use adaptiveForestry,
+  # the ntree.first ntree.second parameters should be invalid
+
+  params <- list(ntree.first = 250, ntree.second = 500, seed = 1397)
+
+  expect_error(
+    preds.bc4 <- correctedPredict(rf,
+                                  newdata = x,
+                                  feats = c(1:5),
+                                  params.forestry = params,
+                                  nrounds = 1),
+    "Invalid parameter in params.forestry: ntree.first Invalid parameter in params.forestry: ntree.second "
+  )
+
+
 })
