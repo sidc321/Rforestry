@@ -82,11 +82,11 @@ Perform predictions given the forest using a bias correction based on
 \examples{
  library(Rforestry)
  set.seed(121235312)
- n <- 1000
- p <- 100
+ n <- 100
+ p <- 10
  x <- matrix(rnorm(n * p), ncol = p)
  beta <- runif(p,min = 0, max = 1)
- y <- as.matrix(x) \%*\% beta + rnorm(1000)
+ y <- as.matrix(x) \%*\% beta + rnorm(100)
  x <- data.frame(x)
 
  forest <- forestry(x =x,
