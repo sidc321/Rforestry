@@ -2320,7 +2320,7 @@ predictInfo <- function(object,
 #' @examples
 #'  library(Rforestry)
 #'  set.seed(121235312)
-#'  n <- 100
+#'  n <- 50
 #'  p <- 10
 #'  x <- matrix(rnorm(n * p), ncol = p)
 #'  beta <- runif(p,min = 0, max = 1)
@@ -2337,7 +2337,7 @@ predictInfo <- function(object,
 #'  pred.bc <- correctedPredict(forest,
 #'                              newdata = x,
 #'                              simple = TRUE,
-#'                              nrounds = 1)
+#'                              nrounds = 0)
 #'
 #' @export
 correctedPredict <- function(object,
