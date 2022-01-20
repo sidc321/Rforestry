@@ -2324,7 +2324,7 @@ predictInfo <- function(object,
 #'  p <- 10
 #'  x <- matrix(rnorm(n * p), ncol = p)
 #'  beta <- runif(p,min = 0, max = 1)
-#'  y <- as.matrix(x) %*% beta + rnorm(100)
+#'  y <- as.matrix(x) %*% beta + rnorm(50)
 #'  x <- data.frame(x)
 #'
 #'  forest <- forestry(x =x,
