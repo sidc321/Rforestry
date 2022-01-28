@@ -643,7 +643,19 @@ forestry <- function(x,
                      doubleTree = FALSE,
                      reuseforestry = NULL,
                      savable = TRUE,
-                     saveable = TRUE) {
+                     saveable = TRUE
+) {
+  # Make sure that all the parameters exist when passed to forestry
+  tryCatch({
+    check_args <- c(as.list(environment()))
+    rm(check_args)
+  },  error = function(err) {
+    err <- as.character(err)
+    err <- gsub("Error in as.list.environment(environment()): ","", err, fixed = TRUE)
+    stop(paste0("A parameter passed is not assigned: ", err))
+  })
+
+
   if(is.matrix(x) && is.null(colnames(x))) {
     message("x does not have column names. The check that columns are provided in the same order
             when training and predicting will be skipped")
@@ -1104,8 +1116,19 @@ multilayerForestry <- function(x,
                      doubleTree = FALSE,
                      reuseforestry = NULL,
                      savable = TRUE,
-                     saveable = saveable
+                     saveable = TRUE
 ) {
+
+  # Make sure that all the parameters exist when passed to forestry
+  tryCatch({
+    check_args <- c(as.list(environment()))
+    rm(check_args)
+  },  error = function(err) {
+    err <- as.character(err)
+    err <- gsub("Error in as.list.environment(environment()): ","", err, fixed = TRUE)
+    stop(paste0("A parameter passed is not assigned: ", err))
+  })
+
   # Check for named columns
   if(is.matrix(x) && is.null(colnames(x))) {
     message("x does not have column names. The check that columns are provided in the same order

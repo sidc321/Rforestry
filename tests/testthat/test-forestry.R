@@ -43,4 +43,9 @@ test_that("Tests that random forest is working correctly", {
   # print(mean((y_pred - y) ^ 2))
   expect_equal(mean((y_pred - y) ^ 2), 0.1076747001972507000733, tolerance = 1e-6)
 
+
+  # Test passing a bad parameter to forestry
+  expect_error(rf <- forestry( x = iris[,-1], y = iris[,1], seed = seed_i),
+               "A parameter passed is not assigned: object 'seed_i' not found\n")
+
 })
