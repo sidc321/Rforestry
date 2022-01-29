@@ -44,7 +44,7 @@ multilayerForestry(
   doubleTree = FALSE,
   reuseforestry = NULL,
   savable = TRUE,
-  saveable = saveable
+  saveable = TRUE
 )
 }
 \arguments{
