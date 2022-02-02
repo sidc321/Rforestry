@@ -44,6 +44,24 @@ void updateBestSplitImpute(
         std::mt19937_64& random_number_generator
 );
 
+void updateBestSplitTrinary(
+        double* bestSplitLossAll,
+        double* bestSplitValueAll,
+        size_t* bestSplitFeatureAll,
+        size_t* bestSplitCountAll,
+        int* bestSplitNaDirectionAll,
+        std::vector<double>* bestSplitLeftWts,
+        std::vector<double>* bestSplitRightWts,
+        double currentSplitLoss,
+        double currentSplitValue,
+        size_t currentFeature,
+        size_t bestSplitTableIndex,
+        int currentSplitNaDirection,
+        std::vector<double> currentSplitLeftWts,
+        std::vector<double> currentSplitRightWts,
+        std::mt19937_64& random_number_generator
+);
+
 void updateBestSplitS(
         arma::Mat<double> &bestSplitSL,
         arma::Mat<double> &bestSplitSR,
@@ -231,17 +249,119 @@ void findBestSplitImputeCategorical(
         size_t maxObs
 );
 
+void findBestSplitSymmetricOuter(
+        std::vector<size_t>* averagingSampleIndex,
+        std::vector<size_t>* splittingSampleIndex,
+        size_t bestSplitTableIndex,
+        size_t currentFeature,
+        double* bestSplitLossAll,
+        double* bestSplitValueAll,
+        size_t* bestSplitFeatureAll,
+        size_t* bestSplitCountAll,
+        int* bestSplitNaDirectionAll,
+        std::vector<double>* bestSplitLeftWtsAll,
+        std::vector<double>* bestSplitRightWtsAll,
+        DataFrame* trainingData,
+        size_t splitNodeSize,
+        size_t averageNodeSize,
+        std::mt19937_64& random_number_generator,
+        bool splitMiddle,
+        size_t maxObs,
+        bool monotone_splits,
+        monotonic_info monotone_details,
+        symmetric_info symmetric_details
+);
+
+double calcSymmetricLossVectorized(
+        std::vector<double> SumsLeft,
+        std::vector<double> SumsRight,
+        std::vector<double> WtsLeft,
+        std::vector<double> WtsRight,
+        std::vector<size_t> CtsLeft,
+        std::vector<size_t> CtsRight
+);
+
+double calcSymmetricLoss(
+        double leftSum,
+        double midSum,
+        double rightSum,
+        size_t nLeft,
+        size_t nRight,
+        size_t nMid,
+        double leftWeight,
+        double rightWeight,
+        double midWeight
+);
+
+double calcSymmetricLossOuter(
+        double leftPositiveSum,
+        double leftNegativeSum,
+        double rightPositiveSum,
+        double rightNegativeSum,
+        size_t leftPositiveCount,
+        size_t leftNegativeCount,
+        size_t rightPositiveCount,
+        size_t rightNegativeCount,
+        double leftPositiveWeight,
+        double leftNegativeWeight,
+        double rightPositiveWeight,
+        double rightNegativeWeight
+);
+
+void updatePartitionWeights(
+        double leftMean,
+        double midMean,
+        double rightMean,
+        size_t nLeft,
+        size_t nRight,
+        size_t nMid,
+        double &leftWeight,
+        double &rightWeight,
+        double &midWeight
+);
+
+void updatePartitionWeightsOuter(
+        double negativeParentWeight,
+        double positiveParentWeight,
+        size_t nLP,
+        size_t nRP,
+        size_t nLN,
+        size_t nRN,
+        double uLP,
+        double uRP,
+        double uLN,
+        double uRN,
+        double &wLP,
+        double &wRP,
+        double &wLN,
+        double &wRN
+);
+
+void updatePartitionWeightsSingle(
+        double parentWeight,
+        size_t nL,
+        size_t nR,
+        double uL,
+        double uR,
+        double &wL,
+        double &wR
+);
+
 void determineBestSplit(
         size_t &bestSplitFeature,
         double &bestSplitValue,
         double &bestSplitLoss,
         int &bestSplitNaDir,
+        std::vector<double> &bestSplitLeftWts,
+        std::vector<double> &bestSplitRightWts,
         size_t mtry,
         double* bestSplitLossAll,
         double* bestSplitValueAll,
         size_t* bestSplitFeatureAll,
         size_t* bestSplitCountAll,
         int* bestSplitNaDirectionAll,
+        std::vector<double>* bestSplitLeftWtsAll,
+        std::vector<double>* bestSplitRightWtsAll,
         std::mt19937_64& random_number_generator
 );
 
@@ -252,9 +372,73 @@ bool acceptMonotoneSplit(
     double rightPartitionMean
 );
 
+bool acceptMonotoneTrinarySplit(
+        monotonic_info &monotone_details,
+        size_t currentFeature,
+        double leftPartitionMean,
+        double rightPartitionMean,
+        double centerPartitionMean
+);
+
+bool acceptMonotoneSplitSingle(
+        monotonic_info &monotone_details,
+        std::vector<size_t> symmetricFeatures,
+        size_t currentFeature,
+        double Lweight,
+        double Rweight,
+        size_t symmetric_idx,
+        double upper_bound,
+        double lower_bound
+);
+
+bool acceptMonotoneOuterSplit(
+        monotonic_info &monotone_details,
+        size_t currentFeature,
+        double LPMean,
+        double RPMean,
+        double LNMean,
+        double RNMean
+);
+
+int calculateNaDirection(
+        double naMean,
+        double left,
+        double center,
+        double right
+);
+
+int calculateNaDirectionOuter(
+        double naMean,
+        double LP,
+        double LN,
+        double RP,
+        double RN
+);
+
 double calculateMonotonicBound(
     double node_mean,
     monotonic_info& monotone_details
+);
+
+double calculateMonotonicBoundSymmetric(
+        double node_mean,
+        double lower_bound,
+        double upper_bound
+);
+
+void getSplitCounts(
+        DataFrame* trainingData,
+        std::vector<size_t>* averagingSampleIndex,
+        size_t splitFeature,
+        double splitValue,
+        size_t &nLP,
+        size_t &nRP,
+        size_t &nLN,
+        size_t &nRN,
+        double &sLP,
+        double &sRP,
+        double &sLN,
+        double &sRN
 );
 
 #endif //FORESTRYCPP_TREESPLIT_H

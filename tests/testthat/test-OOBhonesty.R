@@ -64,7 +64,6 @@ test_that("Tests if OOB Honesty is working correctly", {
     OOBhonest = TRUE,
     doubleBootstrap = FALSE,
     seed = 8921,
-    nodesizeStrictAvg = 0,
     saveable = TRUE
   )
   forest <- make_savable(forest)
@@ -87,7 +86,6 @@ test_that("Tests if OOB Honesty is working correctly", {
     splitratio = .5,
     OOBhonest = FALSE,
     seed = 8921,
-    nodesizeStrictAvg = 0,
     saveable = TRUE
   )
   forest <- make_savable(forest)

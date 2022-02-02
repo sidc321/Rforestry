@@ -2,6 +2,7 @@
 #include "utils.h"
 #include "treeSplitting.h"
 #include <RcppArmadillo.h>
+#include <RcppThread.h>
 #include <cmath>
 #include <set>
 #include <map>
@@ -42,6 +43,7 @@ forestryTree::forestryTree(
   size_t maxObs,
   bool hasNas,
   bool linear,
+  bool symmetric,
   double overfitPenalty,
   unsigned int seed
 ){
@@ -63,18 +65,18 @@ forestryTree::forestryTree(
   * @param maxObs    Max number of observations to split on
   */
  /* Sanity Check */
-  // if (minNodeSizeAvg == 0) {
-  //   throw std::runtime_error("minNodeSizeAvg cannot be set to 0.");
-  // }
+  if (minNodeSizeAvg == 0) {
+    throw std::runtime_error("minNodeSizeAvg cannot be set to 0.");
+  }
   if (minNodeSizeSpt == 0) {
     throw std::runtime_error("minNodeSizeSpt cannot be set to 0.");
   }
   if (minNodeSizeToSplitSpt == 0) {
     throw std::runtime_error("minNodeSizeToSplitSpt cannot be set to 0.");
   }
-  // if (minNodeSizeToSplitAvg == 0) {
-  //   throw std::runtime_error("minNodeSizeToSplitAvg cannot be set to 0.");
-  // }
+  if (minNodeSizeToSplitAvg == 0) {
+    throw std::runtime_error("minNodeSizeToSplitAvg cannot be set to 0.");
+  }
   if (minNodeSizeToSplitAvg > (*averagingSampleIndex).size()) {
     std::ostringstream ostr;
     ostr << "minNodeSizeToSplitAvg cannot exceed total elements in the "
@@ -130,7 +132,6 @@ forestryTree::forestryTree(
   this->_nodeCount = 0;
   this->_seed = seed;
 
-
   /* If ridge splitting, initialize RSS components to pass to leaves*/
 
   std::vector<size_t>* splitIndexes = getSplittingIndex();
@@ -173,7 +174,39 @@ forestryTree::forestryTree(
   monotonic_details.upper_bound = std::numeric_limits<double>::max();
   monotonic_details.lower_bound = -std::numeric_limits<double>::max();
   monotonic_details.monotoneAvg = (bool) trainingData->getMonotoneAvg();
+  monotonic_details.upper_bound_neg = std::numeric_limits<double>::max();
+  monotonic_details.lower_bound_neg = -std::numeric_limits<double>::max();
 
+
+  // When doing symmetric splits, we need to create the struct for the symmetric
+  // splitting constraints
+  struct symmetric_info symmetric_details;
+
+  std::vector<double> outcomes;
+  std::vector<size_t> indices;
+  std::vector<double> ub;
+  std::vector<double> lb;
+
+  if (symmetric) {
+    // Initialize the symmetric indices based on those stored in trainingData
+    indices = (*trainingData->getSymmetricIndices());
+
+
+    size_t size = (size_t) pow(2.0, indices.size());
+
+    // Move this down
+    for (size_t j = 0; j < size; j++) {
+      outcomes.push_back(trainingData->partitionMean(getAveragingIndex()));
+      ub.push_back(std::numeric_limits<double>::max());
+      lb.push_back(-std::numeric_limits<double>::max());
+    }
+  }
+
+  // Fill in the parts of the struct
+  symmetric_details.symmetric_variables = indices;
+  symmetric_details.pseudooutcomes = outcomes;
+  symmetric_details.upper_bounds = ub;
+  symmetric_details.lower_bounds = lb;
 
   /* Recursively grow the tree */
   recursivePartition(
@@ -190,7 +223,10 @@ forestryTree::forestryTree(
     g_ptr,
     s_ptr,
     monotone_splits,
-    monotonic_details
+    monotonic_details,
+    symmetric,
+    true,
+    symmetric_details
   );
 }
 
@@ -322,6 +358,7 @@ void splitDataIntoTwoParts(
     std::vector<size_t>* rightPartitionIndex,
     bool categoical,
     bool hasNas,
+    bool trinary,
     size_t &naLeftCount,
     size_t &naRightCount
 ){
@@ -347,12 +384,25 @@ void splitDataIntoTwoParts(
       } else {
         // Non-categorical, split to left (<) and right (>=) according to the
         double currentFeatureValue = trainingData->getPoint(*it, splitFeature);
+
         if (std::isnan(currentFeatureValue)) {
           naIndices.push_back(*it);
-        } else if (currentFeatureValue < splitValue) {
-          (*leftPartitionIndex).push_back(*it);
         } else {
-          (*rightPartitionIndex).push_back(*it);
+
+          // If trinary splits, we only split by absolute value of the feature value
+          if (trinary && (std::find(
+              trainingData->getSymmetricIndices()->begin(),
+              trainingData->getSymmetricIndices()->end(),
+              splitFeature
+          ) != trainingData->getSymmetricIndices()->end())) {
+            currentFeatureValue = std::fabs(currentFeatureValue);
+          }
+
+          if (currentFeatureValue < splitValue) {
+            (*leftPartitionIndex).push_back(*it);
+          } else {
+            (*rightPartitionIndex).push_back(*it);
+          }
         }
       }
     }
@@ -388,14 +438,315 @@ void splitDataIntoTwoParts(
         }
       } else {
         // Non-categorical, split to left (<) and right (>=) according to the
+        double tmpFeatureValue = (*trainingData).getPoint(*it, splitFeature);
 
-        if ((*trainingData).getPoint(*it, splitFeature) < splitValue) {
+        // If trinary splits, we only split by absolute value of the feature value
+        if (trinary && (std::find(
+          trainingData->getSymmetricIndices()->begin(),
+          trainingData->getSymmetricIndices()->end(),
+          splitFeature
+        ) != trainingData->getSymmetricIndices()->end())) {
+          tmpFeatureValue = std::fabs(tmpFeatureValue);
+        }
+
+        // Now split into left and right partitions based on feature value
+        if (tmpFeatureValue < splitValue) {
           (*leftPartitionIndex).push_back(*it);
         } else {
           (*rightPartitionIndex).push_back(*it);
         }
       }
     }
+  }
+}
+
+void updateMonotoneConstraints(
+    monotonic_info& monotone_details,
+    monotonic_info& monotonic_details_left,
+    monotonic_info& monotonic_details_right,
+    std::vector<int> monotonic_constraints,
+    double leftMean,
+    double rightMean,
+    double centerMean,
+    size_t bestSplitFeature,
+    bool update_center
+) {
+  int monotone_direction = monotone_details.monotonic_constraints[bestSplitFeature];
+  monotonic_details_left.monotonic_constraints = monotonic_constraints;
+  monotonic_details_right.monotonic_constraints = monotonic_constraints;
+
+  // Also need to pass down the monotone Average Flag
+  monotonic_details_left.monotoneAvg = monotone_details.monotoneAvg;
+  monotonic_details_right.monotoneAvg = monotone_details.monotoneAvg;
+
+  double leftNodeMean = calculateMonotonicBound(leftMean,
+                                                monotone_details);
+  double rightNodeMean = calculateMonotonicBound(rightMean,
+                                                 monotone_details);
+  double centerNodeMean;
+  double leftMidMean;
+  double rightMidMean;
+
+  if (update_center) {
+    centerNodeMean = calculateMonotonicBound(centerMean,
+                                             monotone_details);
+    leftMidMean = (leftNodeMean + centerNodeMean)/2.0;
+    rightMidMean = (rightNodeMean + centerNodeMean)/2.0;
+  }
+
+  double midMean = (leftNodeMean + rightNodeMean )/(2);
+
+  // Pass down the new upper and lower bounds if it is a monotonic split,
+  if (update_center) {
+    if (monotone_direction == -1) {
+      monotonic_details_left.lower_bound = rightMidMean;
+      monotonic_details_left.lower_bound_neg = rightMidMean;
+      monotonic_details_left.upper_bound = leftMidMean;
+      monotonic_details_left.upper_bound_neg = leftMidMean;
+
+
+      monotonic_details_right.lower_bound_neg = leftMidMean;
+      monotonic_details_right.upper_bound = rightMidMean;
+
+      monotonic_details_right.upper_bound_neg = monotone_details.upper_bound;
+      monotonic_details_right.lower_bound = monotone_details.lower_bound;
+    } else if (monotone_direction == 1) {
+      monotonic_details_left.upper_bound = rightMidMean;
+      monotonic_details_left.lower_bound = leftMidMean;
+      monotonic_details_left.upper_bound_neg = rightMidMean;
+      monotonic_details_left.lower_bound_neg = leftMidMean;
+
+      monotonic_details_right.upper_bound_neg = leftMidMean;
+      monotonic_details_right.lower_bound = rightMidMean;
+
+      monotonic_details_right.lower_bound_neg =  monotone_details.lower_bound;
+      monotonic_details_right.upper_bound = monotone_details.upper_bound;
+    } else {
+
+      // Just respect the previous bounds
+      monotonic_details_left.upper_bound = monotone_details.upper_bound;
+      monotonic_details_left.lower_bound = monotone_details.lower_bound;
+      monotonic_details_right.upper_bound = monotone_details.upper_bound;
+      monotonic_details_right.lower_bound = monotone_details.lower_bound;
+    }
+
+  } else {
+    if (monotone_direction == -1) {
+      monotonic_details_left.lower_bound = midMean;
+      monotonic_details_right.upper_bound = midMean;
+
+      monotonic_details_left.upper_bound = monotone_details.upper_bound;
+      monotonic_details_right.lower_bound = monotone_details.lower_bound;
+    } else if (monotone_direction == 1) {
+      monotonic_details_left.upper_bound = midMean;
+      monotonic_details_right.lower_bound = midMean;
+
+      monotonic_details_left.lower_bound =  monotone_details.lower_bound;
+      monotonic_details_right.upper_bound = monotone_details.upper_bound;
+    } else {
+      // otherwise keep the old ones
+      monotonic_details_left.upper_bound = monotone_details.upper_bound;
+      monotonic_details_left.lower_bound = monotone_details.lower_bound;
+      monotonic_details_right.upper_bound = monotone_details.upper_bound;
+      monotonic_details_right.lower_bound = monotone_details.lower_bound;
+    }
+  }
+}
+
+void updateMonotoneConstraintsSingle(
+    monotonic_info& monotone_details,
+    monotonic_info& monotone_details_left,
+    monotonic_info& monotone_details_right,
+    symmetric_info& symmetric_details,
+    symmetric_info& symmetric_details_left,
+    symmetric_info& symmetric_details_right,
+    size_t cur_idx,
+    size_t bestSplitFeature
+) {
+  // Given a current set of pseudo outcomes, and the previous monotonic bounds
+  // update the new bounds for that pseudo outcome based on the split.
+  // The index cur_idx gives the pseudooutcomes to update, the bestSplitFeature
+  // gives the current feature (in order to work out the direction of the)
+  // monotonic constraints.
+
+  // pull monotonicity direction for current feature
+  int monotone_direction = monotone_details.monotonic_constraints[bestSplitFeature];
+  monotone_details_left.monotonic_constraints = monotone_details.monotonic_constraints;
+  monotone_details_right.monotonic_constraints = monotone_details.monotonic_constraints;
+
+  // Also need to pass down the monotone Average Flag
+  monotone_details_left.monotoneAvg = monotone_details.monotoneAvg;
+  monotone_details_right.monotoneAvg = monotone_details.monotoneAvg;
+
+  // Calculate the midMeans
+  double leftNodeMean = calculateMonotonicBoundSymmetric(symmetric_details_left.pseudooutcomes[cur_idx],
+                                                         symmetric_details.lower_bounds[cur_idx],
+                                                         symmetric_details.upper_bounds[cur_idx]);
+
+  double rightNodeMean = calculateMonotonicBoundSymmetric(symmetric_details_right.pseudooutcomes[cur_idx],
+                                                          symmetric_details.lower_bounds[cur_idx],
+                                                          symmetric_details.upper_bounds[cur_idx]);
+
+  double midMean = (leftNodeMean + rightNodeMean)/(2);
+
+  // Update the monotone constraints for the current pseudo outcome space
+
+  // If the current feature is a symmetric feature, split is done on abs() of the
+  // feature value and we need to check the outcomes accordingly
+  if (std::find(symmetric_details.symmetric_variables.begin(),
+                symmetric_details.symmetric_variables.end(),
+                bestSplitFeature) != symmetric_details.symmetric_variables.end()) {
+
+    // Get the index of the current feature in the symmetric feats list
+    size_t idx_in_list = *std::find(symmetric_details.symmetric_variables.begin(),
+                                    symmetric_details.symmetric_variables.end(),
+                                    bestSplitFeature);
+
+    // Convert the index in the list to the sign of the current feature
+    size_t sign = idx_to_bin(cur_idx,
+                             idx_in_list);
+
+    // Now using the sign of the feature, the relative ordering of the left
+    // and right weights,
+    if (sign == 1 && monotone_direction == 1) {
+      // If the current feature we are splitting on is always positive for this
+      // set of pseudo outcomes, we should have right > left
+      symmetric_details_left.upper_bounds[cur_idx] = midMean;
+      symmetric_details_right.lower_bounds[cur_idx] = midMean;
+
+      symmetric_details_left.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
+      symmetric_details_right.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
+    } else if (sign == 0 && monotone_direction == 1) {
+      // If the current feature we are splitting on is always negative,
+      // for this set of pseudo outcomes, we should have left > right
+      symmetric_details_left.lower_bounds[cur_idx] = midMean;
+      symmetric_details_right.upper_bounds[cur_idx] = midMean;
+
+      symmetric_details_left.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
+      symmetric_details_right.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
+    } else if (sign == 1 && monotone_direction == -1) {
+      // Now if sign is positive, but monotone direction is negative, we
+      // should have left > right
+      symmetric_details_left.lower_bounds[cur_idx] = midMean;
+      symmetric_details_right.upper_bounds[cur_idx] = midMean;
+
+      symmetric_details_left.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
+      symmetric_details_right.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
+    } else if (sign == 0 && monotone_direction == -1) {
+      // Should have left < right
+      symmetric_details_left.upper_bounds[cur_idx] = midMean;
+      symmetric_details_right.lower_bounds[cur_idx] = midMean;
+
+      symmetric_details_left.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
+      symmetric_details_right.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
+    }
+
+  } else {
+
+  // If current feature is a normal feature, we need to evaluate the split
+  // based on the split being on not the absolute value of the feature value
+    if (monotone_direction == -1) {
+      // Should be left > right
+      symmetric_details_left.lower_bounds[cur_idx] = midMean;
+      symmetric_details_right.upper_bounds[cur_idx] = midMean;
+
+      symmetric_details_left.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
+      symmetric_details_right.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
+    } else if (monotone_direction == 1) {
+      // should be right > left
+      symmetric_details_left.upper_bounds[cur_idx] = midMean;
+      symmetric_details_right.lower_bounds[cur_idx] = midMean;
+
+      symmetric_details_left.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
+      symmetric_details_right.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
+    } else {
+      // otherwise keep the old ones
+      symmetric_details_left.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
+      symmetric_details_left.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
+      symmetric_details_right.upper_bounds[cur_idx] = symmetric_details.upper_bounds[cur_idx];
+      symmetric_details_right.lower_bounds[cur_idx] = symmetric_details.lower_bounds[cur_idx];
+    }
+  }
+}
+
+void updateMonotoneConstraintsOuter(
+    monotonic_info& monotone_details,
+    monotonic_info& monotonic_details_left,
+    monotonic_info& monotonic_details_right,
+    std::vector<int> monotonic_constraints,
+    double LPMean,
+    double LNMean,
+    double RPMean,
+    double RNMean,
+    size_t bestSplitFeature,
+    bool update_center
+) {
+  // Updates the monotone constraints when doing non center splits
+  // in symmetric trees
+  int monotone_direction = monotone_details.monotonic_constraints[bestSplitFeature];
+  monotonic_details_left.monotonic_constraints = monotonic_constraints;
+  monotonic_details_right.monotonic_constraints = monotonic_constraints;
+
+  // Also need to pass down the monotone Average Flag
+  monotonic_details_left.monotoneAvg = monotone_details.monotoneAvg;
+  monotonic_details_right.monotoneAvg = monotone_details.monotoneAvg;
+
+  // Get Mid mean positive
+  double leftNodeMeanPositive = calculateMonotonicBound(LPMean,
+                                                        monotone_details);
+  double rightNodeMeanPositive = calculateMonotonicBound(RPMean,
+                                                         monotone_details);
+
+  double midMeanPositive = (leftNodeMeanPositive + rightNodeMeanPositive )/(2);
+
+  // Get mid mean negtive
+  double leftNodeMeanNegative = calculateMonotonicBound(LNMean,
+                                                        monotone_details);
+  double rightNodeMeanNegative = calculateMonotonicBound(RNMean,
+                                                         monotone_details);
+
+  double midMeanNegative = (leftNodeMeanNegative + rightNodeMeanNegative )/(2);
+
+  // Update the monotone constraints for the positive observations
+  if (monotone_direction == -1) {
+    monotonic_details_left.lower_bound = midMeanPositive;
+    monotonic_details_right.upper_bound = midMeanPositive;
+
+    monotonic_details_left.upper_bound = monotone_details.upper_bound;
+    monotonic_details_right.lower_bound = monotone_details.lower_bound;
+  } else if (monotone_direction == 1) {
+    monotonic_details_left.upper_bound = midMeanPositive;
+    monotonic_details_right.lower_bound = midMeanPositive;
+
+    monotonic_details_left.lower_bound =  monotone_details.lower_bound;
+    monotonic_details_right.upper_bound = monotone_details.upper_bound;
+  } else {
+    // otherwise keep the old ones
+    monotonic_details_left.upper_bound = monotone_details.upper_bound;
+    monotonic_details_left.lower_bound = monotone_details.lower_bound;
+    monotonic_details_right.upper_bound = monotone_details.upper_bound;
+    monotonic_details_right.lower_bound = monotone_details.lower_bound;
+  }
+
+  // Update the monotone constraints for the negative observations
+  if (monotone_direction == -1) {
+    monotonic_details_left.lower_bound_neg = midMeanNegative;
+    monotonic_details_right.upper_bound_neg = midMeanNegative;
+
+    monotonic_details_left.upper_bound_neg = monotone_details.upper_bound_neg;
+    monotonic_details_right.lower_bound_neg = monotone_details.lower_bound_neg;
+  } else if (monotone_direction == 1) {
+    monotonic_details_left.upper_bound_neg = midMeanNegative;
+    monotonic_details_right.lower_bound_neg = midMeanNegative;
+
+    monotonic_details_left.lower_bound_neg =  monotone_details.lower_bound_neg;
+    monotonic_details_right.upper_bound_neg = monotone_details.upper_bound_neg;
+  } else {
+    // otherwise keep the old ones
+    monotonic_details_left.upper_bound_neg = monotone_details.upper_bound_neg;
+    monotonic_details_left.lower_bound_neg = monotone_details.lower_bound_neg;
+    monotonic_details_right.upper_bound_neg = monotone_details.upper_bound_neg;
+    monotonic_details_right.lower_bound_neg = monotone_details.lower_bound_neg;
   }
 }
 
@@ -411,13 +762,15 @@ void splitData(
     std::vector<size_t>* splittingLeftPartitionIndex,
     std::vector<size_t>* splittingRightPartitionIndex,
     size_t &naLeftCount,
+    size_t &naCenterCount,
     size_t &naRightCount,
     bool categoical,
-    bool hasNas
-){
+    bool hasNas,
+    bool trinary
+) {
   size_t avgL = 0;
   size_t avgR = 0;
-  // averaging data
+
   splitDataIntoTwoParts(
     trainingData,
     averagingSampleIndex,
@@ -428,10 +781,10 @@ void splitData(
     averagingRightPartitionIndex,
     categoical,
     hasNas,
+    trinary,
     avgL,
     avgR
   );
-
 
   // splitting data
   splitDataIntoTwoParts(
@@ -444,12 +797,11 @@ void splitData(
     splittingRightPartitionIndex,
     categoical,
     hasNas,
+    trinary,
     naLeftCount,
     naRightCount
   );
 }
-
-
 
 std::pair<double, double> calculateRSquaredSplit (
     DataFrame* trainingData,
@@ -541,12 +893,16 @@ void forestryTree::recursivePartition(
     std::shared_ptr< arma::Mat<double> > gtotal,
     std::shared_ptr< arma::Mat<double> > stotal,
     bool monotone_splits,
-    monotonic_info monotone_details
+    monotonic_info monotone_details,
+    bool trinary,
+    bool centerSplit,
+    symmetric_info symmetric_details
 ){
   if ((*averagingSampleIndex).size() < getMinNodeSizeAvg() ||
       (*splittingSampleIndex).size() < getMinNodeSizeSpt() ||
       (depth == getMaxDepth())) {
-    // Create two lists on heap and transfer the owernship to the node
+
+    // Create two lists on heap and transfer the ownership to the node
     std::unique_ptr<std::vector<size_t> > averagingSampleIndex_(
         new std::vector<size_t>(*averagingSampleIndex)
     );
@@ -558,7 +914,9 @@ void forestryTree::recursivePartition(
     (*rootNode).setLeafNode(
         std::move(averagingSampleIndex_),
         std::move(splittingSampleIndex_),
-        node_id
+        node_id,
+        trinary,
+        symmetric_details.pseudooutcomes
     );
     return;
   }
@@ -568,7 +926,7 @@ void forestryTree::recursivePartition(
   std::vector<double>* featureWeightsUsed;
   std::vector<size_t>* sampledWeightsVariablesUsed;
 
-    if(depth >= getInteractionDepth()) {
+    if (depth >= getInteractionDepth()) {
       featureWeightsUsed = trainingData->getdeepFeatureWeights();
       sampledWeightsVariablesUsed = trainingData->getdeepFeatureWeightsVariables();
     } else {
@@ -592,8 +950,10 @@ void forestryTree::recursivePartition(
   double bestSplitLoss;
   size_t naLeftCount = 0;
   size_t naRightCount = 0;
+  size_t naCenterCount = 0;
   int bestSplitNaDir = 0;
-
+  std::vector<double> bestSplitLeftWts = std::vector<double>();
+  std::vector<double> bestSplitRightWts = std::vector<double>();
 
   /* Arma mat memory is uninitialized now */
   arma::Mat<double> bestSplitGL;
@@ -615,6 +975,8 @@ void forestryTree::recursivePartition(
     bestSplitValue,
     bestSplitLoss,
     bestSplitNaDir,
+    bestSplitLeftWts,
+    bestSplitRightWts,
     bestSplitGL,
     bestSplitGR,
     bestSplitSL,
@@ -627,16 +989,19 @@ void forestryTree::recursivePartition(
     splitMiddle,
     maxObs,
     linear,
+    trinary,
     overfitPenalty,
     gtotal,
     stotal,
     monotone_splits,
-    monotone_details
+    monotone_details,
+    symmetric_details
   );
 
   // Create a leaf node if the current bestSplitValue is NA
   if (std::isnan(bestSplitValue)) {
-    // Create two lists on heap and transfer the owernship to the node
+
+    // Create two lists on heap and transfer the ownership to the node
     std::unique_ptr<std::vector<size_t> > averagingSampleIndex_(
         new std::vector<size_t>(*averagingSampleIndex)
     );
@@ -645,10 +1010,13 @@ void forestryTree::recursivePartition(
     );
     size_t node_id;
     assignNodeId(node_id);
+
     (*rootNode).setLeafNode(
         std::move(averagingSampleIndex_),
         std::move(splittingSampleIndex_),
-        node_id
+        node_id,
+        trinary,
+        symmetric_details.pseudooutcomes
     );
 
   } else {
@@ -673,14 +1041,43 @@ void forestryTree::recursivePartition(
       &splittingLeftPartitionIndex,
       &splittingRightPartitionIndex,
       naLeftCount,
+      naCenterCount,
       naRightCount,
       std::find(
         categorialCols.begin(),
         categorialCols.end(),
         bestSplitFeature
       ) != categorialCols.end(),
-      gethasNas()
+        gethasNas(),
+        trinary
     );
+
+    size_t lAvgSize = averagingLeftPartitionIndex.size();
+    size_t rAvgSize = averagingRightPartitionIndex.size();
+    size_t lSplSize = splittingLeftPartitionIndex.size();
+    size_t rSplSize = splittingRightPartitionIndex.size();
+
+    // Check that once we have split the data, we need to make sure no partitions are empty
+    // If we do have an empty partition we make a leaf node.
+    if ((lAvgSize*rAvgSize*lSplSize*rSplSize == 0)) {
+
+      std::unique_ptr<std::vector<size_t> > averagingSampleIndex_(
+          new std::vector<size_t>(*averagingSampleIndex)
+      );
+      std::unique_ptr<std::vector<size_t> > splittingSampleIndex_(
+          new std::vector<size_t>(*splittingSampleIndex)
+      );
+      size_t node_id;
+      assignNodeId(node_id);
+      (*rootNode).setLeafNode(
+          std::move(averagingSampleIndex_),
+          std::move(splittingSampleIndex_),
+          node_id,
+          trinary,
+          symmetric_details.pseudooutcomes
+      );
+      return;
+    }
 
     // Stopping-criteria
     if (getMinSplitGain() > 0) {
@@ -706,7 +1103,9 @@ void forestryTree::recursivePartition(
         (*rootNode).setLeafNode(
             std::move(averagingSampleIndex_),
             std::move(splittingSampleIndex_),
-            node_id
+            node_id,
+            trinary,
+            symmetric_details.pseudooutcomes
         );
         return;
       }
@@ -737,41 +1136,52 @@ void forestryTree::recursivePartition(
     struct monotonic_info monotonic_details_left;
     struct monotonic_info monotonic_details_right;
 
+    // Symmetric details to be passed to child nodes
+    struct symmetric_info symmetric_details_left;
+    struct symmetric_info symmetric_details_right;
+
+    if (trinary) {
+      symmetric_details_left.pseudooutcomes = bestSplitLeftWts;
+      symmetric_details_left.symmetric_variables = symmetric_details.symmetric_variables;
+      symmetric_details_left.lower_bounds = symmetric_details.lower_bounds;
+      symmetric_details_left.upper_bounds = symmetric_details.upper_bounds;
+
+      symmetric_details_right.pseudooutcomes = bestSplitRightWts;
+      symmetric_details_right.symmetric_variables = symmetric_details.symmetric_variables;
+      symmetric_details_right.lower_bounds = symmetric_details.lower_bounds;
+      symmetric_details_right.upper_bounds = symmetric_details.upper_bounds;
+    }
+
+    // Update the monotonity constraints before we recursively split
     if (monotone_splits) {
-      int monotone_direction = monotone_details.monotonic_constraints[bestSplitFeature];
-      monotonic_details_left.monotonic_constraints = (*trainingData->getMonotonicConstraints());
-      monotonic_details_right.monotonic_constraints = (*trainingData->getMonotonicConstraints());
-
-      // Also need to pass down the monotone Average Flag
-      monotonic_details_left.monotoneAvg = monotone_details.monotoneAvg;
-      monotonic_details_right.monotoneAvg = monotone_details.monotoneAvg;
-
-      double leftNodeMean = calculateMonotonicBound(trainingData->partitionMean(&splittingLeftPartitionIndex), monotone_details);
-      double rightNodeMean = calculateMonotonicBound(trainingData->partitionMean(&splittingRightPartitionIndex), monotone_details);
-      double midMean = (leftNodeMean + rightNodeMean )/(2);
-
-      // Pass down the new upper and lower bounds if it is a monotonic split,
-      if (monotone_direction == -1) {
-        monotonic_details_left.lower_bound = midMean;
-        monotonic_details_right.upper_bound = midMean;
-
-        monotonic_details_left.upper_bound = monotone_details.upper_bound;
-        monotonic_details_right.lower_bound = monotone_details.lower_bound;
-      } else if (monotone_direction == 1) {
-        monotonic_details_left.upper_bound = midMean;
-        monotonic_details_right.lower_bound = midMean;
-
-        monotonic_details_left.lower_bound =  monotone_details.lower_bound;
-        monotonic_details_right.upper_bound = monotone_details.upper_bound;
+      if (trinary) {
+        for (size_t idx = 0; idx < symmetric_details.pseudooutcomes.size(); idx++) {
+          updateMonotoneConstraintsSingle(monotone_details,
+                                          monotonic_details_left,
+                                          monotonic_details_right,
+                                          symmetric_details,
+                                          symmetric_details_left,
+                                          symmetric_details_right,
+                                          idx,
+                                          bestSplitFeature
+                                          );
+        }
       } else {
-        // otherwise keep the old ones
-        monotonic_details_left.upper_bound = monotone_details.upper_bound;
-        monotonic_details_left.lower_bound = monotone_details.lower_bound;
-        monotonic_details_right.upper_bound = monotone_details.upper_bound;
-        monotonic_details_right.lower_bound = monotone_details.lower_bound;
+        updateMonotoneConstraints(
+          monotone_details,
+          monotonic_details_left,
+          monotonic_details_right,
+          (*trainingData->getMonotonicConstraints()),
+          trainingData->partitionMean(&splittingLeftPartitionIndex),
+          trainingData->partitionMean(&splittingRightPartitionIndex),
+          0,
+          bestSplitFeature,
+          trinary
+        );
       }
     }
 
+    // Recursively split on the left child node
     recursivePartition(
       leftChild.get(),
       &averagingLeftPartitionIndex,
@@ -786,8 +1196,13 @@ void forestryTree::recursivePartition(
       g_ptr_l,
       s_ptr_l,
       monotone_splits,
-      monotonic_details_left
+      monotonic_details_left,
+      trinary,
+      centerSplit,
+      symmetric_details_left
     );
+
+    // Recursively split on the right child node
     recursivePartition(
       rightChild.get(),
       &averagingRightPartitionIndex,
@@ -802,13 +1217,10 @@ void forestryTree::recursivePartition(
       g_ptr_r,
       s_ptr_r,
       monotone_splits,
-      monotonic_details_right
-    );
-
-    // For now we want to give each splitNode the avging sample idx
-    std::vector<size_t> agv_idx_copy(*averagingSampleIndex);
-    std::unique_ptr<std::vector<size_t> > averagingSampleIndex_forsplit(
-        new std::vector<size_t>(agv_idx_copy)
+      monotonic_details_right,
+      trinary,
+      false,
+      symmetric_details_right
     );
 
     (*rootNode).setSplitNode(
@@ -816,10 +1228,12 @@ void forestryTree::recursivePartition(
         bestSplitValue,
         std::move(leftChild),
         std::move(rightChild),
-        std::move(averagingSampleIndex_forsplit),
+        trinary,
         naLeftCount,
+        trinary ? naCenterCount : 0,
         naRightCount
     );
+
   }
 }
 
@@ -852,6 +1266,8 @@ void forestryTree::selectBestFeature(
     double &bestSplitValue,
     double &bestSplitLoss,
     int &bestSplitNaDir,
+    std::vector<double> &bestSplitLeftWts,
+    std::vector<double> &bestSplitRightWts,
     arma::Mat<double> &bestSplitGL,
     arma::Mat<double> &bestSplitGR,
     arma::Mat<double> &bestSplitSL,
@@ -864,11 +1280,13 @@ void forestryTree::selectBestFeature(
     bool splitMiddle,
     size_t maxObs,
     bool linear,
+    bool trinary,
     double overfitPenalty,
     std::shared_ptr< arma::Mat<double> > gtotal,
     std::shared_ptr< arma::Mat<double> > stotal,
     bool monotone_splits,
-    monotonic_info &monotone_details
+    monotonic_info &monotone_details,
+    symmetric_info &symmetric_details
 ){
 
   // Get the number of total features
@@ -880,6 +1298,8 @@ void forestryTree::selectBestFeature(
   size_t* bestSplitFeatureAll = new size_t[mtry];
   size_t* bestSplitCountAll = new size_t[mtry];
   int* bestSplitNaDirectionAll = new int[mtry];
+  std::vector<double>* bestSplitLeftWtsAll = new std::vector<double>[mtry];
+  std::vector<double>* bestSplitRightWtsAll = new std::vector<double>[mtry];
 
   for (size_t i=0; i<mtry; i++) {
     bestSplitLossAll[i] = -std::numeric_limits<double>::infinity();
@@ -887,6 +1307,8 @@ void forestryTree::selectBestFeature(
     bestSplitFeatureAll[i] = std::numeric_limits<size_t>::quiet_NaN();
     bestSplitCountAll[i] = 0;
     bestSplitNaDirectionAll[i] = 0;
+    bestSplitLeftWtsAll[i] = std::vector<double>();
+    bestSplitRightWtsAll[i] = std::vector<double>();
   }
 
   // Iterate each selected features
@@ -976,6 +1398,30 @@ void forestryTree::selectBestFeature(
         gtotal,
         stotal
       );
+    } else if (trinary) {
+      // Run symmetric splitting algorithm
+      findBestSplitSymmetricOuter(
+        averagingSampleIndex,
+        splittingSampleIndex,
+        i,
+        currentFeature,
+        bestSplitLossAll,
+        bestSplitValueAll,
+        bestSplitFeatureAll,
+        bestSplitCountAll,
+        bestSplitNaDirectionAll,
+        bestSplitLeftWtsAll,
+        bestSplitRightWtsAll,
+        trainingData,
+        getMinNodeSizeToSplitSpt(),
+        getMinNodeSizeToSplitAvg(),
+        random_number_generator,
+        splitMiddle,
+        maxObs,
+        monotone_splits,
+        monotone_details,
+        symmetric_details
+      );
     } else if (gethasNas()) {
       // Run impute split
       findBestSplitImpute(
@@ -1025,12 +1471,16 @@ void forestryTree::selectBestFeature(
     bestSplitValue,
     bestSplitLoss,
     bestSplitNaDir,
+    bestSplitLeftWts,
+    bestSplitRightWts,
     mtry,
     bestSplitLossAll,
     bestSplitValueAll,
     bestSplitFeatureAll,
     bestSplitCountAll,
     bestSplitNaDirectionAll,
+    bestSplitLeftWtsAll,
+    bestSplitRightWtsAll,
     random_number_generator
   );
 
@@ -1058,6 +1508,8 @@ void forestryTree::selectBestFeature(
   delete[](bestSplitFeatureAll);
   delete[](bestSplitCountAll);
   delete[](bestSplitNaDirectionAll);
+  delete[](bestSplitLeftWtsAll);
+  delete[](bestSplitRightWtsAll);
 }
 
 void forestryTree::printTree(){
@@ -1310,8 +1762,6 @@ void forestryTree::getOOBPrediction(
       getOOBindex(OOBIndex, trainingData->getNumRows());
     }
   }
-
-
 
   // Xnew has first access being the feature selection and second access being
   // the observation selection.
@@ -1582,17 +2032,21 @@ void forestryTree::recursive_reconstruction(
       (*leafSplidxs).erase((*leafSplidxs).begin());
     }
     size_t node_id;
+    std::vector<double> wts;
     assignNodeId(node_id);
     (*currentNode).setLeafNode(
         std::move(averagingSampleIndex_),
         std::move(splittingSampleIndex_),
-        node_id
+        node_id,
+        false,
+        wts
     );
     return;
   } else {
     // This is a normal splitting node
     std::unique_ptr< RFNode > leftChild ( new RFNode() );
     std::unique_ptr< RFNode > rightChild ( new RFNode() );
+    std::unique_ptr< RFNode > centerChild ( new RFNode() );
 
     // We need to populate the current node averaging index
     // before we recurse the reconstruction. This is due to the fact that we
@@ -1633,8 +2087,9 @@ void forestryTree::recursive_reconstruction(
         split_val,
         std::move(leftChild),
         std::move(rightChild),
-        std::move(averagingSampleIndex_),
+        false,
         naLeftCount,
+        0,
         naRightCount
     );
 

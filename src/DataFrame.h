@@ -27,7 +27,8 @@ public:
     std::unique_ptr< std::vector<double> > observationWeights,
     std::shared_ptr< std::vector<int> > monotonicConstraints,
     std::unique_ptr< std::vector<size_t> > groupMemberships,
-    bool monotoneAvg
+    bool monotoneAvg,
+    std::unique_ptr< std::vector<size_t> > symmetricIndices
   );
 
   double getPoint(size_t rowIndex, size_t colIndex);
@@ -101,6 +102,10 @@ public:
     return _monotoneAvg;
   }
 
+  std::vector<size_t>* getSymmetricIndices() {
+    return _symmetricIndices.get();
+  }
+
   std::vector<size_t>* getRowNumbers() {
     return _rowNumbers.get();
   }
@@ -132,6 +137,7 @@ private:
   std::shared_ptr< std::vector<int> > _monotonicConstraints;
   std::unique_ptr< std::vector<size_t> > _groupMemberships;
   bool _monotoneAvg;
+  std::unique_ptr< std::vector<size_t> > _symmetricIndices;
 };
 
 

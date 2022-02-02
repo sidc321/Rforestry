@@ -12,9 +12,9 @@ std::mutex mutex_weightMatrix;
 
 RFNode::RFNode():
   _averagingSampleIndex(nullptr), _splittingSampleIndex(nullptr),
-  _splitFeature(0), _splitValue(0),
-  _leftChild(nullptr), _rightChild(nullptr),
-  _naLeftCount(0), _naRightCount(0), _averageCount(0), _splitCount(0) {}
+  _splitFeature(0), _splitValue(0),_trinary(false),
+  _leftChild(nullptr),_rightChild(nullptr),_naLeftCount(0), _naRightCount(0),
+  _averageCount(0), _splitCount(0) {}
 
 RFNode::~RFNode() {
   //  std::cout << "RFNode() destructor is called." << std::endl;
@@ -23,7 +23,9 @@ RFNode::~RFNode() {
 void RFNode::setLeafNode(
   std::unique_ptr< std::vector<size_t> > averagingSampleIndex,
   std::unique_ptr< std::vector<size_t> > splittingSampleIndex,
-  size_t nodeId
+  size_t nodeId,
+  bool trinary,
+  std::vector<double> weights
 ) {
   if (
       (*averagingSampleIndex).size() == 0 &&
@@ -39,6 +41,10 @@ void RFNode::setLeafNode(
   this->_averageCount = (*_averagingSampleIndex).size();
   this->_splittingSampleIndex = std::move(splittingSampleIndex);
   this->_splitCount = (*_splittingSampleIndex).size();
+  if (trinary) {
+    this->_trinary = trinary;
+    this->_weights = weights;
+  }
 }
 
 void RFNode::setSplitNode(
@@ -46,21 +52,21 @@ void RFNode::setSplitNode(
   double splitValue,
   std::unique_ptr< RFNode > leftChild,
   std::unique_ptr< RFNode > rightChild,
-  std::unique_ptr< std::vector<size_t> > averagingSampleIndex,
+  bool trinary,
   size_t naLeftCount,
+  size_t naCenterCount,
   size_t naRightCount
 ) {
   // Split node constructor
-  _averageCount = (*averagingSampleIndex).size();
   _splitCount = 0;
   _splitFeature = splitFeature;
   _splitValue = splitValue;
-  this->_averagingSampleIndex = std::move(averagingSampleIndex);
   // Give the ownership of the child pointer to the RFNode object
   _leftChild = std::move(leftChild);
   _rightChild = std::move(rightChild);
   _naLeftCount = naLeftCount;
   _naRightCount = naRightCount;
+  _trinary = trinary;
   _nodeId = -1;
 }
 
@@ -104,7 +110,7 @@ void RFNode::ridgePredict(
   }
 
   arma::Mat<double> y(outcomePoints.size(),
-                     1);
+                      1);
   y.col(0) = arma::conv_to<arma::Col<double> >::from(outcomePoints);
 
   //Compute XtX + lambda * I * Y = C
@@ -176,13 +182,15 @@ void RFNode::predict(
                      xNew,
                      trainingData,
                      lambda);
-      } else {
 
+      } else {
 
         double predictedMean;
         // Calculate the mean of current node
-        if (getAveragingIndex()->size() == 0) {
+        if (getAverageCount() == 0 && !getTrinary()) {
           predictedMean = std::numeric_limits<double>::quiet_NaN();
+        } else if (getTrinary()) {
+          predictedMean = 0;
         } else {
           predictedMean = (*trainingData).partitionMean(getAveragingIndex());
         }
@@ -194,7 +202,26 @@ void RFNode::predict(
           it != (*updateIndex).end();
           ++it
         ) {
-          outputPrediction[*it] = predictedMean;
+          if (getTrinary()) {
+            // In this case, we test the feature value and use the correct
+            // pseudo outcome by weight
+            std::vector<bool> signs;
+            for (size_t i = 0; i < (*trainingData->getSymmetricIndices()).size(); i++) {
+              if ((*xNew)[(*trainingData->getSymmetricIndices())[i]][*it] > 0) {
+                signs.push_back(true);
+              } else {
+                signs.push_back(false);
+              }
+            }
+
+            // Pull the correct pseudo outcome
+            size_t weight_idx = bin_to_idx(signs);
+
+            outputPrediction[*it] =(this->getWeights())[weight_idx];
+
+          } else {
+            outputPrediction[*it] = predictedMean;
+          }
         }
     }
 
@@ -236,6 +263,7 @@ void RFNode::predict(
       }
     }
 
+  // If not a leaf then we need to separate the prediction tasks
   } else {
 
     // Separate prediction tasks to two children
@@ -245,11 +273,26 @@ void RFNode::predict(
     size_t naLeftCount = getNaLeftCount();
     size_t naRightCount = getNaRightCount();
 
-    std::vector<size_t> naSampling {naLeftCount, naRightCount};
-    //std::vector<size_t> naSampling_no_miss {1, 1};
-    std::vector<size_t> naSampling_no_miss {
-      (*getLeftChild()).getAverageCountAlways(),
-      (*getRightChild()).getAverageCountAlways()};
+    // Test if the splitting feature is categorical
+    std::vector<size_t> categorialCols = *(*trainingData).getCatCols();
+    bool categorical_split = (std::find(categorialCols.begin(),
+                                       categorialCols.end(),
+                                       getSplitFeature()) != categorialCols.end());
+
+    // Initialize vectors of ratios in which we sample randomly to send
+    // observations with NA values
+    std::vector<size_t> naSampling;
+    if (!categorical_split) {
+      naSampling = {naLeftCount, naRightCount};
+    }
+
+    std::vector<size_t> naSampling_no_miss;
+    if (!categorical_split) {
+      naSampling_no_miss = {
+        (*getLeftChild()).getAverageCountAlways(),
+        (*getRightChild()).getAverageCountAlways()};
+    }
+
 
     std::discrete_distribution<size_t> discrete_dist(
         naSampling.begin(), naSampling.end()
@@ -261,13 +304,8 @@ void RFNode::predict(
     random_number_generator.seed(seed);
 
     // Test if the splitting feature is categorical
-    std::vector<size_t> categorialCols = *(*trainingData).getCatCols();
     if (
-      std::find(
-        categorialCols.begin(),
-        categorialCols.end(),
-        getSplitFeature()
-      ) != categorialCols.end()
+        categorical_split
     ){
 
       // If the splitting feature is categorical, split by (==) or (!=)
@@ -292,11 +330,13 @@ void RFNode::predict(
             draw = discrete_dist(random_number_generator);
           }
 
+          // Have to push to three indices when we have trinary splits
           if (draw == 0) {
             (*leftPartitionIndex).push_back(*it);
           } else {
             (*rightPartitionIndex).push_back(*it);
           }
+
         } else if (currentValue == getSplitValue()) {
           (*leftPartitionIndex).push_back(*it);
         } else {
@@ -323,22 +363,55 @@ void RFNode::predict(
           // number of observations in left/right child node else send
           // right/left with probability in proportion to NA's which went
           // left/right when splitting
-          if ((naLeftCount == 0) && (naRightCount == 0)) {
-            draw = discrete_dist_nonmissing(random_number_generator);
+          if (getTrinary()) {
+            if ((naLeftCount == 0) && (naRightCount == 0)) {
+              draw = discrete_dist_nonmissing(random_number_generator);
+            } else {
+              draw = discrete_dist(random_number_generator);
+            }
+
+            // Have to push to three indices when we have trinary splits
+            if (draw == -1) {
+              (*leftPartitionIndex).push_back(*it);
+            } else if (draw == 1) {
+              (*rightPartitionIndex).push_back(*it);
+            }
           } else {
-            draw = discrete_dist(random_number_generator);
+            if ((naLeftCount == 0) && (naRightCount == 0)) {
+              draw = discrete_dist_nonmissing(random_number_generator);
+            } else {
+              draw = discrete_dist(random_number_generator);
+            }
+            // Now push to index
+            if (draw == 0) {
+              (*leftPartitionIndex).push_back(*it);
+            } else {
+              (*rightPartitionIndex).push_back(*it);
+            }
           }
 
-          if (draw == 0) {
-            (*leftPartitionIndex).push_back(*it);
-          } else {
-            (*rightPartitionIndex).push_back(*it);
-          }
-
-        } else if (currentValue < getSplitValue()) {
-          (*leftPartitionIndex).push_back(*it);
         } else {
-          (*rightPartitionIndex).push_back(*it);
+          // Check if the current split feature is a symmetric feature
+          if (getTrinary() && (std::find(
+              trainingData->getSymmetricIndices()->begin(),
+              trainingData->getSymmetricIndices()->end(),
+              getSplitFeature()) != trainingData->getSymmetricIndices()->end())) {
+
+            // If this is a symmetric feature, have to use the absolute value
+            // of the feature value
+            if (std::fabs(currentValue) < getSplitValue()) {
+              (*leftPartitionIndex).push_back(*it);
+            } else {
+              (*rightPartitionIndex).push_back(*it);
+            }
+          } else {
+            // Run standard predictions
+            if (currentValue < getSplitValue()) {
+              (*leftPartitionIndex).push_back(*it);
+            } else {
+              (*rightPartitionIndex).push_back(*it);
+            }
+          }
         }
       }
 
@@ -346,147 +419,23 @@ void RFNode::predict(
 
     // Recursively get predictions from its children
     if ((*leftPartitionIndex).size() > 0) {
-
-      // Here we want to now make sure the left node has averaging indices,
-      // otherwise we give it predictions from the parent
-      if (getLeftChild()->getAverageCount() < std::max(nodesizeStrictAvg, (size_t) 1)) {
-
-        double predictedMean;
-        // Calculate the mean of current node
-        if (getAverageCount() == 0) {
-          predictedMean = std::numeric_limits<double>::quiet_NaN();;
-        } else{
-          predictedMean = (*trainingData).partitionMean(getAveragingIndex());
-        }
-
-        // Give all updateIndex the mean of the node as prediction values
-        for (
-            std::vector<size_t>::iterator it = (*leftPartitionIndex).begin();
-            it != (*leftPartitionIndex).end();
-            ++it
-        ) {
-          outputPrediction[*it] = predictedMean;
-        }
-
-        if (weightMatrix){
-          // If weightMatrix is not a NULL pointer, then we want to update it,
-          // because we have choosen aggregation = "weightmatrix".
-          std::vector<size_t> idx_in_leaf =
-            (*trainingData).get_all_row_idx(getAveragingIndex());
-          // The following will lock the access to weightMatrix
-          std::lock_guard<std::mutex> lock(mutex_weightMatrix);
-          for (
-              std::vector<size_t>::iterator it = (*leftPartitionIndex).begin();
-              it != (*leftPartitionIndex).end();
-              ++it ) {
-
-            // Set the row which we update in the weightMatrix
-            //
-            size_t idx = *it;
-            if (OOBIndex) {
-              idx = (*OOBIndex)[*it];
-            }
-
-            for (size_t i = 0; i<idx_in_leaf.size(); i++) {
-              (*weightMatrix)(idx, idx_in_leaf[i] - 1) +=
-                (double) 1.0 / ((double) idx_in_leaf.size());
-            }
-          }
-        }
-
-        if (terminalNodes) {
-          // If terminalNodes not a NULLPTR, set the terminal node for all X in this
-          // leaf to be the leaf node_id
-          size_t node_id = getNodeId();
-          for (
-              std::vector<size_t>::iterator it = (*leftPartitionIndex).begin();
-              it != (*leftPartitionIndex).end();
-              ++it
-          ) {
-            (*terminalNodes)[*it] = node_id;
-          }
-        }
-
-      } else {
-        (*getLeftChild()).predict(
-            outputPrediction,
-            terminalNodes,
-            outputCoefficients,
-            leftPartitionIndex,
-            xNew,
-            trainingData,
-            weightMatrix,
-            linear,
-            lambda,
-            seed,
-            nodesizeStrictAvg,
-            OOBIndex
-        );
-      }
-
+      (*getLeftChild()).predict(
+          outputPrediction,
+          terminalNodes,
+          outputCoefficients,
+          leftPartitionIndex,
+          xNew,
+          trainingData,
+          weightMatrix,
+          linear,
+          lambda,
+          seed,
+          nodesizeStrictAvg,
+          OOBIndex
+      );
     }
+
     if ((*rightPartitionIndex).size() > 0) {
-
-      // Here we want to now make sure the right node has averaging indices,
-      // otherwise we give it predictions from the parent
-      if (getRightChild()->getAverageCount() < std::max(nodesizeStrictAvg,(size_t) 1)) {
-
-
-        double predictedMean;
-        // Calculate the mean of current node
-        if (getAverageCount() == 0) {
-          predictedMean = std::numeric_limits<double>::quiet_NaN();;
-        } else{
-          predictedMean = (*trainingData).partitionMean(getAveragingIndex());
-        }
-
-        //Give all rightPartitionIndex the mean of the node as prediction values
-        for (
-            std::vector<size_t>::iterator it = (*rightPartitionIndex).begin();
-            it != (*rightPartitionIndex).end();
-            ++it
-        ) {
-          outputPrediction[*it] = predictedMean;
-        }
-
-        if (weightMatrix){
-          // If weightMatrix is not a NULL pointer, then we want to update it,
-          // because we have choosen aggregation = "weightmatrix".
-          std::vector<size_t> idx_in_leaf =
-            (*trainingData).get_all_row_idx(getAveragingIndex());
-          // The following will lock the access to weightMatrix
-          std::lock_guard<std::mutex> lock(mutex_weightMatrix);
-          for (
-              std::vector<size_t>::iterator it = (*rightPartitionIndex).begin();
-              it != (*rightPartitionIndex).end();
-              ++it ) {
-            // Set the row which we update in the weightMatrix
-            //
-            size_t idx = *it;
-            if (OOBIndex) {
-              idx = (*OOBIndex)[*it];
-            }
-
-            for (size_t i = 0; i<idx_in_leaf.size(); i++) {
-              (*weightMatrix)(idx, idx_in_leaf[i] - 1) +=
-                (double) 1.0 / ((double) idx_in_leaf.size());
-            }
-          }
-        }
-
-        if (terminalNodes) {
-          // If terminalNodes not a NULLPTR, set the terminal node for all X in this
-          // leaf to be the leaf node_id
-          size_t node_id = getNodeId();
-          for (
-              std::vector<size_t>::iterator it = (*rightPartitionIndex).begin();
-              it != (*rightPartitionIndex).end();
-              ++it
-          ) {
-            (*terminalNodes)[*it] = node_id;
-          }
-        }
-      } else {
         (*getRightChild()).predict(
           outputPrediction,
           terminalNodes,
@@ -501,19 +450,16 @@ void RFNode::predict(
           nodesizeStrictAvg,
           OOBIndex
         );
-      }
     }
 
     delete(leftPartitionIndex);
     delete(rightPartitionIndex);
-
   }
-
 }
 
 bool RFNode::is_leaf() {
-  // int ave_ct = getAverageCount();
-  int spl_ct = getSplitCount();
+  int ave_ct = getAverageCount();
+  //int spl_ct = getSplitCount();
   // if (
   //     (ave_ct == 0 && spl_ct != 0) ||(ave_ct != 0 && spl_ct == 0)
   // ) {
@@ -522,7 +468,7 @@ bool RFNode::is_leaf() {
   //       );
   // }
   //return !(ave_ct == 0 && spl_ct == 0);
-  return !(spl_ct == 0);
+  return !(ave_ct == 0);
 }
 
 size_t RFNode::getAverageCountAlways() {
@@ -558,8 +504,14 @@ void RFNode::printSubtree(int indentSpace) {
               << getSplitFeature()
               << ", split value = "
               << getSplitValue()
+              << ", trinary indicator "
+              << getTrinary()
               << ", # of average samples = "
               << getAverageCount()
+              << ", # NA's l,r = "
+              << getNaLeftCount()
+              << " "
+              << getNaRightCount()
               << std::endl;
 
     R_FlushConsole();
@@ -567,7 +519,6 @@ void RFNode::printSubtree(int indentSpace) {
     // Recursively calling its children
     (*getLeftChild()).printSubtree(indentSpace+2);
     (*getRightChild()).printSubtree(indentSpace+2);
-
   }
 }
 
@@ -595,7 +546,6 @@ void RFNode::write_node_info(
     for (size_t i = 0; i<idx_in_leaf_Spl.size(); i++) {
       treeInfo->leafSplidx.push_back(idx_in_leaf_Spl[i] + 1);
     }
-
 
   } else {
     // If it is a usual node: remember split var and split value and recursively

@@ -19,17 +19,20 @@ public:
   void setLeafNode(
     std::unique_ptr< std::vector<size_t> > averagingSampleIndex,
     std::unique_ptr< std::vector<size_t> > splittingSampleIndex,
-    size_t nodeId
+    size_t nodeId,
+    bool trinary,
+    std::vector<double> weights
   );
 
   void setSplitNode(
-    size_t splitFeature,
-    double splitValue,
-    std::unique_ptr< RFNode > leftChild,
-    std::unique_ptr< RFNode > rightChild,
-    std::unique_ptr< std::vector<size_t> > averagingSampleIndex,
-    size_t naLeftCount,
-    size_t naRightCount
+      size_t splitFeature,
+      double splitValue,
+      std::unique_ptr< RFNode > leftChild,
+      std::unique_ptr< RFNode > rightChild,
+      bool trinary,
+      size_t naLeftCount,
+      size_t naCenterCount,
+      size_t naRightCount
   );
 
   void ridgePredict(
@@ -110,11 +113,21 @@ public:
   size_t getNaLeftCount() {
     return _naLeftCount;
   }
+
   size_t getNaRightCount() {
     return _naRightCount;
   }
+
   size_t getNodeId() {
     return _nodeId;
+  }
+
+  std::vector<double> getWeights() {
+    return _weights;
+  }
+
+  bool getTrinary() {
+    return _trinary;
   }
 
   std::vector<size_t>* getAveragingIndex() {
@@ -130,6 +143,8 @@ private:
   std::unique_ptr< std::vector<size_t> > _splittingSampleIndex;
   size_t _splitFeature;
   double _splitValue;
+  bool _trinary;
+  std::vector<double> _weights;
   std::unique_ptr< RFNode > _leftChild;
   std::unique_ptr< RFNode > _rightChild;
   size_t _naLeftCount;

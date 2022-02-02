@@ -26,7 +26,8 @@ DataFrame::DataFrame(
   std::unique_ptr< std::vector<double> > observationWeights,
   std::shared_ptr< std::vector<int> > monotonicConstraints,
   std::unique_ptr< std::vector<size_t> > groupMemberships,
-  bool monotoneAvg
+  bool monotoneAvg,
+  std::unique_ptr< std::vector<size_t> > symmetricIndices
 ) {
   this->_featureData = std::move(featureData);
   this->_outcomeData = std::move(outcomeData);
@@ -42,6 +43,7 @@ DataFrame::DataFrame(
   this->_monotonicConstraints = std::move(monotonicConstraints);
   this->_groupMemberships = std::move(groupMemberships);
   this->_monotoneAvg = (bool) monotoneAvg;
+  this->_symmetricIndices = std::move(symmetricIndices); // Switch from R indices being 1 - indexed
 
   // define the row numbers to be the numbers from 1 to nrow:
   std::vector<size_t> rowNumberss;
