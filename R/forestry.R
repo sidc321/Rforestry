@@ -2900,6 +2900,11 @@ loadForestry <- function(filename){
   # First we need to make sure the object is saveable
   name <- base::load(file = filename, envir = environment())
   rf <- get(name)
+
+  # Check if we are loading an old model
+  if (!("symmetric" %in% names(attributes(rf)))) {
+    rf@symmetric <- rep(0,rf@processed_dta$numColumns)
+  }
   rf <- relinkCPP_prt(rf)
   return(rf)
 }
