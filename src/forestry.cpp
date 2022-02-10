@@ -1248,6 +1248,12 @@ void forestry::reconstructTrees(
           );
 #endif
 
+  // Try sorting the forest by seed, this way we should do predict in the same order
+  std::vector< std::unique_ptr< forestryTree > >* curr_forest;
+  curr_forest = this->getForest();
+  std::sort(curr_forest->begin(), curr_forest->end(), [](const std::unique_ptr< forestryTree >& a, const std::unique_ptr< forestryTree >& b) {
+    return a.get()->getSeed() > b.get()->getSeed();
+  });
 
   return;
 }
