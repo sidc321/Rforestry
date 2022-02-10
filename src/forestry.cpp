@@ -1166,7 +1166,7 @@ void forestry::reconstructTrees(
       splittingSampleIndex){
 
     #if DOPARELLEL
-    size_t nthreadToUse = 0;
+    size_t nthreadToUse = this->getNthread();
 
     if (nthreadToUse == 0) {
       // Use all threads
