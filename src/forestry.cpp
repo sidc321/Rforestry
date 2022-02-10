@@ -1150,6 +1150,7 @@ void forestry::fillinTreeInfo(
   return ;
 };
 
+
 void forestry::reconstructTrees(
     std::unique_ptr< std::vector<size_t> > & categoricalFeatureColsRcpp,
     std::unique_ptr< std::vector<unsigned int> > & tree_seeds,
@@ -1164,7 +1165,37 @@ void forestry::reconstructTrees(
     std::unique_ptr< std::vector< std::vector<size_t> >  > &
       splittingSampleIndex){
 
-    for (size_t i=0; i<split_vals->size(); i++) {
+    #if DOPARELLEL
+    size_t nthreadToUse = 0;
+
+    if (nthreadToUse == 0) {
+      // Use all threads
+      nthreadToUse = std::thread::hardware_concurrency();
+    }
+
+    if (isVerbose()) {
+      RcppThread::Rcout << "Prediction parallel using " << nthreadToUse << " threads"
+                        << std::endl;
+    }
+
+    std::vector<std::thread> allThreads(nthreadToUse);
+    std::mutex threadLock;
+
+    // For each thread, assign a sequence of tree numbers that the thread
+    // is responsible for handling
+    for (size_t t = 0; t < nthreadToUse; t++) {
+      auto dummyThread = std::bind(
+        [&](const int iStart, const int iEnd, const int t_) {
+
+          // loop over al assigned trees, iStart is the starting tree number
+          // and iEnd is the ending tree number
+          for (int i=iStart; i < iEnd; i++) {
+    #else
+              // For non-parallel version, just simply iterate all trees serially
+    for(int i=0; i<(split_vals->size()); i++ ) {
+    #endif
+
+    // for (size_t i=0; i<split_vals->size(); i++) {
       try{
         forestryTree *oneTree = new forestryTree();
 
@@ -1196,8 +1227,25 @@ void forestry::reconstructTrees(
       } catch (std::runtime_error &err) {
         Rcpp::Rcerr << err.what() << std::endl;
       }
-
   }
+  #if DOPARELLEL
+            },
+            t * split_vals->size() / nthreadToUse,
+            (t + 1) == nthreadToUse ?
+            split_vals->size() :
+              (t + 1) * split_vals->size() / nthreadToUse,
+              t
+        );
+        allThreads[t] = std::thread(dummyThread);
+          }
+
+          std::for_each(
+            allThreads.begin(),
+            allThreads.end(),
+            [](std::thread& x) { x.join(); }
+          );
+#endif
+
 
   return;
 }
