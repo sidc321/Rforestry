@@ -1173,8 +1173,10 @@ void forestry::reconstructTrees(
       nthreadToUse = std::thread::hardware_concurrency();
     }
 
-    RcppThread::Rcout << "Reconstructing in parallel using " << nthreadToUse << " threads"
-                      << std::endl;
+    if (isVerbose()) {
+      RcppThread::Rcout << "Reconstructing in parallel using " << nthreadToUse << " threads"
+                        << std::endl;
+    }
 
     std::vector<std::thread> allThreads(nthreadToUse);
     std::mutex threadLock;
