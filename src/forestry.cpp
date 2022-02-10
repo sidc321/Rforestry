@@ -1222,6 +1222,10 @@ void forestry::reconstructTrees(
                 (*averagingSampleIndex)[i],
                 (*splittingSampleIndex)[i]);
 
+#if DOPARELLEL
+        std::lock_guard<std::mutex> lock(threadLock);
+#endif
+
         (*getForest()).emplace_back(oneTree);
         _ntree = _ntree + 1;
       } catch (std::runtime_error &err) {
