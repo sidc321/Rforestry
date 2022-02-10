@@ -1174,7 +1174,7 @@ void forestry::reconstructTrees(
     }
 
     if (isVerbose()) {
-      RcppThread::Rcout << "Prediction parallel using " << nthreadToUse << " threads"
+      RcppThread::Rcout << "Reconstructing in parallel using " << nthreadToUse << " threads"
                         << std::endl;
     }
 
