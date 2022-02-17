@@ -187,8 +187,6 @@ void RFNode::predict(
 
         double predictedMean;
         if(!this->_predictedMeanSet) {
-        // if(true){
-          // RcppThread::Rcout << "Setting predicted mean" << std::endl;
           // Calculate the mean of current node
           if (getAverageCount() == 0 && !getTrinary()) {
             predictedMean = std::numeric_limits<double>::quiet_NaN();
