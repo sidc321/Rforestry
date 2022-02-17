@@ -186,19 +186,14 @@ void RFNode::predict(
       } else {
 
         double predictedMean;
-        if(true) {
-          // Calculate the mean of current node
-          if (getAverageCount() == 0 && !getTrinary()) {
-            predictedMean = std::numeric_limits<double>::quiet_NaN();
-          } else if (getTrinary()) {
-            predictedMean = 0;
-          } else {
-            predictedMean = (*trainingData).partitionMean(getAveragingIndex());
-          }
-          this->_predictedMean = predictedMean;
-          this->_predictedMeanSet = true;
+        // Calculate the mean of current node
+        if (getAverageCount() == 0 && !getTrinary()) {
+          predictedMean = std::numeric_limits<double>::quiet_NaN();
+        } else if (getTrinary()) {
+          predictedMean = 0;
+        } else {
+          predictedMean = (*trainingData).partitionMean(getAveragingIndex());
         }
-        predictedMean = this->_predictedMean;
 
 
 
