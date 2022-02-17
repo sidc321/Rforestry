@@ -152,8 +152,6 @@ private:
   size_t _averageCount;
   size_t _splitCount;
   size_t _nodeId;
-  bool _predictedMeanSet;
-  double _predictedMean;
 };
 
 
