@@ -14,7 +14,7 @@ RFNode::RFNode():
   _averagingSampleIndex(nullptr), _splittingSampleIndex(nullptr),
   _splitFeature(0), _splitValue(0),_trinary(false),
   _leftChild(nullptr),_rightChild(nullptr),_naLeftCount(0), _naRightCount(0),
-  _averageCount(0), _splitCount(0) {}
+  _averageCount(0), _splitCount(0), _predictedMeanSet(false), _predictedMean(0) {}
 
 RFNode::~RFNode() {
   //  std::cout << "RFNode() destructor is called." << std::endl;
@@ -186,14 +186,22 @@ void RFNode::predict(
       } else {
 
         double predictedMean;
-        // Calculate the mean of current node
-        if (getAverageCount() == 0 && !getTrinary()) {
-          predictedMean = std::numeric_limits<double>::quiet_NaN();
-        } else if (getTrinary()) {
-          predictedMean = 0;
-        } else {
-          predictedMean = (*trainingData).partitionMean(getAveragingIndex());
+        if(!this->_predictedMeanSet) {
+        // if(true){
+          // RcppThread::Rcout << "Setting predicted mean" << std::endl;
+          // Calculate the mean of current node
+          if (getAverageCount() == 0 && !getTrinary()) {
+            predictedMean = std::numeric_limits<double>::quiet_NaN();
+          } else if (getTrinary()) {
+            predictedMean = 0;
+          } else {
+            predictedMean = (*trainingData).partitionMean(getAveragingIndex());
+          }
+          this->_predictedMean = predictedMean;
+          this->_predictedMeanSet = true;
         }
+        predictedMean = this->_predictedMean;
+
 
 
         // Give all updateIndex the mean of the node as prediction values
