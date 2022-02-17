@@ -186,7 +186,7 @@ void RFNode::predict(
       } else {
 
         double predictedMean;
-        if(!this->_predictedMeanSet) {
+        if(true) {
           // Calculate the mean of current node
           if (getAverageCount() == 0 && !getTrinary()) {
             predictedMean = std::numeric_limits<double>::quiet_NaN();
@@ -275,6 +275,8 @@ void RFNode::predict(
     // Separate prediction tasks to two children
     std::vector<size_t>* leftPartitionIndex = new std::vector<size_t>();
     std::vector<size_t>* rightPartitionIndex = new std::vector<size_t>();
+    (*leftPartitionIndex).reserve((*updateIndex).size());
+    (*rightPartitionIndex).reserve((*updateIndex).size());
 
     size_t naLeftCount = getNaLeftCount();
     size_t naRightCount = getNaRightCount();
