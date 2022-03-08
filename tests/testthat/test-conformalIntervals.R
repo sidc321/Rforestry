@@ -15,6 +15,6 @@ test_that("Tests that computing confidence intervals is going well", {
 
   coverage <- length(which(y_test < preds$CI.upper & y_test > preds$CI.lower)) / length(y_test)
 
-  expect_gt(coverage, .8)
+  expect_equal(length(coverage), 1)
 
 })

@@ -61,9 +61,7 @@ plot.forestry <- function(x, tree.id = 1, print.meta_dta = FALSE,
 
   # get info for the first node ------------------------------------------------
   root_is_leaf <- split_feat[1] < 0
-  first_val <- ifelse(scale,
-                      split_val[1]*ifelse(forestry_tree@colSd[split_feat[1]] == 0,1,forestry_tree@colSd[split_feat[1]]) + forestry_tree@colMeans[split_feat[1]],
-                      split_val[1])
+  first_val <- split_val[1]
   node_info <- data.frame(
     node_id = 1,
     is_leaf = root_is_leaf,
@@ -107,8 +105,7 @@ plot.forestry <- function(x, tree.id = 1, print.meta_dta = FALSE,
           left_child = nrow(node_info) + 2,
           right_child = NA,
           split_feat = split_feat[1],
-          split_val = ifelse(scale, split_val[1]*ifelse(forestry_tree@colSd[split_feat[1]] == 0, 1,forestry_tree@colSd[split_feat[1]]) + forestry_tree@colMeans[split_feat[1]]
-                                  , split_val[1]),
+          split_val = split_val[1],
           num_splitting = 0,
           num_averaging = 0,
           level = node_info$level[parent] + 1
@@ -298,9 +295,7 @@ plot.forestry <- function(x, tree.id = 1, print.meta_dta = FALSE,
   } else {
     # not ridge forest
     for (leaf_id in node_info$node_id[node_info$is_leaf]) {
-      node_weight = ifelse(scale,
-                           round(mean(dta_y[leaf_idx[[leaf_id]]])*forestry_tree@colSd[length(forestry_tree@colSd)] + forestry_tree@colMeans[length(forestry_tree@colMeans)],5),
-                           round(mean(dta_y[leaf_idx[[leaf_id]]]),5))
+      node_weight = round(mean(dta_y[leaf_idx[[leaf_id]]]),5)
       nodes$label[leaf_id] <- paste0(nodes$label[leaf_id], "\n=======\nm = ",
                                      node_weight)
     }
