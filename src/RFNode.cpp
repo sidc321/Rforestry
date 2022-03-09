@@ -196,6 +196,7 @@ void RFNode::predict(
         }
 
 
+
         // Give all updateIndex the mean of the node as prediction values
         for (
           std::vector<size_t>::iterator it = (*updateIndex).begin();
@@ -269,6 +270,8 @@ void RFNode::predict(
     // Separate prediction tasks to two children
     std::vector<size_t>* leftPartitionIndex = new std::vector<size_t>();
     std::vector<size_t>* rightPartitionIndex = new std::vector<size_t>();
+    (*leftPartitionIndex).reserve((*updateIndex).size());
+    (*rightPartitionIndex).reserve((*updateIndex).size());
 
     size_t naLeftCount = getNaLeftCount();
     size_t naRightCount = getNaRightCount();
