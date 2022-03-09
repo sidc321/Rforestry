@@ -918,6 +918,17 @@ forestry <- function(x,
         TRUE,
         rcppDataFrame
       )
+
+      # We don't want to save the scaled df, so unceneter and unscale for the R
+      # object
+      if (scale) {
+        processed_x <- unscale_uncenter(processed_x,
+                                        categoricalFeatureCols,
+                                        colMeans,
+                                        colSd)
+        y <-  y * colSd[ncol(processed_x)+1] + colMeans[ncol(processed_x)+1]
+      }
+
       processed_dta <- list(
         "processed_x" = processed_x,
         "y" = y,
@@ -1739,9 +1750,18 @@ predict.forestry <- function(object,
     }
 
     if (is.null(newdata)) {
+      if (object@scale) {
+        processed_x <- scale_center(object@processed_dta$processed_x,
+                                    (unname(object@processed_dta$categoricalFeatureCols_cpp)+1),
+                                    object@colMeans,
+                                    object@colSd)
+      } else {
+        processed_x <- object@processed_dta$processed_x
+      }
+
       rcppPrediction <- tryCatch({
         rcpp_OBBPredictionsInterface(object@forest,
-                                     object@processed_dta$processed_x,  # If we don't provide a dataframe, provide the forest DF
+                                     processed_x,  # If we don't provide a dataframe, provide the forest DF
                                      TRUE, # Tell predict we don't have an existing dataframe
                                      FALSE,
                                      weightMatrix,
@@ -1785,9 +1805,19 @@ predict.forestry <- function(object,
     }
 
     if (is.null(newdata)) {
+
+      if (object@scale) {
+        processed_x <- scale_center(object@processed_dta$processed_x,
+                                    (unname(object@processed_dta$categoricalFeatureCols_cpp)+1),
+                                    object@colMeans,
+                                    object@colSd)
+      } else {
+        processed_x <- object@processed_dta$processed_x
+      }
+
       rcppPrediction <- tryCatch({
         rcpp_OBBPredictionsInterface(object@forest,
-                                     object@processed_dta$processed_x,  # Give null for the dataframe
+                                     processed_x,  # Give null for the dataframe
                                      TRUE, # Tell predict we don't have an existing dataframe
                                      TRUE,
                                      weightMatrix,
@@ -1981,12 +2011,8 @@ getOOB <- function(object,
     rcppOOB <- tryCatch({
       preds <- predict(object, aggregation = "oob")
       # Only calc mse on non missing predictions
-      if (object@scale) {
-        y_true <- object@processed_dta$y[which(!is.nan(preds))]*object@colSd[length(object@colSd)] +
-          object@colMeans[length(object@colMeans)]
-      } else {
-        y_true <- object@processed_dta$y[which(!is.nan(preds))]
-      }
+      y_true <- object@processed_dta$y[which(!is.nan(preds))]
+
 
       mse <- mean((preds[which(!is.nan(preds))] -
                      y_true)^2)
@@ -2112,16 +2138,18 @@ getOOBpreds <- function(object,
                                       object@categoricalFeatureCols,
                                       object@categoricalFeatureMapping)
 
-    if (object@scale) {
-      # Cycle through all continuous features and center / scale
-      processed_x <- scale_center(processed_x,
-                                  (unname(object@processed_dta$categoricalFeatureCols_cpp)+1),
-                                  object@colMeans,
-                                  object@colSd)
-    }
+
   } else {
     # Else we take the data the forest was trained with
     processed_x <- object@processed_dta$processed_x
+  }
+
+  if (object@scale) {
+    # Cycle through all continuous features and center / scale
+    processed_x <- scale_center(processed_x,
+                                (unname(object@processed_dta$categoricalFeatureCols_cpp)+1),
+                                object@colMeans,
+                                object@colSd)
   }
 
   rcppOOBpreds <- tryCatch({
@@ -2402,6 +2430,10 @@ predictInfo <- function(object,
 #'   predict on the in sample data.
 #' @param feats A vector of feature indices which should be included in the bias
 #'   correction. By default only the outcome and predicted outcomes are used.
+#' @param observations A vector of observation indices from the original data set
+#'   that should be used for the bias correction regression. This can be used for
+#'   treatment effect estimation to carry out separate regressions for the
+#'   treatment and control group.
 #' @param nrounds The number of nonlinear bias correction steps which should be
 #'   taken. By default this is zero, so just a single linear correction is used.
 #' @param linear A flag indicating whether or not we want to do a final linear
@@ -2458,6 +2490,7 @@ predictInfo <- function(object,
 correctedPredict <- function(object,
                              newdata = NULL,
                              feats = NULL,
+                             observations = NULL,
                              nrounds = 0,
                              linear = TRUE,
                              double = FALSE,
@@ -2511,13 +2544,17 @@ correctedPredict <- function(object,
   # First get out of bag preds
   oob.preds <- predict(object = object, aggregation = agg)
 
+  if (is.null(observations)) {
+    observations <- 1:nrow(object@processed_dta$processed_x)
+  }
 
   if (is.null(feats)) {
-    adjust.data <- data.frame(Y = object@processed_dta$y, Y.hat = oob.preds)
+    adjust.data <- data.frame(Y = object@processed_dta$y[observations],
+                              Y.hat = oob.preds[observations])
   } else {
-    adjust.data <- data.frame(object@processed_dta$processed_x[,feats],
-                              Y = object@processed_dta$y,
-                              Y.hat = oob.preds)
+    adjust.data <- data.frame(object@processed_dta$processed_x[observations,feats],
+                              Y = object@processed_dta$y[observations],
+                              Y.hat = oob.preds[observations])
     # give adjust data the column names from feats
     colnames(adjust.data) <- c(paste0("V",feats), "Y","Y.hat")
   }
@@ -2715,9 +2752,17 @@ correctedPredict <- function(object,
     }
   } else {
     if (!keep_fits) {
-      return(adjust.data[,ncol(adjust.data)])
+      if (!is.null(newdata)) {
+        return(pred_data$Y.hat)
+      } else {
+        return(adjust.data[,ncol(adjust.data)])
+      }
     } else {
-      return(list("predictions" = adjust.data[,ncol(adjust.data)], "fits" = rf_fits))
+      if (!is.null(newdata)) {
+        return(list("predictions" = pred_data$Y.hat, "fits" = rf_fits))
+      } else {
+        return(list("predictions" = adjust.data[,ncol(adjust.data)], "fits" = rf_fits))
+      }
     }
   }
 }
@@ -3043,10 +3088,26 @@ relinkCPP_prt <- function(object) {
           stop("Forest was saved without first calling `forest <- make_savable(forest)`. ",
                "This forest cannot be reconstructed.")
 
+        # If tree has scaling, we need to scale + center the X and Y before
+        # giving to C++
+        if (object@scale) {
+          processed_x <- scale_center(object@processed_dta$processed_x,
+                                      (unname(object@processed_dta$categoricalFeatureCols_cpp)+1),
+                                      object@colMeans,
+                                      object@colSd)
+
+          processed_y <- (object@processed_dta$y-object@colMeans[ncol(processed_x)+1]) /
+            object@colSd[ncol(processed_x)+1]
+        } else {
+          processed_x <- object@processed_dta$processed_x
+          processed_y <- object@processed_dta$y
+        }
+
+
         # In this case we use the tree constructor
         forest_and_df_ptr <- rcpp_reconstructree(
-          x = object@processed_dta$processed_x,
-          y = object@processed_dta$y,
+          x = processed_x,
+          y = processed_y,
           catCols = object@processed_dta$categoricalFeatureCols_cpp,
           linCols = object@processed_dta$linearFeatureCols_cpp,
           numRows = object@processed_dta$nObservations,

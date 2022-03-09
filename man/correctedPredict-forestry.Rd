@@ -8,6 +8,7 @@ correctedPredict(
   object,
   newdata = NULL,
   feats = NULL,
+  observations = NULL,
   nrounds = 0,
   linear = TRUE,
   double = FALSE,
@@ -29,6 +30,11 @@ predict on the in sample data.}
 
 \item{feats}{A vector of feature indices which should be included in the bias
 correction. By default only the outcome and predicted outcomes are used.}
+
+\item{observations}{A vector of observation indices from the original data set
+that should be used for the bias correction regression. This can be used for
+treatment effect estimation to carry out separate regressions for the
+treatment and control group.}
 
 \item{nrounds}{The number of nonlinear bias correction steps which should be
 taken. By default this is zero, so just a single linear correction is used.}
