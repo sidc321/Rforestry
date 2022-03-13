@@ -848,7 +848,7 @@ forestry <- function(x,
     }
 
     # Get the symmetric feature if one is set
-    symmetricIndex <- 0
+    symmetricIndex <- 1
     if (any(symmetric != 0)) {
       symmetricIndex <- which(symmetric != 0)
     }
@@ -1033,7 +1033,7 @@ forestry <- function(x,
     }
 
     # Get the symmetric feature if one is set
-    symmetricIndex <- 0
+    symmetricIndex <- 1
     if (any(symmetric != 0)) {
       symmetricIndex <- which(symmetric != 0)
     }
@@ -1342,7 +1342,7 @@ multilayerForestry <- function(x,
     }
 
     # Get the symmetric feature if one is set
-    symmetricIndex <- 0
+    symmetricIndex <- 1
     if (any(symmetric != 0)) {
       symmetricIndex <- which(symmetric != 0)
     }
@@ -1510,7 +1510,7 @@ multilayerForestry <- function(x,
     }
 
     # Get the symmetric feature if one is set
-    symmetricIndex <- 0
+    symmetricIndex <- 1
     if (any(symmetric != 0)) {
       symmetricIndex <- which(symmetric != 0)
     }
