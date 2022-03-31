@@ -700,6 +700,10 @@ forestry <- function(x,
     stop(paste0("A parameter passed is not assigned: ", err))
   })
 
+  # Should not scale if we have only one value of Y
+  if (sd(y) == 0) {
+    scale = FALSE
+  }
 
   if(is.matrix(x) && is.null(colnames(x))) {
     message("x does not have column names. The check that columns are provided in the same order
@@ -1218,6 +1222,11 @@ multilayerForestry <- function(x,
   if (!is.null(sample.fraction))
     sampsize <- ceiling(sample.fraction * nrow(x))
   linFeats <- unique(linFeats)
+
+  # Should not scale if we have only one value of Y
+  if (sd(y) == 0) {
+    scale = FALSE
+  }
 
   x <- as.data.frame(x)
   hasNas <- any(is.na(x))
