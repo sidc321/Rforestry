@@ -4,6 +4,17 @@
 
 Sören Künzel, Theo Saarinen, Simon Walter, Edward Liu, Allen Tang, Jasjeet Sekhon
 
+
+
+## TODO
+
+- Make pyforestry into a library that we can install
+- Check what is the best way to handle categorical variables
+- Start writing tests for the package using pytest
+
+
+
+
 ## Introduction
 
 Rforestry is a fast implementation of Honest Random Forests, Gradient Boosting,
