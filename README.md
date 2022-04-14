@@ -11,6 +11,9 @@ Sören Künzel, Theo Saarinen, Simon Walter, Edward Liu, Allen Tang, Jasjeet Sek
 - Make pyforestry into a library that we can install
 - Check what is the best way to handle categorical variables
 - Start writing tests for the package using pytest
+- Priority, get init, fit, and predict implemented, next is set_params/ get_params
+- If it helps to test, add SK learn tree inside to simulate predictions
+- (Theo) Work on implementing the linker to C++
 
 
 
