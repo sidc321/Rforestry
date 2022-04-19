@@ -10,7 +10,7 @@
 #include "forestry.h"
 #include "forestryTree.h"
 #include "utils.h"
-#include <RcppArmadillo.h>
+#include <armadillo>
 
 class multilayerForestry {
 

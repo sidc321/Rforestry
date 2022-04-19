@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="forestryCpp"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="gcc"/>
+		<Option virtualFolders="CMake Files\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/Users/theosaa/Dropbox/Rforestry_fork/src"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -f &quot;/Users/theosaa/Dropbox/Rforestry_fork/src/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -f &quot;/Users/theosaa/Dropbox/Rforestry_fork/src/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -f &quot;/Users/theosaa/Dropbox/Rforestry_fork/src/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -f &quot;/Users/theosaa/Dropbox/Rforestry_fork/src/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="output_lib_name">
+				<Option working_dir="/Users/theosaa/Dropbox/Rforestry_fork/src"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -f &quot;/Users/theosaa/Dropbox/Rforestry_fork/src/Makefile&quot;  VERBOSE=1 output_lib_name"/>
+					<CompileFile command="/usr/bin/make -f &quot;/Users/theosaa/Dropbox/Rforestry_fork/src/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -f &quot;/Users/theosaa/Dropbox/Rforestry_fork/src/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -f &quot;/Users/theosaa/Dropbox/Rforestry_fork/src/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/Users/theosaa/Dropbox/Rforestry_fork/src"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -f &quot;/Users/theosaa/Dropbox/Rforestry_fork/src/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/make -f &quot;/Users/theosaa/Dropbox/Rforestry_fork/src/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -f &quot;/Users/theosaa/Dropbox/Rforestry_fork/src/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -f &quot;/Users/theosaa/Dropbox/Rforestry_fork/src/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/Users/theosaa/Dropbox/Rforestry_fork/src"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -f &quot;/Users/theosaa/Dropbox/Rforestry_fork/src/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/make -f &quot;/Users/theosaa/Dropbox/Rforestry_fork/src/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -f &quot;/Users/theosaa/Dropbox/Rforestry_fork/src/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -f &quot;/Users/theosaa/Dropbox/Rforestry_fork/src/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="forestryCpp">
+				<Option output="/Users/theosaa/Dropbox/Rforestry_fork/src/libforestryCpp.dylib" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/theosaa/Dropbox/Rforestry_fork/src"/>
+				<Option object_output="./"/>
+				<Option type="3"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/local/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -f &quot;/Users/theosaa/Dropbox/Rforestry_fork/src/Makefile&quot;  VERBOSE=1 forestryCpp"/>
+					<CompileFile command="/usr/bin/make -f &quot;/Users/theosaa/Dropbox/Rforestry_fork/src/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -f &quot;/Users/theosaa/Dropbox/Rforestry_fork/src/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -f &quot;/Users/theosaa/Dropbox/Rforestry_fork/src/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="forestryCpp/fast">
+				<Option output="/Users/theosaa/Dropbox/Rforestry_fork/src/libforestryCpp.dylib" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/theosaa/Dropbox/Rforestry_fork/src"/>
+				<Option object_output="./"/>
+				<Option type="3"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/local/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -f &quot;/Users/theosaa/Dropbox/Rforestry_fork/src/Makefile&quot;  VERBOSE=1 forestryCpp/fast"/>
+					<CompileFile command="/usr/bin/make -f &quot;/Users/theosaa/Dropbox/Rforestry_fork/src/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -f &quot;/Users/theosaa/Dropbox/Rforestry_fork/src/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -f &quot;/Users/theosaa/Dropbox/Rforestry_fork/src/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/Users/theosaa/Dropbox/Rforestry_fork/src/DataFrame.cpp">
+			<Option target="forestryCpp"/>
+		</Unit>
+		<Unit filename="/Users/theosaa/Dropbox/Rforestry_fork/src/DataFrame.h">
+			<Option target="forestryCpp"/>
+		</Unit>
+		<Unit filename="/Users/theosaa/Dropbox/Rforestry_fork/src/RFNode.cpp">
+			<Option target="forestryCpp"/>
+		</Unit>
+		<Unit filename="/Users/theosaa/Dropbox/Rforestry_fork/src/RFNode.h">
+			<Option target="forestryCpp"/>
+		</Unit>
+		<Unit filename="/Users/theosaa/Dropbox/Rforestry_fork/src/forestry.cpp">
+			<Option target="forestryCpp"/>
+		</Unit>
+		<Unit filename="/Users/theosaa/Dropbox/Rforestry_fork/src/forestry.h">
+			<Option target="forestryCpp"/>
+		</Unit>
+		<Unit filename="/Users/theosaa/Dropbox/Rforestry_fork/src/forestryTree.cpp">
+			<Option target="forestryCpp"/>
+		</Unit>
+		<Unit filename="/Users/theosaa/Dropbox/Rforestry_fork/src/forestryTree.h">
+			<Option target="forestryCpp"/>
+		</Unit>
+		<Unit filename="/Users/theosaa/Dropbox/Rforestry_fork/src/treeSplitting.cpp">
+			<Option target="forestryCpp"/>
+		</Unit>
+		<Unit filename="/Users/theosaa/Dropbox/Rforestry_fork/src/treeSplitting.h">
+			<Option target="forestryCpp"/>
+		</Unit>
+		<Unit filename="/Users/theosaa/Dropbox/Rforestry_fork/src/utils.cpp">
+			<Option target="forestryCpp"/>
+		</Unit>
+		<Unit filename="/Users/theosaa/Dropbox/Rforestry_fork/src/utils.h">
+			<Option target="forestryCpp"/>
+		</Unit>
+		<Unit filename="/Users/theosaa/Dropbox/Rforestry_fork/src/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>

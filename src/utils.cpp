@@ -1,4 +1,3 @@
-#include <Rcpp.h>
 #include <vector>
 #include <string>
 #include <iostream>
@@ -8,14 +7,14 @@ void print_vector(
     std::vector<unsigned int> v
 ){
   for (auto i = v.begin(); i != v.end(); ++i){
-    Rcpp::Rcout << *i << ' ';
+    std::cout << *i << ' ';
     // Rcpp's equivalent of std::flush
-    R_FlushConsole();
-    R_ProcessEvents();
-    R_CheckUserInterrupt();
+
+
+
   }
-  Rcpp::Rcout << std::endl;
-  Rcpp::Rcout << std::endl;
+  std::cout << std::endl;
+  std::cout << std::endl;
 }
 
 
@@ -23,14 +22,14 @@ void print_vector(
     std::vector<double> v
 ){
   for (auto i = v.begin(); i != v.end(); ++i){
-    Rcpp::Rcout << *i << ' ';
+    std::cout << *i << ' ';
     // Rcpp's equivalent of std::flush
-    R_FlushConsole();
-    R_ProcessEvents();
-    R_CheckUserInterrupt();
+
+
+
   }
-  Rcpp::Rcout << std::endl;
-  Rcpp::Rcout << std::endl;
+  std::cout << std::endl;
+  std::cout << std::endl;
 }
 
 int add_vector(

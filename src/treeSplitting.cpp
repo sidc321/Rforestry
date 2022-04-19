@@ -3,8 +3,8 @@
 #include "DataFrame.h"
 #include "RFNode.h"
 #include "utils.h"
-#include <RcppArmadillo.h>
-#include <RcppThread.h>
+#include <armadillo>
+
 #include <cmath>
 #include <set>
 #include <map>
@@ -13,7 +13,7 @@
 #include <sstream>
 #include <tuple>
 #include <numeric>
-// [[Rcpp::plugins(cpp11)]]
+
 
 double calculateRSS(
     DataFrame* trainingData,
@@ -1010,7 +1010,7 @@ void findBestSplitRidge(
         currentSplitValue = epsilon_lower;
       }
     }
-    //Rcpp::Rcout << currentRSS << " " << currentSplitValue << "\n";
+    //std::cout << currentRSS << " " << currentSplitValue << "\n";
     updateBestSplit(
       bestSplitLossAll,
       bestSplitValueAll,

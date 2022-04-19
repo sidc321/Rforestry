@@ -1,15 +1,15 @@
 #include "forestryTree.h"
 #include "utils.h"
 #include "treeSplitting.h"
-#include <RcppArmadillo.h>
-#include <RcppThread.h>
+#include <armadillo>
+
 #include <cmath>
 #include <set>
 #include <map>
 #include <random>
 #include <sstream>
 #include <tuple>
-// [[Rcpp::plugins(cpp11)]]
+
 
 forestryTree::forestryTree():
   _mtry(0),
@@ -290,7 +290,7 @@ void forestryTree::predict(
                        seed,
                        nodesizeStrictAvg,
                        OOBIndex);
-  //Rcpp::Rcout << "Seed is" << seed << ".\n";
+  //std::cout << "Seed is" << seed << ".\n";
 }
 
 
@@ -1933,7 +1933,7 @@ void forestryTree::reconstruct_tree(
     bool linear,
     double overfitPenalty,
     unsigned int seed,
-    std::vector<size_t> categoricalFeatureColsRcpp,
+    std::vector<size_t> categoricalFeatureCols,
     std::vector<int> var_ids,
     std::vector<double> split_vals,
     std::vector<int> naLeftCounts,

@@ -1,12 +1,12 @@
-// [[Rcpp::depends(RcppThread)]]
-// [[Rcpp::plugins(cpp11)]]
+
+
 #include "forestry.h"
 #include "utils.h"
-#include <RcppThread.h>
+
 #include <random>
 #include <thread>
 #include <mutex>
-#include <RcppArmadillo.h>
+#include <armadillo>
 #define DOPARELLEL true
 
 
@@ -151,7 +151,7 @@ void forestry::addTrees(size_t ntree) {
   }
   newEndingTreeNumber = newStartingTreeNumber + (unsigned int) numToGrow;
 
-  //RcppThread::Rcout << newEndingTreeNumber;
+  //std::cout << newEndingTreeNumber;
 
   unsigned int nthreadToUse = (unsigned int) getNthread();
   if (nthreadToUse == 0) {
@@ -165,11 +165,11 @@ void forestry::addTrees(size_t ntree) {
 
   #if DOPARELLEL
   if (isVerbose()) {
-    RcppThread::Rcout << "Training parallel using " << nthreadToUse << " threads"
+    std::cout << "Training parallel using " << nthreadToUse << " threads"
               << std::endl;
-    R_FlushConsole();
-    R_ProcessEvents();
-    R_CheckUserInterrupt();
+
+
+
   }
 
   std::vector<std::thread> allThreads(nthreadToUse);
@@ -206,7 +206,7 @@ void forestry::addTrees(size_t ntree) {
             // Get the current group
             currentGroup = (((size_t) i) / ((size_t) getMinTreesPerGroup())) + 1;
 
-            //RcppThread::Rcout << currentGroup;
+            //std::cout << currentGroup;
 
             // Populate sampleIndex with the leave group out function
             group_out_sample(
@@ -443,9 +443,9 @@ void forestry::addTrees(size_t ntree) {
             #endif
 
             if (isVerbose()) {
-              Rcpp::Rcout << "Finish training tree # " << (i + 1) << std::endl;
-              R_FlushConsole();
-              R_ProcessEvents();
+              std::cout << "Finish training tree # " << (i + 1) << std::endl;
+
+
             }
 
             (*getForest()).emplace_back(oneTree);
@@ -458,7 +458,7 @@ void forestry::addTrees(size_t ntree) {
             }
 
           } catch (std::runtime_error &err) {
-            // Rcpp::Rcerr << err.what() << std::endl;
+            // std::cerr << err.what() << std::endl;
           }
 
         }
@@ -532,7 +532,7 @@ std::unique_ptr< std::vector<double> > forestry::predict(
   }
 
   if (isVerbose()) {
-    RcppThread::Rcout << "Prediction parallel using " << nthreadToUse << " threads"
+    std::cout << "Prediction parallel using " << nthreadToUse << " threads"
               << std::endl;
   }
 
@@ -634,7 +634,7 @@ std::unique_ptr< std::vector<double> > forestry::predict(
             }
 
           } catch (std::runtime_error &err) {
-            Rcpp::Rcerr << err.what() << std::endl;
+            std::cerr << err.what() << std::endl;
           }
       }
   #if DOPARELLEL
@@ -756,7 +756,7 @@ std::vector<double> forestry::predictOOB(
         nthreadToUse = std::thread::hardware_concurrency();
       }
       if (isVerbose()) {
-        RcppThread::Rcout << "Calculating OOB parallel using " << nthreadToUse << " threads"
+        std::cout << "Calculating OOB parallel using " << nthreadToUse << " threads"
                           << std::endl;
       }
       std::vector<std::thread> allThreads(nthreadToUse);
@@ -811,7 +811,7 @@ std::vector<double> forestry::predictOOB(
                   }
 
                 } catch (std::runtime_error &err) {
-                  // Rcpp::Rcerr << err.what() << std::endl;
+                  // std::cerr << err.what() << std::endl;
                 }
               }
     #if DOPARELLEL
@@ -919,7 +919,7 @@ void forestry::calculateVariableImportance() {
       nthreadToUse = std::thread::hardware_concurrency();
     }
     if (isVerbose()) {
-      RcppThread::Rcout << "Calculating OOB parallel using " << nthreadToUse << " threads"
+      std::cout << "Calculating OOB parallel using " << nthreadToUse << " threads"
                 << std::endl;
     }
 
@@ -965,7 +965,7 @@ void forestry::calculateVariableImportance() {
             outputOOBCount[j] += outputOOBCount_iteration[j];
           }
         } catch (std::runtime_error &err) {
-          Rcpp::Rcerr << err.what() << std::endl;
+          std::cerr << err.what() << std::endl;
         }
       }
     #if DOPARELLEL
@@ -1026,7 +1026,7 @@ void forestry::calculateOOBError(
     nthreadToUse = std::thread::hardware_concurrency();
   }
   if (isVerbose()) {
-    RcppThread::Rcout << "Calculating OOB parallel using " << nthreadToUse << " threads"
+    std::cout << "Calculating OOB parallel using " << nthreadToUse << " threads"
               << std::endl;
   }
 
@@ -1074,7 +1074,7 @@ void forestry::calculateOOBError(
             }
 
           } catch (std::runtime_error &err) {
-            // Rcpp::Rcerr << err.what() << std::endl;
+            // std::cerr << err.what() << std::endl;
           }
         }
   #if DOPARELLEL
@@ -1120,7 +1120,7 @@ void forestry::fillinTreeInfo(
 ){
 
   if (isVerbose()) {
-    RcppThread::Rcout << "Starting to translate Forest to R.\n";
+    std::cout << "Starting to translate Forest to R.\n";
   }
 
   for(int i=0; i<((int) getNtree()); i++ ) {
@@ -1133,25 +1133,25 @@ void forestry::fillinTreeInfo(
       forest_dta->push_back(*treeInfo_i);
 
     } catch (std::runtime_error &err) {
-      Rcpp::Rcerr << err.what() << std::endl;
+      std::cerr << err.what() << std::endl;
 
     }
 
     if (isVerbose()) {
-      RcppThread::Rcout << "Done with tree " << i + 1 << " of " << getNtree() << ".\n";
+      std::cout << "Done with tree " << i + 1 << " of " << getNtree() << ".\n";
     }
 
   }
 
   if (isVerbose()) {
-    RcppThread::Rcout << "Translation done.\n";
+    std::cout << "Translation done.\n";
   }
 
   return ;
 };
 
 void forestry::reconstructTrees(
-    std::unique_ptr< std::vector<size_t> > & categoricalFeatureColsRcpp,
+    std::unique_ptr< std::vector<size_t> > & categoricalFeatureCols,
     std::unique_ptr< std::vector<unsigned int> > & tree_seeds,
     std::unique_ptr< std::vector< std::vector<int> >  > & var_ids,
     std::unique_ptr< std::vector< std::vector<double> >  > & split_vals,
@@ -1181,7 +1181,7 @@ void forestry::reconstructTrees(
                 getlinear(),
                 getOverfitPenalty(),
                 (*tree_seeds)[i],
-                (*categoricalFeatureColsRcpp),
+                (*categoricalFeatureCols),
                 (*var_ids)[i],
                 (*split_vals)[i],
                 (*naLeftCounts)[i],
@@ -1194,7 +1194,7 @@ void forestry::reconstructTrees(
         (*getForest()).emplace_back(oneTree);
         _ntree = _ntree + 1;
       } catch (std::runtime_error &err) {
-        Rcpp::Rcerr << err.what() << std::endl;
+        std::cerr << err.what() << std::endl;
       }
 
   }
@@ -1210,8 +1210,8 @@ size_t forestry::getTotalNodeCount() {
   }
   return node_count;
 }
-// [[Rcpp::depends(RcppArmadillo)]]
-// [[Rcpp::plugins(cpp11)]]
+// [[::depends(Armadillo)]]
+
 std::vector<std::vector<double>>* forestry::neighborhoodImpute(
     std::vector< std::vector<double> >* xNew,
     arma::Mat<double>* weightMatrix

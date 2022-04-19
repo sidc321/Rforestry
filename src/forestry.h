@@ -5,7 +5,7 @@
 #include "DataFrame.h"
 #include "forestryTree.h"
 #include "utils.h"
-#include <RcppArmadillo.h>
+#include <armadillo>
 #include <iostream>
 #include <vector>
 #include <string>
@@ -71,7 +71,7 @@ public:
   );
 
   void reconstructTrees(
-      std::unique_ptr< std::vector<size_t> > & categoricalFeatureColsRcpp,
+      std::unique_ptr< std::vector<size_t> > & categoricalFeatureCols,
       std::unique_ptr< std::vector<unsigned int> > & tree_seeds,
       std::unique_ptr< std::vector< std::vector<int> >  > & var_ids,
       std::unique_ptr< std::vector< std::vector<double> >  > & split_vals,

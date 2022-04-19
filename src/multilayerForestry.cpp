@@ -5,7 +5,7 @@
 #include "DataFrame.h"
 #include "forestry.h"
 #include "utils.h"
-#include <RcppArmadillo.h>
+#include <armadillo>
 
 multilayerForestry::multilayerForestry():
   _multilayerForests(nullptr), _gammas(0) {}
