@@ -74,7 +74,7 @@ def training_data_checker(
         raise ValueError('y contains missing data.')
 
     if not isinstance(replace, bool):
-        raise ValueError('replace must be True or False.')
+        raise AttributeError('replace must be True or False.')
 
     if (not isinstance(ntree, int)) or ntree <= 0:
         raise ValueError('ntree must be a positive integer.')
@@ -201,7 +201,7 @@ def training_data_checker(
 
     if groups is not None:
         if not pd.api.types.is_categorical_dtype(groups):
-            raise ValueError('groups must have a data dtype of categorical. Try using pd.Series(..., dtype="category") or pd.Categorical(...).')
+            raise ValueError('groups must have a data dtype of categorical. Try using pd.Categorical(...) or pd.Series(..., dtype="category").')
         if len(groups.unique()) == 1:
             raise ValueError('groups must have more than 1 level to be left out from sampling.')
         groups = pd.Series(groups, dtype='category')
@@ -310,14 +310,38 @@ def preprocess_training(x,y):
         raise ValueError('The dimension of input dataset x doesn\'t match the output vector y.')
 
     # Track the order of all features
-    featureNames = list(x.columns)
-    if not featureNames:
+    featureNames = np.array(x.columns)
+    if featureNames.size == 0:
         warnings.warn('No names are given for each column.')
 
     # Track all categorical features (both factors and characters)
 
-    #################################
-    return (x, [], [])
+    categoricalFeatureCols = np.array((x.select_dtypes('category')).columns)
+    featureCharacterCols = np.array((x.select_dtypes('object')).columns)
+    # Note: this will select all the data types that are objects - pointers to another 
+    # block, like strings, dictionaries, etc.
+
+    if featureCharacterCols.size != 0:
+        raise AttributeError('Character value features must be cast to factors.')
+
+    # For each categorical feature, encode x into numeric representation and
+    # save the encoding mapping
+    categoricalFeatureMapping = [None for _ in range(categoricalFeatureCols.size)]
+    dummyIndex = 0
+    for categoricalFeatureCol in categoricalFeatureCols:
+        x[categoricalFeatureCol] = pd.Series(x[categoricalFeatureCol], dtype='category').cat.remove_unused_categories()
+
+        categoricalFeatureMapping[dummyIndex] = {
+            'categoricalFeatureCol': categoricalFeatureCol,
+            'uniqueFeatureValues' : list(x[categoricalFeatureCol].cat.categories),
+            'numericFeatureValues': np.arange(1,len(x[categoricalFeatureCol].cat.categories)+1)
+        }
+
+        x[categoricalFeatureCol] = x[categoricalFeatureCol].cat.codes
+        dummyIndex += 1
+
+    
+    return (x, categoricalFeatureCols, categoricalFeatureMapping)
 
 
 #' @title preprocess_testing
@@ -333,7 +357,22 @@ def preprocess_training(x,y):
 #'   corresponding numeric representation.
 #' @return A preprocessed training dataaset x
 def preprocess_testing (x, categoricalFeatureCols, categoricalFeatureMapping):
-    pass
+    x = pd.DataFrame(x)
+
+    # Track the order of all features
+    testingFeatureNames = np.array(x.columns)
+    if testingFeatureNames.size == 0:
+        warnings.warn('No names are given for each column.')
+    
+    # Track all categorical features (both factors and characters)
+    featureFactorCols = np.array((x.select_dtypes('category')).columns)
+    featureCharacterCols = np.array((x.select_dtypes('object')).columns)
+
+    testingCategoricalFeatureCols = np.concatenate((featureFactorCols, featureCharacterCols), axis=0)
+    
+    if set(categoricalFeatureCols) - set(testingCategoricalFeatureCols):
+        raise ValueError('Categorical columns are different between testing and training data.')
+
 
 
 
