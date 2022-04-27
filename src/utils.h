@@ -25,6 +25,9 @@ int add_vector(
 double square(
     double x
 );
+extern "C" int add_one(
+        int i
+);
 
 void group_out_sample(
     size_t groupIdx,

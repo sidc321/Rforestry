@@ -9,14 +9,15 @@ void print_vector(
   for (auto i = v.begin(); i != v.end(); ++i){
     std::cout << *i << ' ';
     // Rcpp's equivalent of std::flush
-
-
-
   }
   std::cout << std::endl;
   std::cout << std::endl;
 }
-
+extern "C" int add_one(
+        int i
+){
+   return(i+1);
+}
 
 void print_vector(
     std::vector<double> v
