@@ -14,6 +14,10 @@ void print_vector(
     std::vector<unsigned int> v
 );
 
+extern "C" int add_one(
+        int i
+);
+
 void print_vector(
     std::vector<double> v
 );

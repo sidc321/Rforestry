@@ -7,7 +7,7 @@
 #include "utils.h"
 
 
-extern "C" forestry train_forest(
+extern "C" double train_forest(
         int i
 ){
     // Create Data
@@ -114,26 +114,54 @@ extern "C" forestry train_forest(
     std::mt19937_64 random_number_generator;
     random_number_generator.seed(24750371);
 
+    std::unique_ptr< std::vector<size_t> > linearFeatures (
+            new std::vector<size_t>(4, 0)
+            );
+
+    std::unique_ptr< std::vector<double> > feature_weights (
+            new std::vector<double>(4, 0.25)
+    );
+
+    std::unique_ptr< std::vector<size_t> > feature_weight_vars (
+            new std::vector<size_t>{0,1,2,3}
+    );
+
+    std::unique_ptr< std::vector<double> > obs_weights (
+            new std::vector<double>(150, 0.006666667)
+    );
+
+    std::unique_ptr< std::vector<int> > monotone_constraints (
+            new std::vector<int>(4, 0)
+    );
+
+    std::unique_ptr< std::vector<size_t> > groups (
+            new std::vector<size_t>(150, 0)
+    );
+
+    std::unique_ptr< std::vector<size_t> > symmetric_constraints (
+            new std::vector<size_t>(4, 0)
+    );
+
     std::unique_ptr< DataFrame > test_df (new DataFrame(
             std::move(featureData),
             std::move(outcomeData),
             std::move(categoricalFeatureCols),
-            nullptr,
+            std::move(linearFeatures),
             numRows,
             numColumns,
-            nullptr,
-            nullptr,
-            nullptr,
-            nullptr,
-            nullptr,
-            nullptr,
-            nullptr,
+            std::move(feature_weights),
+            std::move(feature_weight_vars),
+            std::move(feature_weights),
+            std::move(feature_weight_vars),
+            std::move(obs_weights),
+            std::move(monotone_constraints),
+            std::move(groups),
             false,
-            nullptr
+            std::move(symmetric_constraints)
     ));
 
-    forestry forest = new forestry(
-            DataFrame* trainingData,
+    std::unique_ptr<forestry> forest ( new forestry(
+            test_df.get(),
             500,
             true,
             numRows,
@@ -159,6 +187,32 @@ extern "C" forestry train_forest(
             false,
             1.0,
             false
+    ));
+
+    std::unique_ptr< std::vector<double> > testForestPrediction (
+            (*forest).predict(
+                    (*forest).getTrainingData()->getAllFeatureData(),
+                    nullptr,
+                    nullptr,
+                    nullptr,
+                    1,
+                    0,
+                    false,
+                    false,
+                    nullptr
+            )
     );
-    return forest;
+
+    // Calculate prediction accuracy
+    std::vector<double>* truePredictions =
+            (*forest).getTrainingData()->getOutcomeData();
+
+    double testMSE = 0;
+    for (size_t i=0; i<(*truePredictions).size(); i++){
+        testMSE += pow(
+                ((*testForestPrediction.get())[i] - (*truePredictions)[i]), 2
+        );
+    }
+
+    return testMSE;
 }

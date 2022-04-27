@@ -9,3 +9,8 @@
 #define FORESTRYCPP_API_H
 
 #endif //FORESTRYCPP_API_H
+
+
+extern "C" double train_forest(
+        int i
+);
