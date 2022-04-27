@@ -92,6 +92,12 @@
 		<Unit filename="/Users/theosaa/Dropbox/Rforestry_fork/src/RFNode.h">
 			<Option target="forestryCpp"/>
 		</Unit>
+		<Unit filename="/Users/theosaa/Dropbox/Rforestry_fork/src/api.cpp">
+			<Option target="forestryCpp"/>
+		</Unit>
+		<Unit filename="/Users/theosaa/Dropbox/Rforestry_fork/src/api.h">
+			<Option target="forestryCpp"/>
+		</Unit>
 		<Unit filename="/Users/theosaa/Dropbox/Rforestry_fork/src/forestry.cpp">
 			<Option target="forestryCpp"/>
 		</Unit>

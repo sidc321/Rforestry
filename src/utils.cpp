@@ -9,14 +9,15 @@ void print_vector(
   for (auto i = v.begin(); i != v.end(); ++i){
     std::cout << *i << ' ';
     // Rcpp's equivalent of std::flush
-
-
-
   }
   std::cout << std::endl;
   std::cout << std::endl;
 }
-
+extern "C" int add_one(
+        int i
+){
+   return(i+1);
+}
 
 void print_vector(
     std::vector<double> v
@@ -133,3 +134,21 @@ std::vector<bool> get_symmetric_feat_signs(
   return ret;
 }
 
+extern "C" {
+std::vector<double>* new_vector(){
+    return new std::vector<double>;
+}
+void delete_vector(std::vector<double>* v){
+    std::cout << "destructor called in C++ for " << v << std::endl;
+    delete v;
+}
+int vector_size(std::vector<double>* v){
+    return v->size();
+}
+double vector_get(std::vector<double>* v, int i){
+    return v->at(i);
+}
+void vector_push_back(std::vector<double>* v, int i){
+    v->push_back(i);
+}
+}

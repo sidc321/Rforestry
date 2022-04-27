@@ -14,6 +14,10 @@ void print_vector(
     std::vector<unsigned int> v
 );
 
+extern "C" int add_one(
+        int i
+);
+
 void print_vector(
     std::vector<double> v
 );
@@ -24,6 +28,9 @@ int add_vector(
 
 double square(
     double x
+);
+extern "C" int add_one(
+        int i
 );
 
 void group_out_sample(
