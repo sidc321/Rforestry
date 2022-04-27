@@ -7,8 +7,8 @@
 #include "utils.h"
 
 
-extern "C" double train_forest(
-        int i
+extern "C" std::vector<double>* train_forest(
+        int input
 ){
     // Create Data
     size_t numRows = 150;
@@ -115,7 +115,7 @@ extern "C" double train_forest(
     random_number_generator.seed(24750371);
 
     std::unique_ptr< std::vector<size_t> > linearFeatures (
-            new std::vector<size_t>(4, 0)
+            new std::vector<size_t> {0,1,2,3}
             );
 
     std::unique_ptr< std::vector<double> > feature_weights (
@@ -139,7 +139,7 @@ extern "C" double train_forest(
     );
 
     std::unique_ptr< std::vector<size_t> > symmetric_constraints (
-            new std::vector<size_t>(4, 0)
+            new std::vector<size_t>(1, 0)
     );
 
     std::unique_ptr< DataFrame > test_df (new DataFrame(
@@ -162,12 +162,12 @@ extern "C" double train_forest(
 
     std::unique_ptr<forestry> forest ( new forestry(
             test_df.get(),
-            500,
+            input,
             true,
             numRows,
             1,
-            true,
-            true,
+            false,
+            false,
             1,
             1,
             1,
@@ -175,13 +175,13 @@ extern "C" double train_forest(
             1,
             0.0,
             10,
-            1,
+            100,
             1,
             0,
-            false,
+            true,
             true,
             numRows,
-            1,
+            0,
             false,
             false,
             false,
@@ -207,12 +207,29 @@ extern "C" double train_forest(
     std::vector<double>* truePredictions =
             (*forest).getTrainingData()->getOutcomeData();
 
-    double testMSE = 0;
+    double testMSE = 0.0;
     for (size_t i=0; i<(*truePredictions).size(); i++){
         testMSE += pow(
                 ((*testForestPrediction.get())[i] - (*truePredictions)[i]), 2
         );
     }
+    std::vector< std::unique_ptr< forestryTree > >* curr_forest;
+    curr_forest = forest->getForest();
+    std::sort(curr_forest->begin(), curr_forest->end(), [](const std::unique_ptr< forestryTree >& a,
+                                                           const std::unique_ptr< forestryTree >& b) {
+        return a.get()->getSeed() > b.get()->getSeed();
+    });
 
-    return testMSE;
+    (*curr_forest)[0]->printTree();
+
+    std::vector<double>* ret_test(
+            new std::vector<double>(10, 2.3)
+    );
+
+    for (size_t i = 0; i <10; i++) {
+        (*ret_test)[i] = (*testForestPrediction.get())[i];
+        std::cout << (*testForestPrediction.get())[i] << std::endl;
+    }
+
+    return ret_test;
 }

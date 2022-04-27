@@ -134,3 +134,21 @@ std::vector<bool> get_symmetric_feat_signs(
   return ret;
 }
 
+extern "C" {
+std::vector<double>* new_vector(){
+    return new std::vector<double>;
+}
+void delete_vector(std::vector<double>* v){
+    std::cout << "destructor called in C++ for " << v << std::endl;
+    delete v;
+}
+int vector_size(std::vector<double>* v){
+    return v->size();
+}
+double vector_get(std::vector<double>* v, int i){
+    return v->at(i);
+}
+void vector_push_back(std::vector<double>* v, int i){
+    v->push_back(i);
+}
+}
