@@ -50,22 +50,15 @@ res = Py_preprocessing.training_data_checker(
 
 #ONLY NUMERUCAL CATEGORICAL DATA?????
 
-new_dat = pd.Categorical(['1', '1', 'o'])
-df2['cat'] = new_dat
+cat1 = pd.Series([1,1,3], dtype='category')
+cat2 = pd.Categorical(['a', 'a', 'b'])
 
-cat2 = pd.Series([1,3,5], dtype="category")
+df2['cat1'] = cat1
 df2['cat2'] = cat2
 
+(x, categoricalFeatureCols, categoricalFeatureMapping) = Py_preprocessing.preprocess_training(df2, y)
+x = Py_preprocessing.preprocess_testing(x, categoricalFeatureCols, categoricalFeatureMapping)
 
-# preproc_test = Py_preprocessing.preprocess_training(df2, y)
-# print(preproc_test)
+print(Py_preprocessing.scale_center(x, ['cat1', 'cat2'], [2,5,8], [0.8165, 0.8165, 0.8165]))
 
-test_check = Py_preprocessing.preprocess_testing(df2, [], [])
-
-a = {1, 2}
-b = {1,2}
-if a-b:
-    print(a-b)
-# PF1 = forestry(x=df2, y=y, groups=pd.Categorical([1,1,1,2,3,2,3,2,3,3,4,2,1,2,2,3,3,3,4]), minTreesPerGroup=100)
-
-
+print(Py_preprocessing.unscale_uncenter(x, ['cat1', 'cat2'], [2,5,8], [0.8165, 0.8165, 0.8165]))

@@ -16,6 +16,20 @@ from random import randrange
 """
 --------------------------------------
 
+Helper Function
+@return a nunpy array indicating the indices of first occurunces of 
+  the elements of A in B
+"""
+def find_match(A, B):
+    d = {}
+    
+    for i in range(len(B)):
+        if not str(B[i]) in d:
+            d[str(B[i])] = i
+            
+    return np.array([d[str(val)] for val in A])
+
+"""
 #' @include the preprocessign file
 #-- Sanity Checker -------------------------------------------------------------
 #' @name training_data_checker
@@ -334,10 +348,10 @@ def preprocess_training(x,y):
         categoricalFeatureMapping[dummyIndex] = {
             'categoricalFeatureCol': categoricalFeatureCol,
             'uniqueFeatureValues' : list(x[categoricalFeatureCol].cat.categories),
-            'numericFeatureValues': np.arange(1,len(x[categoricalFeatureCol].cat.categories)+1)
+            'numericFeatureValues': np.arange(len(x[categoricalFeatureCol].cat.categories))
         }
 
-        x[categoricalFeatureCol] = x[categoricalFeatureCol].cat.codes
+        x[categoricalFeatureCol] = pd.Series(x[categoricalFeatureCol].cat.codes, dtype='category')
         dummyIndex += 1
 
     
@@ -373,7 +387,28 @@ def preprocess_testing (x, categoricalFeatureCols, categoricalFeatureMapping):
     if set(categoricalFeatureCols) - set(testingCategoricalFeatureCols):
         raise ValueError('Categorical columns are different between testing and training data.')
 
+    # For each categorical feature, encode x into numeric representation
+    for categoricalFeatureMapping_ in categoricalFeatureMapping:
+        categoricalFeatureCol = categoricalFeatureMapping_['categoricalFeatureCol']
+        # Get all unique feature values
+        testingUniqueFeatureValues = x[categoricalFeatureCol].unique()
+        uniqueFeatureValues = categoricalFeatureMapping_['uniqueFeatureValues']
+        numericFeatureValues = categoricalFeatureMapping_['numericFeatureValues']
 
+        # If testing dataset contains more, adding new factors to the mapping list
+        diffUniqueFeatureValues = set(testingUniqueFeatureValues) - set(uniqueFeatureValues)
+        if diffUniqueFeatureValues:
+            uniqueFeatureValues = np.concatenate((list(uniqueFeatureValues), list(diffUniqueFeatureValues)), axis=0)
+            numericFeatureValues = np.arange(uniqueFeatureValues.size)
+
+            #update
+            categoricalFeatureMapping_['uniqueFeatureValues'] = uniqueFeatureValues
+            categoricalFeatureMapping_['numericFeatureValues'] = numericFeatureValues
+
+        x[categoricalFeatureCol] = pd.Series(find_match(x[categoricalFeatureCol], uniqueFeatureValues), dtype='category')
+    
+    # Return transformed data and encoding information
+    return x
 
 
 #' @title scale_center
@@ -385,7 +420,14 @@ def preprocess_testing (x, categoricalFeatureCols, categoricalFeatureMapping):
 #' @param colSd A vector of the standard deviations to scale each column with.
 #' @return A scaled and centered  dataset x
 def scale_center(x, categoricalFeatureCols, colMeans, colSd):
-    pass
+    for col_idx in range(len(x.columns)):
+        if x.columns[col_idx] not in categoricalFeatureCols:
+            if colSd[col_idx] != 0:
+                x.iloc[:, col_idx] = (x.iloc[:, col_idx] - colMeans[col_idx]) / colSd[col_idx]
+            else:
+                x.iloc[:, col_idx] = x.iloc[:, col_idx] - colMeans[col_idx]
+
+    return x
 
 
 
@@ -398,4 +440,11 @@ def scale_center(x, categoricalFeatureCols, colMeans, colSd):
 #' @param colSd A vector of the standard deviations to rescale each column with.
 #' @return A dataset x in it's original scaling
 def unscale_uncenter(x, categoricalFeatureCols, colMeans, colSd):
-    pass
+    for col_idx in range(len(x.columns)):
+        if x.columns[col_idx] not in categoricalFeatureCols:
+            if colSd[col_idx] != 0:
+                x.iloc[:, col_idx] = x.iloc[:, col_idx] * colSd[col_idx] + colMeans[col_idx]
+            else:
+                x.iloc[:, col_idx] = x.iloc[:, col_idx] + colMeans[col_idx]
+
+    return x
