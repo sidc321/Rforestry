@@ -235,6 +235,10 @@ def training_data_checker(
     if not isinstance(middleSplit, bool):
         raise ValueError('middleSplit must be True or False.')
 
+    #make an np arrays
+    monotonicConstraints = np.array(monotonicConstraints)
+    symmetric = np.array(symmetric)
+
     return (
         x,
         y,
@@ -335,23 +339,26 @@ def preprocess_training(x,y):
     # Note: this will select all the data types that are objects - pointers to another 
     # block, like strings, dictionaries, etc.
 
-    if featureCharacterCols.size != 0:
-        raise AttributeError('Character value features must be cast to factors.')
+    if featureCharacterCols.size != 0:  #convert to a factor
+        warnings.warn('Character value features will be cast to categorical data.')
+        categoricalFeatureCols = np.concatenate((categoricalFeatureCols, featureCharacterCols), axis=0)
+        
+    categoricalFeatureCols = x.columns.get_indexer(categoricalFeatureCols)
 
     # For each categorical feature, encode x into numeric representation and
     # save the encoding mapping
     categoricalFeatureMapping = [None for _ in range(categoricalFeatureCols.size)]
     dummyIndex = 0
     for categoricalFeatureCol in categoricalFeatureCols:
-        x[categoricalFeatureCol] = pd.Series(x[categoricalFeatureCol], dtype='category').cat.remove_unused_categories()
+        x.iloc[:, categoricalFeatureCol] = pd.Series(x.iloc[:, categoricalFeatureCol], dtype='category').cat.remove_unused_categories()
 
         categoricalFeatureMapping[dummyIndex] = {
             'categoricalFeatureCol': categoricalFeatureCol,
-            'uniqueFeatureValues' : list(x[categoricalFeatureCol].cat.categories),
-            'numericFeatureValues': np.arange(len(x[categoricalFeatureCol].cat.categories))
+            'uniqueFeatureValues' : list(x.iloc[:, categoricalFeatureCol].cat.categories),
+            'numericFeatureValues': np.arange(len(x.iloc[:, categoricalFeatureCol].cat.categories))
         }
 
-        x[categoricalFeatureCol] = pd.Series(x[categoricalFeatureCol].cat.codes, dtype='category')
+        x.iloc[:, categoricalFeatureCol] = pd.Series(x.iloc[:, categoricalFeatureCol].cat.codes, dtype='category')
         dummyIndex += 1
 
     
@@ -383,7 +390,9 @@ def preprocess_testing (x, categoricalFeatureCols, categoricalFeatureMapping):
     featureCharacterCols = np.array((x.select_dtypes('object')).columns)
 
     testingCategoricalFeatureCols = np.concatenate((featureFactorCols, featureCharacterCols), axis=0)
-    
+    testingCategoricalFeatureCols = x.columns.get_indexer(testingCategoricalFeatureCols)
+
+
     if set(categoricalFeatureCols) - set(testingCategoricalFeatureCols):
         raise ValueError('Categorical columns are different between testing and training data.')
 
@@ -391,7 +400,7 @@ def preprocess_testing (x, categoricalFeatureCols, categoricalFeatureMapping):
     for categoricalFeatureMapping_ in categoricalFeatureMapping:
         categoricalFeatureCol = categoricalFeatureMapping_['categoricalFeatureCol']
         # Get all unique feature values
-        testingUniqueFeatureValues = x[categoricalFeatureCol].unique()
+        testingUniqueFeatureValues = x.iloc[:, categoricalFeatureCol].unique()
         uniqueFeatureValues = categoricalFeatureMapping_['uniqueFeatureValues']
         numericFeatureValues = categoricalFeatureMapping_['numericFeatureValues']
 
@@ -405,7 +414,7 @@ def preprocess_testing (x, categoricalFeatureCols, categoricalFeatureMapping):
             categoricalFeatureMapping_['uniqueFeatureValues'] = uniqueFeatureValues
             categoricalFeatureMapping_['numericFeatureValues'] = numericFeatureValues
 
-        x[categoricalFeatureCol] = pd.Series(find_match(x[categoricalFeatureCol], uniqueFeatureValues), dtype='category')
+        x[categoricalFeatureCol] = pd.Series(find_match(x.iloc[:, categoricalFeatureCol], uniqueFeatureValues), dtype='category')
     
     # Return transformed data and encoding information
     return x
@@ -415,13 +424,13 @@ def preprocess_testing (x, categoricalFeatureCols, categoricalFeatureMapping):
 #' @description Given a dataframe, scale and center the continous features
 #' @param x A dataframe in order to be processed.
 #' @param categoricalFeatureCols A vector of the categorical features, we
-#'   don't want to scale/center these. Should be 1-indexed.
+#'   don't want to scale/center these.
 #' @param colMeans A vector of the means to center each column.
 #' @param colSd A vector of the standard deviations to scale each column with.
 #' @return A scaled and centered  dataset x
 def scale_center(x, categoricalFeatureCols, colMeans, colSd):
     for col_idx in range(len(x.columns)):
-        if x.columns[col_idx] not in categoricalFeatureCols:
+        if col_idx not in categoricalFeatureCols:
             if colSd[col_idx] != 0:
                 x.iloc[:, col_idx] = (x.iloc[:, col_idx] - colMeans[col_idx]) / colSd[col_idx]
             else:
