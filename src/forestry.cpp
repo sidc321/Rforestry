@@ -485,7 +485,7 @@ void forestry::addTrees(size_t ntree) {
   #endif
 }
 
-std::unique_ptr< std::vector<double> > forestry::predict(
+  std::vector<double>* forestry::predict(
   std::vector< std::vector<double> >* xNew,
   arma::Mat<double>* weightMatrix,
   arma::Mat<double>* coefficients,
@@ -700,7 +700,7 @@ std::unique_ptr< std::vector<double> > forestry::predict(
     prediction[j] /= total_weights;
   }
 
-  std::unique_ptr< std::vector<double> > prediction_ (
+  std::vector<double>* prediction_ (
     new std::vector<double>(prediction)
   );
 

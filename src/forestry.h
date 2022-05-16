@@ -47,7 +47,7 @@ public:
     bool doubleTree
   );
 
-  std::unique_ptr< std::vector<double> > predict(
+  std::vector<double>* predict(
     std::vector< std::vector<double> >* xNew,
     arma::Mat<double>* weightMatrix,
     arma::Mat<double>* coefficients,
