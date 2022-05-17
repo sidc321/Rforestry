@@ -232,8 +232,9 @@ public:
       arma::Mat<double>* weightMatrix
   );
 
-private:
   DataFrame* _trainingData;
+
+private:
   size_t _ntree;
   bool _replace;
   size_t _sampSize;

@@ -496,6 +496,9 @@ void forestry::addTrees(size_t ntree) {
   bool use_weights,
   std::vector<size_t>* tree_weights
 ){
+
+  //return new std::vector<double> ((*xNew)[0]);
+
   std::vector<double> prediction;
   size_t numObservations = (*xNew)[0].size();
   for (size_t j=0; j<numObservations; j++) {
