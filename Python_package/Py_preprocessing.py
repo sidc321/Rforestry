@@ -3,6 +3,7 @@ LIBRARIES NEEDED
 ----------------------
 """
 
+from multiprocessing.sharedctypes import Value
 import numpy as np
 import pandas as pd
 import warnings
@@ -279,8 +280,22 @@ def training_data_checker(
 @return A feature dataframe if it can be used for new predictions.
 """
 def testing_data_checker(object, newdata, hasNas):
-    pass
+    if len(newdata.columns) != object.processed_dta['numColumns']:
+        raise ValueError('newdata has ' + len(newdata.columns) + ' but the forest was trained with ' + object.processed_dta['numColumns'] + ' columns.')
 
+    if object.processed_dta['featNames'] is not None:
+        if not (set(newdata.columns) == set(object.processed_dta['featNames'])):
+            raise ValueError('newdata has different columns then the ones the forest was trained with.')
+
+        if not all(newdata.columns == object.processed_dta['featNames']):
+            warnings.warn('newdata columns have been reordered so that they match the training feature matrix')
+            newdata = newdata[object.processed_dta['featNames']]
+    
+        # If linear is true we can't predict observations with some features missing.
+        if object.linear and newdata.isnull().values.any():
+            raise ValueError('linear does not support missing data')
+
+    return newdata
 
 
 def sample_weights_checker(featureWeights, mtry, ncol):
@@ -379,7 +394,7 @@ def preprocess_training(x,y):
 #' @return A preprocessed training dataaset x
 def preprocess_testing (x, categoricalFeatureCols, categoricalFeatureMapping):
     x = pd.DataFrame(x)
-
+    print(x, categoricalFeatureCols, categoricalFeatureMapping)
     # Track the order of all features
     testingFeatureNames = np.array(x.columns)
     if testingFeatureNames.size == 0:

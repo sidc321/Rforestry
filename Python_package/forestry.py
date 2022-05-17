@@ -167,7 +167,7 @@ the monotone constraints, the split will be rejected.
 @export
 """
 class forestry:
-
+    ##### NOTE: Remeve params x, y
     def __init__(
         self,
         x,
@@ -215,7 +215,7 @@ class forestry:
         # Make sure that all the parameters exist when passed to forestry
         
         if isinstance(x, pd.DataFrame):
-            featNames = x.columns.values
+            featNames = x.columns
 
         elif type(x).__module__ == np.__name__ or isinstance(x, list) or isinstance(x, pd.Series):
             featNames = None
@@ -259,7 +259,7 @@ class forestry:
 
         # Giving default values
         if mtry is None:
-            mtry = max(int(ncol / 3), 1)
+            mtry = max((ncol // 3), 1)
 
         if maxDepth is None:
             maxDepth = round(nrow / 2) + 1
@@ -335,7 +335,6 @@ class forestry:
             hasNas = hasNas
         )
 
-
         (featureWeightsVariables, featureWeights) = Py_preprocessing.sample_weights_checker(featureWeights, mtry, ncol)
         (deepFeatureWeightsVariables, deepFeatureWeights) = Py_preprocessing.sample_weights_checker(deepFeatureWeights, mtry, ncol)    
         
@@ -391,6 +390,9 @@ class forestry:
             # Create rcpp object
             # Create a forest object
             #___________________________________
+
+            rcppDataFrame = None  #Cpp pointer
+            rcppForest = None  #Cpp pointer
             processed_dta = {
                 'processed_x': processed_x,
                 'y': y,
@@ -400,13 +402,16 @@ class forestry:
                 'numColumns': ncol,
                 'featNames': featNames
             }
+            Py_forest = np.array([])  # for printing
 
-            self.x = processed_x ###
-            self.y = y ###
+            #Data Fields
+            self.forest = rcppForest
+            self.dataframe = rcppDataFrame
             self.processed_dta = processed_dta
-            self.categoricalFeatureCols = categoricalFeatureCols_cpp ####
+            self.Py_forest = Py_forest
+            self.categoricalFeatureCols = categoricalFeatureCols_cpp
             self.categoricalFeatureMapping = categoricalFeatureMapping
-            self.ntree = ntree ####
+            self.ntree = ntree * (doubleTree+1) if minTreesPerGroup == 0 else max(ntree * (doubleTree+1), len(groups.cat.categories) * minTreesPerGroup)
             self.replace = replace
             self.sampsize = sampsize,
             self.mtry = mtry
@@ -478,14 +483,17 @@ class forestry:
             if idxs.size != 0:
                 symmetricIndex = idxs[0]
 
-            ##initialize
+            
+            rcppForest = None #Cpp pointer
 
-            self.x = processed_x ###
-            self.y = y ###
+            #Data Fields
+            self.forest = rcppForest
+            self.dataframe = reuseforestry.dataframe
             self.processed_dta = reuseforestry.processed_dta
-            self.categoricalFeatureCols = categoricalFeatureCols_cpp ####
+            self.Py_forest = reuseforestry.Py_forest
+            self.categoricalFeatureCols = reuseforestry.categoricalFeatureCols
             self.categoricalFeatureMapping = categoricalFeatureMapping
-            self.ntree = ntree ####
+            self.ntree = ntree * (doubleTree+1) if minTreesPerGroup == 0 else max(ntree * (doubleTree+1), len(groups.cat.categories) * minTreesPerGroup)
             self.replace = replace
             self.sampsize = sampsize,
             self.mtry = mtry
@@ -584,7 +592,6 @@ class forestry:
     #' @param ... additional arguments.
     #' @return A vector of predicted responses.
     #' @export
-
     def predict(self, newdata=None, aggregation = 'average', seed = None, nthread = 0, exact = None, trees = None, weightMatrix = False):
 
         if (newdata is None) and not (aggregation == 'oob' or aggregation == 'doubleOOB'):
@@ -604,7 +611,6 @@ class forestry:
             processed_x = Py_preprocessing.preprocess_testing(newdata, self.categoricalFeatureCols, self.categoricalFeatureMapping)
 
             if self.scale:
-                ####### categoricalFeatureCols_cpp???
                 processed_x = Py_preprocessing.scale_center(processed_x, self.categoricalFeatureCols, self.colMeans, self.colSd)
 
 
@@ -616,7 +622,6 @@ class forestry:
                 exact = True
 
         # We can only use tree aggregations if exact = TRUE and aggregation = "average"
-
         if (trees is not None) and ((not exact) or (aggregation != 'average')):
             raise ValueError('When using tree indices, we must have exact = True and aggregation = \'average\' ')
 
@@ -638,3 +643,170 @@ class forestry:
             if (newdata is not None) and (self.processed_dta['nObservations'] != len(newdata.index)):
                 warnings.warn('Attempting to do OOB predictions on a dataset which doesn\'t match the training data!')
                 return None
+
+            if newdata is None:
+                #Cpp
+                pass
+
+            else:
+                #Cpp
+                pass
+
+        elif aggregation == 'doubleOOB':
+            
+            if newdata is not None and self.sampsize != len(newdata.index):
+                raise ValueError('Attempting to do OOB predictions on a dataset which doesn\'t match the training data!')
+
+            if not self.doubleBootstrap:
+                raise ValueError('Attempting to do double OOB predictions with a forest that was not trained with doubleBootstrap = TRUE')
+
+            if newdata is None:
+                #Cpp
+                pass
+            
+            else:
+                #Cpp
+                pass
+
+        else:
+            #Cpp
+            pass
+
+        # In the case aggregation is set to "linear"
+        # rccpPrediction is a list with an entry $coef
+        # which gives pointwise regression coeffficients averaged across the forest
+        if aggregation == 'coefs':
+            if len(self.linFeats) == 1:
+                newdata = pd.DataFrame(newdata)
+            coef_names = newdata.columns
+            coef_names = np.append(coef_names, 'Intercept')
+            #Cpp
+
+        # If we have scaled the observations, we want to rescale the predictions
+        if self.scale:
+            #Cpp\
+            pass
+
+        if aggregation == 'average' and weightMatrix:
+            #Cpp
+            pass
+        elif aggregation == 'oob' and weightMatrix:
+            #Cpp
+            pass
+        elif aggregation == 'doubleOOB' and weightMatrix:
+            #Cpp
+            pass
+        elif aggregation == 'average':
+            #Cpp
+            pass
+        elif aggregation == 'oob':
+            #Cpp
+            pass
+        elif aggregation == 'doubleOOB':
+            #Cpp
+            pass
+        elif aggregation == 'coefs':
+            #Cpp
+            pass
+        elif aggregation == 'terminalNodes':
+            #Cpp
+            pass
+        
+
+
+
+    # -- Calculate OOB Error -------------------------------------------------------
+    #' getOOB-forestry
+    #' @name getOOB-forestry
+    #' @rdname getOOB-forestry
+    #' @description Calculate the out-of-bag error of a given forest. This is done
+    #' by using the out-of-bag predictions for each observation, and calculating the
+    #' MSE over the entire forest.
+    #' @param object A `forestry` object.
+    #' @param noWarning flag to not display warnings
+    #' @aliases getOOB,forestry-method
+    #' @return The OOB error of the forest.
+    #' @export
+    def getOOB(self, noWarning):
+        # TODO (all): find a better threshold for throwing such warning. 25 is
+        # currently set up arbitrarily.
+
+        Py_preprocessing.forest_checker(self)
+
+        #cpp check
+
+        try:
+            preds = self.predict(self, aggregation = 'oob')
+            # Only calc mse on non missing predictions
+            if self.scale:
+                y_true = self.processed_dta['y'][not np.isnan(preds)] * self.colSd[-1] + self.colMeans[-1]
+            else:
+                y_true = self.processed_dta['y'][not np.isnan(preds)]
+
+            mse = np.mean((preds[not np.isnan(preds)] - y_true)**2)
+
+            return mse
+
+        except:
+            return
+            ###FILL THIS LATER
+
+    # -- make savable --------------------------------------------------------------
+    #' make_savable
+    #' @name make_savable
+    #' @rdname make_savable
+    #' @description When a `foresty` object is saved and then reloaded the Cpp
+    #'   pointers for the data set and the Cpp forest have to be reconstructed
+    #' @param object an object of class `forestry`
+    #' @note  `make_savable` does not translate all of the private member variables
+    #'   of the C++ forestry object so when the forest is reconstructed with
+    #'   `relinkCPP_prt` some attributes are lost. For example, `nthreads` will be
+    #'   reset to zero. This makes it impossible to disable threading when
+    #'   predicting for forests loaded from disk.
+    #' @examples
+    #' set.seed(323652639)
+    #' x <- iris[, -1]
+    #' y <- iris[, 1]
+    #' forest <- forestry(x, y, ntree = 3, nthread = 2)
+    #' y_pred_before <- predict(forest, x)
+    #'
+    #' forest <- make_savable(forest)
+    #'
+    #' wd <- tempdir()
+    #
+    #' saveForestry(forest, filename = file.path(wd, "forest.Rda"))
+    #' rm(forest)
+    #'
+    #' forest <- loadForestry(file.path(wd, "forest.Rda"))
+    #'
+    #' y_pred_after <- predict(forest, x)
+    #'
+    #' file.remove(file.path(wd, "forest.Rda"))
+    #' @return A list of lists. Each sublist contains the information to span a
+    #'   tree.
+    #' @aliases make_savable,forestry-method
+    #' @export
+    def make_savable(self):
+        pass
+        #multilayerForestry not done yet
+
+
+
+    # -- Calculate Splitting Proportions -------------------------------------------
+    #' getSplitProps-forestry
+    #' @name getSplitProps-forestry
+    #' @rdname getSplitProps-forestry
+    #' @description Retrieves the proportion of splits for each feature in the given
+    #'  forestry object. These proportions are calculated as the number of splits
+    #'  on feature i in the entire forest over total the number of splits in the
+    #'  forest.
+    #' @param object A trained model object of class "forestry".
+    #' @return A vector of length equal to the number of columns
+    #' @seealso \code{\link{forestry}}
+    #' @export
+    def getSplitProps(self):
+        ## call make_savable
+
+        # Dataframe to hold the splitting counts for each tree
+        #data = pd.DataFrame(np.repeat(0, self.ntree*(self.processed_dta['featNames']).size).reshape(self.ntree, (self.processed_dta['featNames']).size))
+        pass
