@@ -51,9 +51,9 @@ forestry.get_data.restype =  ctypes.c_void_p
 data_pr = ctypes.c_void_p(forestry.get_data(ct_ptr, array.shape[0], array.shape[1]))
 forest_trained = ctypes.c_void_p(forestry.train_forest(3, data_pr))
 
-forest_preds = forestry.predict_forest(forest_trained, data_pr)
+forest_preds = forestry.predict_forest(forest_trained, data_pr, ct_ptr, array.shape[0])
 forest_preds
-forestry.vector_get(forest_preds, 0)
-forestry.vector_get(forest_preds, 4)
-forestry.vector_get(forest_preds, 9)
+print(forestry.vector_get(forest_preds, 0))
+print(forestry.vector_get(forest_preds, 4))
+print(forestry.vector_get(forest_preds, 9))
 
