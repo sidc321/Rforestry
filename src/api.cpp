@@ -14,7 +14,7 @@ extern "C"{
             int n_rows,
             int n_cols
             ) {
-        // Create Data
+        // Create Data: first n_cols - 1 are features, last is outcome
         std::vector<std::vector<double>> data_numpy;
 
 
@@ -26,39 +26,26 @@ extern "C"{
             data_numpy.push_back(col);
         }
 
-
-
-        size_t numRows = n_rows;
-        size_t numColumns = n_cols;
-
-
         std::unique_ptr< std::vector< std::vector<double> > > featureData {
                 new std::vector<std::vector<double> >
         };
 
-        for (size_t i = 0; i < numColumns; i++) {
+        for (size_t i = 0; i < n_cols-1; i++) {
             featureData->push_back(data_numpy[i]);
         }
 
+        size_t numRows = n_rows;
+        size_t numColumns = n_cols-1;
+
         // Create outcome data
-        std::unique_ptr< std::vector<double> > outcomeData (
-                new std::vector<double> {
-                        0.2, 0.2, 0.2, 0.2, 0.2, 0.4, 0.3, 0.2, 0.2, 0.1,
-                        0.2, 0.2, 0.1, 0.1, 0.2, 0.4, 0.4, 0.3, 0.3, 0.3,
-                        0.2, 0.4, 0.2, 0.5, 0.2, 0.2, 0.4, 0.2, 0.2, 0.2,
-                        0.2, 0.4, 0.1, 0.2, 0.2, 0.2, 0.2, 0.1, 0.2, 0.2,
-                        0.3, 0.3, 0.2, 0.6, 0.4, 0.3, 0.2, 0.2, 0.2, 0.2,
-                        1.4, 1.5, 1.5, 1.3, 1.5, 1.3, 1.6, 1.0, 1.3, 1.4,
-                        1.0, 1.5, 1.0, 1.4, 1.3, 1.4, 1.5, 1.0, 1.5, 1.1,
-                        1.8, 1.3, 1.5, 1.2, 1.3, 1.4, 1.4, 1.7, 1.5, 1.0,
-                        1.1, 1.0, 1.2, 1.6, 1.5, 1.6, 1.5, 1.3, 1.3, 1.3,
-                        1.2, 1.4, 1.2, 1.0, 1.3, 1.2, 1.3, 1.3, 1.1, 1.3,
-                        2.5, 1.9, 2.1, 1.8, 2.2, 2.1, 1.7, 1.8, 1.8, 2.5,
-                        2.0, 1.9, 2.1, 2.0, 2.4, 2.3, 1.8, 2.2, 2.3, 1.5,
-                        2.3, 2.0, 2.0, 1.8, 2.1, 1.8, 1.8, 1.8, 2.1, 1.6,
-                        1.9, 2.0, 2.2, 1.5, 1.4, 2.3, 2.4, 1.8, 1.8, 2.1,
-                        2.4, 2.3, 1.9, 2.3, 2.5, 2.3, 1.9, 2.0, 2.3, 1.8
-                });
+        std::unique_ptr< std::vector<double> > outcomeData {
+                new std::vector<double>
+        };
+
+        for (size_t i = 0; i < numRows; i++) {
+            std::cout << data_numpy[n_cols-1][i] << std::endl;
+            outcomeData->push_back(data_numpy[n_cols-1][i]);
+        }
 
         // Categorical features column
         std::unique_ptr< std::vector<size_t> > categoricalFeatureCols (
@@ -123,7 +110,7 @@ extern "C"{
             void* data_ptr
     ){
         DataFrame* test_df = reinterpret_cast<DataFrame* >(data_ptr);
-        int numRows = 150;
+        int numRows = test_df->getNumRows();
 
         forestry* forest ( new (std::nothrow) forestry(
                 test_df,
