@@ -154,8 +154,6 @@ extern "C"{
         return forest;
     }
 
-    // std::vector<double>*
-
     std::vector<double>* predict_forest(
             void* forest_pt,
             void* dataframe_pt,
@@ -213,14 +211,10 @@ extern "C"{
         );
 
 
-        std::vector<double>* ret_test(
-                new std::vector<double>(numRows, 2.3)
-        );
 
-    /*    for (size_t i = 0; i <numRows; i++) {
-            (*ret_test)[i] = (*testForestPrediction.get())[i];
-            std::cout << (*testForestPrediction.get())[i] << std::endl;
-        }*/
+        for (size_t i = 0; i <numRows; i++) {
+            std::cout << (*testForestPrediction)[i] << std::endl;
+        }
 
         return testForestPrediction;
     }
