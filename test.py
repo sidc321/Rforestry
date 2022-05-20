@@ -3,21 +3,72 @@ import numpy as np
 import pandas as pd
 from sklearn.datasets import load_iris
 
-# %%
-
 print("Loading Forestry DLL")
-forestry = (ctypes.CDLL("src/libforestryCpp.dylib"))
+forestry = (ctypes.CDLL("src/libforestryCpp.so"))  #CHANGE TO DLL IF NECESSARY
 print(forestry)
-print(forestry.add_one(1))
 
+#Setting up argument types and result types 
+forestry.get_data.argtypes = [ctypes.POINTER(ctypes.POINTER(ctypes.c_double)), ctypes.c_int, ctypes.c_int]
+forestry.get_data.restype =  ctypes.c_void_p
 
-# Setting argument types for train_forest + vector_get functions
 forestry.train_forest.argtypes = [ctypes.c_int, ctypes.c_void_p]
 forestry.train_forest.restype = ctypes.c_void_p
+
+forestry.predict_forest.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.POINTER(ctypes.c_double)), ctypes.c_int]
+forestry.predict_forest.restype =  ctypes.c_void_p
+
 forestry.vector_get.argtypes = [ctypes.c_void_p, ctypes.c_int]
 forestry.vector_get.restype = ctypes.c_double
 
-#ctypes.c_void_p
+
+# ref : https://stackoverflow.com/questions/58727931/how-to-pass-a-2d-array-from-python-to-c
+
+def get_data_pointer(array):
+    kdoublePtr = ctypes.POINTER(ctypes.c_double)
+    kdoublePtrPtr = ctypes.POINTER(kdoublePtr)
+    ct_arr = np.ctypeslib.as_ctypes(array)
+    doublePtrArr = kdoublePtr * ct_arr._length_
+    ct_ptr = ctypes.cast(doublePtrArr(*(ctypes.cast(row, kdoublePtr) for row in ct_arr)), kdoublePtrPtr)
+    return ct_ptr
+
+
+class Forestry:
+
+    def __init__(self, ntree):
+        self.ntree = ntree
+        self.forest_pointer = None
+        self.data_pointer = None
+
+    def fit(self, X, y):
+        X = pd.concat([X, y], axis=1)
+        array = np.ascontiguousarray(X.values[:,:], np.double)
+        ct_ptr = get_data_pointer(array)
+
+        data_pr = ctypes.c_void_p(forestry.get_data(ct_ptr, array.shape[0], array.shape[1]))
+
+        forest_trained = ctypes.c_void_p(forestry.train_forest(self.ntree, data_pr))
+
+        self.data_pointer = data_pr
+        self.forest_pointer = forest_trained
+
+    
+    def predict(self, X_test):
+
+        if self.forest_pointer is None:
+            raise ValueError("Cannot predict before training on a dataset.")
+
+        X_test = pd.concat([X_test], axis=1)
+        array_test = np.ascontiguousarray(X_test.values[:,:], np.double)
+        ct_ptr_test = get_data_pointer(array_test)
+
+        forest_preds = forestry.predict_forest(self.forest_pointer, self.data_pointer, ct_ptr_test, array_test.shape[0])
+
+        res = np.empty(len(X_test.index))
+        for i in range(len(X_test.index)):
+            res[i] = forestry.vector_get(forest_preds, i)
+        
+        return res
+
 
 # Load in pandas data
 data = load_iris()
@@ -26,60 +77,12 @@ df['target'] = data['target']
 df.head()
 X = df.loc[:, df.columns != 'target']
 y = df['target']
-X = pd.concat([X, y], axis=1)
-
-# Now pass some data in
-# X = pd.concat([X], axis=1)
-# 
-# ref : https://stackoverflow.com/questions/58727931/how-to-pass-a-2d-array-from-python-to-c
-# create double pointer of type double (cast for 2d array input)
-
-# we need to have a numpy contiguous array to pass into the C++ fit function
-
-# Begin >FIT FUnction ==========================================================
-array = np.ascontiguousarray(X.values[:,:], np.double)
-
-kdoublePtr = ctypes.POINTER(ctypes.c_double)
-kdoublePtrPtr = ctypes.POINTER(kdoublePtr)
-ct_arr = np.ctypeslib.as_ctypes(array)
-doublePtrArr = kdoublePtr * ct_arr._length_
-ct_ptr = ctypes.cast(doublePtrArr(*(ctypes.cast(row, kdoublePtr) for row in ct_arr)), kdoublePtrPtr)
-
-# Setting the argument types and return types for get_data
-forestry.get_data.argtypes = [kdoublePtrPtr, ctypes.c_int, ctypes.c_int]
-forestry.get_data.restype =  ctypes.c_void_p
 
 
-# Get a pointer to the data frame
-data_pr = ctypes.c_void_p(forestry.get_data(ct_ptr, array.shape[0], array.shape[1]))
+fr = Forestry(5)
+fr.fit(X, y)
 
-# Train a forest and get a pointer to the forest
-forest_trained = ctypes.c_void_p(forestry.train_forest(3, data_pr))
-# End >FIT FUnction ============================================================
-
-# Now predict on new data
 X_test = df.loc[:, df.columns != 'target']
-X_test = pd.concat([X_test], axis=1)
-array_test = np.ascontiguousarray(X_test.values[:,:], np.double)
+forest_preds = fr.predict(X_test)
 
-# Create types for prediction function arguments
-ct_arr_test = np.ctypeslib.as_ctypes(array_test)
-doublePtrArr = kdoublePtr * ct_arr_test._length_
-ct_ptr_test = ctypes.cast(doublePtrArr(*(ctypes.cast(row, kdoublePtr) for row in ct_arr_test)), kdoublePtrPtr)
-
-# Setting the arguments and returns for the predict function
-forestry.predict_forest.argtypes = [ctypes.c_void_p, ctypes.c_void_p, kdoublePtrPtr, ctypes.c_int]
-forestry.predict_forest.restype =  ctypes.c_void_p
-
-# This is actually doing predict, returns a pointer to a vector of doubles
-forest_preds = forestry.predict_forest(forest_trained, data_pr, ct_ptr_test, array_test.shape[0])
-
-forest_preds
-
-# See what the actual predictions are by using the vector_get function
-# First argument is a pointer, returned by predict_forest, and second is an index
-print(forestry.vector_get(forest_preds, 0))
-print(forestry.vector_get(forest_preds, 4))
-print(forestry.vector_get(forest_preds, 9))
-print(forestry.vector_get(forest_preds, 149))
-
+print(forest_preds)
