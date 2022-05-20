@@ -5,16 +5,19 @@ from sklearn.datasets import load_iris
 
 print("Loading Forestry DLL")
 forestry = (ctypes.CDLL("src/libforestryCpp.so"))  #CHANGE TO DLL IF NECESSARY
+#forestry = (ctypes.CDLL("src/libforestryCpp.dylib")) 
 print(forestry)
 
 #Setting up argument types and result types 
 forestry.get_data.argtypes = [ctypes.POINTER(ctypes.POINTER(ctypes.c_double)), ctypes.c_int, ctypes.c_int]
 forestry.get_data.restype =  ctypes.c_void_p
 
-forestry.train_forest.argtypes = [ctypes.c_int, ctypes.c_void_p]
+forestry.train_forest.argtypes = [ctypes.c_int, ctypes.c_void_p, ctypes.c_bool]
 forestry.train_forest.restype = ctypes.c_void_p
 
-forestry.predict_forest.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.POINTER(ctypes.c_double)), ctypes.c_int]
+forestry.predict_forest.argtypes = [ctypes.c_void_p, ctypes.c_void_p, 
+                                    ctypes.POINTER(ctypes.POINTER(ctypes.c_double)), 
+                                    ctypes.c_int, ctypes.c_bool]
 forestry.predict_forest.restype =  ctypes.c_void_p
 
 forestry.vector_get.argtypes = [ctypes.c_void_p, ctypes.c_int]
@@ -34,10 +37,11 @@ def get_data_pointer(array):
 
 class Forestry:
 
-    def __init__(self, ntree):
+    def __init__(self, ntree, verbose=True):
         self.ntree = ntree
         self.forest_pointer = None
         self.data_pointer = None
+        self.verbose = verbose
 
     def fit(self, X, y):
         X = pd.concat([X, y], axis=1)
@@ -46,7 +50,7 @@ class Forestry:
 
         data_pr = ctypes.c_void_p(forestry.get_data(ct_ptr, array.shape[0], array.shape[1]))
 
-        forest_trained = ctypes.c_void_p(forestry.train_forest(self.ntree, data_pr))
+        forest_trained = ctypes.c_void_p(forestry.train_forest(self.ntree, data_pr, self.verbose))
 
         self.data_pointer = data_pr
         self.forest_pointer = forest_trained
@@ -61,7 +65,10 @@ class Forestry:
         array_test = np.ascontiguousarray(X_test.values[:,:], np.double)
         ct_ptr_test = get_data_pointer(array_test)
 
-        forest_preds = forestry.predict_forest(self.forest_pointer, self.data_pointer, ct_ptr_test, array_test.shape[0])
+        forest_preds = forestry.predict_forest(self.forest_pointer, 
+                                               self.data_pointer, ct_ptr_test, 
+                                               array_test.shape[0],
+                                               self.verbose)
 
         res = np.empty(len(X_test.index))
         for i in range(len(X_test.index)):
@@ -80,9 +87,11 @@ y = df['target']
 
 
 fr = Forestry(5)
+print("Fitting the forest")
 fr.fit(X, y)
 
 X_test = df.loc[:, df.columns != 'target']
+print("Predicting with the forest")
 forest_preds = fr.predict(X_test)
 
 print(forest_preds)

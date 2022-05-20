@@ -43,7 +43,6 @@ extern "C"{
         };
 
         for (size_t i = 0; i < numRows; i++) {
-            std::cout << data_numpy[n_cols-1][i] << std::endl;
             outcomeData->push_back(data_numpy[n_cols-1][i]);
         }
 
@@ -107,7 +106,8 @@ extern "C"{
 
     void* train_forest(
             int input,
-            void* data_ptr
+            void* data_ptr,
+            bool verbose
     ){
         DataFrame* test_df = reinterpret_cast<DataFrame* >(data_ptr);
         int numRows = test_df->getNumRows();
@@ -130,7 +130,7 @@ extern "C"{
                 100,
                 1,
                 0,
-                true,
+                verbose,
                 true,
                 numRows,
                 0,
@@ -141,16 +141,9 @@ extern "C"{
                 false
         ));
 
-        std::vector< std::unique_ptr< forestryTree > >* curr_forest;
-        curr_forest = forest->getForest();
-        std::sort(curr_forest->begin(), curr_forest->end(), [](const std::unique_ptr< forestryTree >& a,
-                                                               const std::unique_ptr< forestryTree >& b) {
-            return a.get()->getSeed() > b.get()->getSeed();
-        });
+        if (verbose)
+            std::cout << forest << std::endl;
 
-        (*curr_forest)[0]->printTree();
-
-        std::cout << forest << std::endl;
         return forest;
     }
 
@@ -158,22 +151,16 @@ extern "C"{
             void* forest_pt,
             void* dataframe_pt,
             double** test_data,
-            int num_test_rows
+            int num_test_rows,
+            bool verbose
     ){
-        std::cout << forest_pt << std::endl;
+        if (verbose)
+            std::cout << forest_pt << std::endl;
+
         forestry* forest = reinterpret_cast<forestry *>(forest_pt);
         DataFrame* dta_frame = reinterpret_cast<DataFrame *>(dataframe_pt);
 
         forest->_trainingData = dta_frame;
-
-        //return forest->getMinNodeSizeSpt();
-
-        size_t numRows = 150;
-        std::cout << (*forest->getTrainingData()->getOutcomeData())[1] << std::endl;
-
-        std::vector< std::unique_ptr< forestryTree > >* curr_forest;
-        curr_forest = forest->getForest();
-        (*curr_forest)[0]->printTree();
 
         // Create Data
         std::vector<std::vector<double>> data_numpy;
@@ -196,8 +183,6 @@ extern "C"{
         }
 
 
-        //return (*predi_data)[1][1];
-
         std::vector<double>* testForestPrediction = forest->predict(
                 predi_data,
                 nullptr,
@@ -209,12 +194,6 @@ extern "C"{
                 false,
                 nullptr
         );
-
-
-
-        for (size_t i = 0; i <numRows; i++) {
-            std::cout << (*testForestPrediction)[i] << std::endl;
-        }
 
         return testForestPrediction;
     }
