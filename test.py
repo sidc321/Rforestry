@@ -1,7 +1,10 @@
 import ctypes
+import re
 import numpy as np
 import pandas as pd
 from sklearn.datasets import load_iris
+import math
+from random import randrange
 
 print("Loading Forestry DLL")
 forestry = (ctypes.CDLL("src/libforestryCpp.so"))  #CHANGE TO DLL IF NECESSARY
@@ -12,7 +15,34 @@ print(forestry)
 forestry.get_data.argtypes = [ctypes.POINTER(ctypes.POINTER(ctypes.c_double)), ctypes.c_int, ctypes.c_int]
 forestry.get_data.restype =  ctypes.c_void_p
 
-forestry.train_forest.argtypes = [ctypes.c_int, ctypes.c_void_p, ctypes.c_bool]
+forestry.train_forest.argtypes = [
+    ctypes.c_void_p,
+    ctypes.c_size_t,
+    ctypes.c_bool,
+    ctypes.c_size_t,
+    ctypes.c_double,
+    ctypes.c_bool,
+    ctypes.c_bool,
+    ctypes.c_size_t,
+    ctypes.c_size_t,
+    ctypes.c_size_t,
+    ctypes.c_size_t,
+    ctypes.c_size_t,
+    ctypes.c_double,
+    ctypes.c_size_t,
+    ctypes.c_size_t,
+    ctypes.c_uint,
+    ctypes.c_size_t,
+    ctypes.c_bool,
+    ctypes.c_bool,
+    ctypes.c_size_t,
+    ctypes.c_size_t,
+    ctypes.c_bool,
+    ctypes.c_bool,
+    ctypes.c_bool,
+    ctypes.c_double,
+    ctypes.c_bool
+]
 forestry.train_forest.restype = ctypes.c_void_p
 
 forestry.predict_forest.argtypes = [ctypes.c_void_p, ctypes.c_void_p, 
@@ -37,20 +67,107 @@ def get_data_pointer(array):
 
 class Forestry:
 
-    def __init__(self, ntree, verbose=True):
+    def __init__(
+        self, 
+        ntree = 5,
+        replace = True,
+        splitRatio = 1,
+        OOBhonest = False,
+        doubleBootstrap = False,
+        mtry = 1,
+        minNodeSizeSpt = 1,
+        minNodeSizeAvg = 1,
+        minNodeSizeToSplitSpt = 1,
+        minNodeSizeToSplitAvg = 1,
+        minSplitGain = 0,
+        maxDepth = 10,
+        interactionDepth = 100,
+        seed = randrange(1001),
+        nthread = 0,
+        verbose = True,
+        splitMiddle = True,
+        maxObs = None,
+        minTreesPerGroup = 0,
+        hasNas = False,
+        linear = False,
+        symmetric = False,
+        overfitPenalty = 1,
+        doubleTree = False
+    ):
         self.ntree = ntree
+        self.replace = replace
+        self.splitRatio = splitRatio
+        self.OOBhonest = OOBhonest
+        self.doubleBootstrap = doubleBootstrap
+        self.mtry = mtry
+        self.minNodeSizeSpt = minNodeSizeSpt
+        self.minNodeSizeAvg = minNodeSizeAvg
+        self.minNodeSizeToSplitSpt = minNodeSizeToSplitSpt
+        self.minNodeSizeToSplitAvg = minNodeSizeToSplitAvg
+        self.minSplitGain = minSplitGain
+        self.maxDepth = maxDepth
+        self.interactionDepth = interactionDepth
+        self.seed = seed
+        self.nthread = nthread
+        self.verbose = verbose
+        self.splitMiddle = splitMiddle
+        self.maxObs = maxObs
+        self.minTreesPerGroup = minTreesPerGroup
+        self.hasNas = hasNas
+        self.linear = linear
+        self.symmetric = symmetric
+        self.overfitPenalty = overfitPenalty
+        self.doubleTree = doubleTree
+
         self.forest_pointer = None
         self.data_pointer = None
-        self.verbose = verbose
+        self.sampSize = None
 
-    def fit(self, X, y):
+    def fit(self, X, y, sampSize=None):
         X = pd.concat([X, y], axis=1)
         array = np.ascontiguousarray(X.values[:,:], np.double)
         ct_ptr = get_data_pointer(array)
 
         data_pr = ctypes.c_void_p(forestry.get_data(ct_ptr, array.shape[0], array.shape[1]))
 
-        forest_trained = ctypes.c_void_p(forestry.train_forest(self.ntree, data_pr, self.verbose))
+
+        #Set sampSize and maxObs fields
+        if sampSize is None:
+            self.sampSize = len(X.index) if self.replace else math.ceil(0.632 * len(X.index))
+        else:
+            self.sampSize = sampSize
+        
+        if self.maxObs is None:
+            self.maxObs = len(X.index)
+
+        forest_trained = ctypes.c_void_p(forestry.train_forest(
+            data_pr, 
+            self.ntree, 
+            self.replace,
+            self.sampSize,
+            self.splitRatio,
+            self.OOBhonest,
+            self.doubleBootstrap,
+            self.mtry,
+            self.minNodeSizeSpt,
+            self.minNodeSizeAvg,
+            self.minNodeSizeToSplitSpt,
+            self.minNodeSizeToSplitAvg,
+            self.minSplitGain,
+            self.maxDepth,
+            self.interactionDepth,
+            self.seed,
+            self.nthread,
+            self.verbose,
+            self.splitMiddle,
+            self.maxObs,
+            self.minTreesPerGroup,
+            self.hasNas,
+            self.linear,
+            self.symmetric,
+            self.overfitPenalty,
+            self.doubleTree
+        ))
 
         self.data_pointer = data_pr
         self.forest_pointer = forest_trained
@@ -86,10 +203,12 @@ X = df.loc[:, df.columns != 'target']
 y = df['target']
 
 
-fr = Forestry(5)
+#!!!MINSPLITGAIN minTreesPerGroup BUG!!!
+
+fr = Forestry(5, replace=True, splitRatio=0.5, OOBhonest=True, doubleBootstrap=True, mtry=2, minNodeSizeSpt=4, minNodeSizeToSplitSpt=4, maxDepth=20, seed=729, nthread=4, verbose=False, maxObs=160, linear=True, overfitPenalty=10, doubleTree=True)
 print("Fitting the forest")
 fr.fit(X, y)
-
+print(fr.sampSize)
 X_test = df.loc[:, df.columns != 'target']
 print("Predicting with the forest")
 forest_preds = fr.predict(X_test)
