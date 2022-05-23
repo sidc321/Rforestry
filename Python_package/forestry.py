@@ -15,14 +15,10 @@ from random import randrange
 import Py_preprocessing
 
 
-
 # -- Random Forest Constructor -------------------------------------------------
 
 """
 @title forestry
-@rdname forestry
-@param x A data frame of all training predictors.
-@param y A list/array of all training responses.
 @param ntree The number of trees to grow in the forest. The default value is
   500.
 @param replace An indicator of whether sampling of training data is with
@@ -170,8 +166,6 @@ class forestry:
     ##### NOTE: Remeve params x, y
     def __init__(
         self,
-        x,
-        y,
         ntree = 500,
         replace = True,
         sampsize = None,  #Add a default value.
@@ -184,10 +178,6 @@ class forestry:
         minSplitGain = 0,
         maxDepth = None,  #Add a default value.
         interactionDepth = None,   #Add a default value.
-        interactionVariables = [],
-        featureWeights = None,
-        deepFeatureWeights = None,
-        observationWeights = None,
         splitratio = 1,
         OOBhonest = False,
         doubleBootstrap = None, #Add a default value.
@@ -198,10 +188,6 @@ class forestry:
         middleSplit = False,
         maxObs = None,    #Add a default value.
         linear = False,
-        symmetric = None,   #Add a default value.
-        linFeats = None,    #Add a default value.
-        monotonicConstraints = None,    #Add a default value.
-        groups = None,
         minTreesPerGroup = 0,
         monotoneAvg = False,
         overfitPenalty = 1,
@@ -212,78 +198,18 @@ class forestry:
         saveable = True
     ):
 
-        # Make sure that all the parameters exist when passed to forestry
-        
-        if isinstance(x, pd.DataFrame):
-            featNames = x.columns
-
-        elif type(x).__module__ == np.__name__ or isinstance(x, list) or isinstance(x, pd.Series):
-            featNames = None
-            print('x does not have column names. The check that columns are provided in the same order when training and predicting will be skipped', file=sys.stderr)
-
-        else:
-            raise AttributeError('x must be a Pandas DataFrame, a numpy array, or a regular list')
-
-        x = pd.DataFrame(x)
-        
-        nrow, ncol = x.shape
-
-        if sampsize is None:
-            sampsize = nrow if replace else math.ceil(0.632 * nrow)
-
-        # only if sample.fraction is given, update sampsize
-        if sample_fraction is not None:
-            sampsize = math.ceil(sample_fraction * nrow)
-
-        # make linFeats unique
-        if linFeats == None:
-            linFeats = [i for i in range(ncol)]
-        linFeats = list(set(linFeats))
-
-        # Preprocess the data
-        hasNas = x.isnull().values.any()
-
-        # Create vectors with the column means and SD's for scaling
-        colMeans = np.repeat(0.0, ncol+1)
-        colSd = np.repeat(0.0, ncol+1)
-
-        # Translating interactionVariables to featureWeights syntax
-        if featureWeights is None:
-            featureWeights = np.repeat(1, ncol)
-            featureWeights[interactionVariables] = 0
-        if deepFeatureWeights is None:
-            deepFeatureWeights = np.repeat(1, ncol)
-        if observationWeights is None:
-            observationWeights = np.repeat(1, nrow)
-
-
-        # Giving default values
-        if mtry is None:
-            mtry = max((ncol // 3), 1)
-
-        if maxDepth is None:
-            maxDepth = round(nrow / 2) + 1
-        
-        if interactionDepth is None:
-            interactionDepth = maxDepth
 
         if doubleBootstrap is None:
             doubleBootstrap = OOBhonest
 
-        if maxObs is None:
-            maxObs = len(y)
 
-        if symmetric is None:
-            symmetric = np.repeat(0, ncol)
+        # Call the forest_parameter_checker function
+        # haven't checking splitrule
 
-        if monotonicConstraints is None:
-            monotonicConstraints = np.repeat(0, ncol)
-
-        (x,
-        y,
-        ntree,
+        (ntree,
         replace,
         sampsize,
+        sample_fraction,
         mtry,
         nodesizeSpl,
         nodesizeAvg,
@@ -294,113 +220,57 @@ class forestry:
         interactionDepth,
         splitratio,
         OOBhonest,
+        doubleBootstrap,
+        seed,
+        verbose, 
         nthread,
-        groups,
         middleSplit,
-        doubleTree,
-        linFeats,
-        monotonicConstraints,
-        featureWeights,
+        maxObs,
+        linear,
+        minTreesPerGroup,
+        monotoneAvg,
+        overfitPenalty,
         scale,
-        deepFeatureWeights,
-        observationWeights,
-        hasNas) = Py_preprocessing.training_data_checker(
-            x = x,
-            y = y,
-            ntree = ntree,
-            replace = replace,
-            sampsize = sampsize,
-            mtry = mtry,
-            nodesizeSpl = nodesizeSpl,
-            nodesizeAvg = nodesizeAvg,
-            nodesizeStrictSpl = nodesizeStrictSpl,
-            nodesizeStrictAvg = nodesizeStrictAvg,
-            minSplitGain = minSplitGain,
-            maxDepth = maxDepth,
-            interactionDepth = interactionDepth,
-            splitratio = splitratio,
-            OOBhonest = OOBhonest,
-            nthread = nthread,
-            middleSplit = middleSplit,
-            doubleTree = doubleTree,
-            linFeats = linFeats,
-            monotonicConstraints = monotonicConstraints,
-            groups = groups,
-            featureWeights = featureWeights,
-            deepFeatureWeights = deepFeatureWeights,
-            observationWeights = observationWeights,
-            linear = linear,
-            symmetric = symmetric,
-            scale = scale,
-            hasNas = hasNas
-        )
-
-        (featureWeightsVariables, featureWeights) = Py_preprocessing.sample_weights_checker(featureWeights, mtry, ncol)
-        (deepFeatureWeightsVariables, deepFeatureWeights) = Py_preprocessing.sample_weights_checker(deepFeatureWeights, mtry, ncol)    
-        
-
-        groupsMapping = dict()
-        if groups is not None:
-            groupsMapping['groupValue'] = groups.cat.categories
-            groupsMapping['groupNumericValue'] = np.arange(len(groups.cat.categories))
-
-            groupVector = pd.to_numeric(groups)
-
-            # Print warning if the group number and minTreesPerGroup results in a large forest
-            if minTreesPerGroup > 0 and len(groups.cat.categories) * minTreesPerGroup > 2000:
-                warnings.warn('Using ' + str(len(groups.cat.categories)) + ' groups with ' + str(minTreesPerGroup) + ' trees per group will train ' + str(len(groups.cat.categories) * minTreesPerGroup) + ' trees in the forest')
-        
-        else:
-            groupVector = np.repeat(0, nrow)
+        doubleTree) = Py_preprocessing.forest_parameter_checker(
+            ntree,
+            replace,
+            sampsize,
+            sample_fraction,
+            mtry,
+            nodesizeSpl,
+            nodesizeAvg,
+            nodesizeStrictSpl,
+            nodesizeStrictAvg,
+            minSplitGain,
+            maxDepth,
+            interactionDepth,
+            splitratio,
+            OOBhonest,
+            doubleBootstrap,
+            seed,
+            verbose,
+            nthread,
+            middleSplit,
+            maxObs,
+            linear,
+            minTreesPerGroup,
+            monotoneAvg,
+            overfitPenalty,
+            scale,
+            doubleTree)
 
         if reuseforestry is None:
-            (processed_x, categoricalFeatureCols_cpp, categoricalFeatureMapping) =  Py_preprocessing.preprocess_training(x, y)
             
-            if categoricalFeatureCols_cpp.size == 0:
-                categoricalFeatureCols_cpp = np.array([])
-            else:
-                # If we have monotonic constraints on any categorical features we need to
-                # zero these out as we cannot do monotonicity with categorical features
-                monotonicConstraints[categoricalFeatureCols_cpp] = 0
-
-            if scale:
-                for col_idx in range(ncol):
-                    if col_idx not in categoricalFeatureCols_cpp:
-                        colMeans[col_idx] = np.nanmean(processed_x.iloc[:, col_idx])
-                        colSd[col_idx] = np.nanstd(processed_x.iloc[:, col_idx])
-                        
-                # Scale columns of X
-                processed_x = Py_preprocessing.scale_center(processed_x, categoricalFeatureCols_cpp, colMeans, colSd)
-                
-                # Center and scale Y
-                colMeans[ncol] = np.nanmean(y)
-                colSd[ncol] = np.nanstd(y)
-                if colSd[ncol] != 0:
-                    y = (y - colMeans[ncol]) / colSd[ncol]    
-                else:
-                    y = y - colMeans[ncol]
-            
-            # Get the symmetric feature if one is set
-            symmetricIndex = -1
-            idxs = np.where(symmetric > 0)[0]
-            if idxs.size != 0:
-                symmetricIndex = idxs[0]
-
-
-            # Create rcpp object
-            # Create a forest object
-            #___________________________________
-
             rcppDataFrame = None  #Cpp pointer
             rcppForest = None  #Cpp pointer
             processed_dta = {
-                'processed_x': processed_x,
-                'y': y,
-                'categoricalFeatureCols_cpp': categoricalFeatureCols_cpp,
-                'linearFeatureCols_cpp': linFeats,
-                'nObservations': nrow,
-                'numColumns': ncol,
-                'featNames': featNames
+                'processed_x': None,
+                'y': None,
+                'categoricalFeatureCols_cpp': None,
+                'linearFeatureCols_cpp': None,
+                'nObservations': None,
+                'numColumns': None,
+                'featNames': None
             }
             Py_forest = np.array([])  # for printing
 
@@ -409,404 +279,220 @@ class forestry:
             self.dataframe = rcppDataFrame
             self.processed_dta = processed_dta
             self.Py_forest = Py_forest
-            self.categoricalFeatureCols = categoricalFeatureCols_cpp
-            self.categoricalFeatureMapping = categoricalFeatureMapping
-            self.ntree = ntree * (doubleTree+1) if minTreesPerGroup == 0 else max(ntree * (doubleTree+1), len(groups.cat.categories) * minTreesPerGroup)
+            self.categoricalFeatureMapping = None
+            self.ntree = ntree
             self.replace = replace
-            self.sampsize = sampsize,
+            self.sampsize = sampsize
+            self.sample_fraction = sample_fraction
             self.mtry = mtry
-            self.nodesizeSpl = nodesizeSpl,
-            self.nodesizeAvg = nodesizeAvg,
-            self.nodesizeStrictSpl = nodesizeStrictSpl,
-            self.nodesizeStrictAvg = nodesizeStrictAvg,
-            self.minSplitGain = minSplitGain,
-            self.maxDepth = maxDepth,
-            self.interactionDepth = interactionDepth,
-            self.splitratio = splitratio,
-            self.OOBhonest = OOBhonest,
-            self.doubleBootstrap = doubleBootstrap,
-            self.middleSplit = middleSplit,
-            self.maxObs = maxObs,
-            self.featureWeights = featureWeights,
-            self.featureWeightsVariables = featureWeightsVariables,
-            self.deepFeatureWeights =  deepFeatureWeights,
-            self.deepFeatureWeightsVariables = deepFeatureWeightsVariables,
-            self.observationWeights = observationWeights,
-            self.hasNas = hasNas,
-            self.linear = linear,
-            self.symmetric = symmetric,
-            self.linFeats = linFeats,
-            self.monotonicConstraints = monotonicConstraints,
-            self.monotoneAvg = monotoneAvg,
-            self.overfitPenalty = overfitPenalty,
-            self.doubleTree = doubleTree,
-            self.groupsMapping = groupsMapping,
-            self.groups = groupVector,
-            self.colMeans = colMeans,
-            self.colSd = colSd,
-            self.scale = scale,
+            self.nodesizeSpl = nodesizeSpl
+            self.nodesizeAvg = nodesizeAvg
+            self.nodesizeStrictSpl = nodesizeStrictSpl
+            self.nodesizeStrictAvg = nodesizeStrictAvg
+            self.minSplitGain = minSplitGain
+            self.maxDepth = maxDepth
+            self.interactionDepth = interactionDepth
+            self.splitratio = splitratio
+            self.OOBhonest = OOBhonest
+            self.doubleBootstrap = doubleBootstrap
+            self.middleSplit = middleSplit
+            self.maxObs = maxObs
+            self.featureWeights = None
+            self.featureWeightsVariables = None
+            self.deepFeatureWeights =  None
+            self.deepFeatureWeightsVariables = None
+            self.observationWeights = None
+            self.hasNas = None
+            self.linear = linear
+            self.symmetric = None
+            self.monotonicConstraints = None
+            self.monotoneAvg = monotoneAvg
+            self.overfitPenalty = overfitPenalty
+            self.doubleTree = doubleTree
+            self.groupsMapping = None
+            self.groups = None
+            self.colMeans = None
+            self.colSd = None
+            self.scale = scale
             self.minTreesPerGroup = minTreesPerGroup
 
-        #reuseforestry
+        # reuseforestry Forestry is not None
         else:
-            ### x or processsed_x????
-            categoricalFeatureCols_cpp = reuseforestry.categoricalFeatureCols
-            if categoricalFeatureCols_cpp.size == 0:
-                categoricalFeatureCols_cpp = np.array([])
-            else:
-                # If we have monotonic constraints on any categorical features we need to
-                # zero these out as we cannot do monotonicity with categorical features
-                monotonicConstraints[categoricalFeatureCols_cpp] = 0
-
-            categoricalFeatureMapping = reuseforestry.categoricalFeatureMapping
-
-            if scale:
-                for col_idx in range(ncol):
-                    if col_idx not in categoricalFeatureCols_cpp:
-                        colMeans[col_idx] = np.nanmean(x.iloc[:, col_idx])
-                        colSd[col_idx] = np.nanstd(x.iloc[:, col_idx])
-                        
-                # Scale columns of X
-                processed_x = Py_preprocessing.scale_center(x, categoricalFeatureCols_cpp, colMeans, colSd)
-                
-                # Center and scale Y
-                colMeans[ncol] = np.nanmean(y)
-                colSd[ncol] = np.nanstd(y)
-                if colSd[ncol] != 0:
-                    y = (y - colMeans[ncol]) / colSd[ncol]    
-                else:
-                    y = y - colMeans[ncol]
-            
-            # Get the symmetric feature if one is set
-            symmetricIndex = -1
-            idxs = np.where(symmetric > 0)[0]
-            if idxs.size != 0:
-                symmetricIndex = idxs[0]
-
-            
-            rcppForest = None #Cpp pointer
-
-            #Data Fields
-            self.forest = rcppForest
-            self.dataframe = reuseforestry.dataframe
-            self.processed_dta = reuseforestry.processed_dta
-            self.Py_forest = reuseforestry.Py_forest
-            self.categoricalFeatureCols = reuseforestry.categoricalFeatureCols
-            self.categoricalFeatureMapping = categoricalFeatureMapping
-            self.ntree = ntree * (doubleTree+1) if minTreesPerGroup == 0 else max(ntree * (doubleTree+1), len(groups.cat.categories) * minTreesPerGroup)
-            self.replace = replace
-            self.sampsize = sampsize,
-            self.mtry = mtry
-            self.nodesizeSpl = nodesizeSpl,
-            self.nodesizeAvg = nodesizeAvg,
-            self.nodesizeStrictSpl = nodesizeStrictSpl,
-            self.nodesizeStrictAvg = nodesizeStrictAvg,
-            self.minSplitGain = minSplitGain,
-            self.maxDepth = maxDepth,
-            self.interactionDepth = interactionDepth,
-            self.splitratio = splitratio,
-            self.OOBhonest = OOBhonest,
-            self.doubleBootstrap = doubleBootstrap,
-            self.middleSplit = middleSplit,
-            self.maxObs = maxObs,
-            self.featureWeights = featureWeights,
-            self.featureWeightsVariables = featureWeightsVariables,
-            self.deepFeatureWeights =  deepFeatureWeights,
-            self.deepFeatureWeightsVariables = deepFeatureWeightsVariables,
-            self.observationWeights = observationWeights,
-            self.hasNas = hasNas,
-            self.linear = linear,
-            self.symmetric = symmetric,
-            self.linFeats = linFeats,
-            self.monotonicConstraints = monotonicConstraints,
-            self.monotoneAvg = monotoneAvg,
-            self.overfitPenalty = overfitPenalty,
-            self.doubleTree = doubleTree,
-            self.groupsMapping = groupsMapping,
-            self.groups = groupVector,
-            self.colMeans = colMeans,
-            self.colSd = colSd,
-            self.scale = scale,
-            self.minTreesPerGroup = minTreesPerGroup
-
-
-
-    # -- Predict Method ------------------------------------------------------------
-    #' predict-forestry
-    #' @name predict-forestry
-    #' @rdname predict-forestry
-    #' @description Return the prediction from the forest.
-    #' @param object A `forestry` object.
-    #' @param newdata A data frame of testing predictors.
-    #' @param aggregation How the individual tree predictions are aggregated:
-    #'   `average` returns the mean of all trees in the forest; `terminalNodes` also returns
-    #'   the weightMatrix, as well as "terminalNodes", a matrix where
-    #'   the ith entry of the jth column is the index of the leaf node to which the
-    #'   ith observation is assigned in the jth tree; and "sparse", a matrix
-    #'   where the ith entry in the jth column is 1 if the ith observation in
-    #'   newdata is assigned to the jth leaf and 0 otherwise. In each tree the
-    #'   leaves are indexed using a depth first ordering, and, in the "sparse"
-    #'   representation, the first leaf in the second tree has column index one more than
-    #'   the number of leaves in the first tree and so on. So, for example, if the
-    #'   first tree has 5 leaves, the sixth column of the "sparse" matrix corresponds
-    #'   to the first leaf in the second tree.
-    #'   `oob` returns the out-of-bag predictions for the forest. We assume
-    #'   that the ordering of the observations in newdata have not changed from
-    #'   training. If the ordering has changed, we will get the wrong OOB indices.
-    #'   `doubleOOB` is an experimental flag, which can only be used when OOBhonest = TRUE
-    #'   and doubleBootstrap = TRUE. When both of these settings are on, the
-    #'   splitting set is selected as a bootstrap sample of observations and the
-    #'   averaging set is selected as a bootstrap sample of the observations which
-    #'   were left out of bag during the splitting set selection. This leaves a third
-    #'   set which is the observations which were not selected in either bootstrap sample.
-    #'   This predict flag gives the predictions using- for each observation- only the trees
-    #'   in which the observation fell into this third set (so was neither a splitting
-    #'   nor averaging example).
-    #'   `coefs` is an aggregation option which works only when linear aggregation
-    #'   functions have been used. This returns the linear coefficients for each
-    #'   linear feature which were used in the leaf node regression of each predicted
-    #'   point.
-    #' @param seed random seed
-    #' @param nthread The number of threads with which to run the predictions with.
-    #'   This will default to the number of threads with which the forest was trained
-    #'   with.
-    #' @param exact This specifies whether the forest predictions should be aggregated
-    #'   in a reproducible ordering. Due to the non-associativity of floating point
-    #'   addition, when we predict in parallel, predictions will be aggregated in
-    #'   varied orders as different threads finish at different times.
-    #'   By default, exact is TRUE unless N > 100,000 or a custom aggregation
-    #'   function is used.
-    #' @param trees A vector of indices in the range 1:ntree which tells
-    #'   predict which trees in the forest to use for the prediction. Predict will by
-    #'   default take the average of all trees in the forest, although this flag
-    #'   can be used to get single tree predictions, or averages of diffferent trees
-    #'   with different weightings. Duplicate entries are allowed, so if trees = c(1,2,2)
-    #'   this will predict the weighted average prediction of only trees 1 and 2 weighted by:
-    #'   predict(..., trees = c(1,2,2)) = (predict(..., trees = c(1)) +
-    #'                                      2*predict(..., trees = c(2))) / 3.
-    #'   note we must have exact = TRUE, and aggregation = "average" to use tree indices.
-    #' @param weightMatrix An indicator of whether or not we should also return a
-    #'   matrix of the weights given to each training observation when making each
-    #'   prediction. When getting the weight matrix, aggregation must be one of
-    #'   `average`, `oob`, and `doubleOOB`.
-    #' @param ... additional arguments.
-    #' @return A vector of predicted responses.
-    #' @export
-    def predict(self, newdata=None, aggregation = 'average', seed = None, nthread = 0, exact = None, trees = None, weightMatrix = False):
-
-        if (newdata is None) and not (aggregation == 'oob' or aggregation == 'doubleOOB'):
-            raise ValueError('When using an aggregation that is not oob or doubleOOB, one must supply newdata')
-
-        if (not self.linear) and aggregation == 'coefs':
-            raise ValueError('Aggregation can only be linear with setting the parameter linear = TRUE.')
-        
-        # Preprocess the data. We only run the data checker if ridge is turned on,
-        # because even in the case where there were no NAs in train, we still want to predict.
-
-        if newdata is not None:
-            Py_preprocessing.forest_checker(self)
-            newdata = Py_preprocessing.testing_data_checker(self, newdata, self.hasNas)
-            newdata = pd.DataFrame(newdata)
-
-            processed_x = Py_preprocessing.preprocess_testing(newdata, self.categoricalFeatureCols, self.categoricalFeatureMapping)
-
-            if self.scale:
-                processed_x = Py_preprocessing.scale_center(processed_x, self.categoricalFeatureCols, self.colMeans, self.colSd)
-
-
-        # Set exact aggregation method if nobs < 100,000 and average aggregation
-        if exact is None:
-            if (newdata is not None) and len(newdata.index) > 1e5:
-                exact = False
-            else:
-                exact = True
-
-        # We can only use tree aggregations if exact = TRUE and aggregation = "average"
-        if (trees is not None) and ((not exact) or (aggregation != 'average')):
-            raise ValueError('When using tree indices, we must have exact = True and aggregation = \'average\' ')
-
-        if any((not isinstance(i, int)) or (i < 0) or (i >= self.ntree) for i in trees):
-            raise ValueError('trees must contain indices which are integers between 1 and ntree')
-
-        # If trees are being used, we need to convert them into a weight vector
-        tree_weights = np.repeat(0, self.ntree)
-        if trees is not None:
-            for i in range(len(trees)):
-                tree_weights[trees[i]] += 1
-            use_weights = True
-        else:
-            use_weights = False
-
-        # If option set to terminalNodes, we need to make matrix of ID's
-        if aggregation == 'oob':
-
-            if (newdata is not None) and (self.processed_dta['nObservations'] != len(newdata.index)):
-                warnings.warn('Attempting to do OOB predictions on a dataset which doesn\'t match the training data!')
-                return None
-
-            if newdata is None:
-                #Cpp
-                pass
-
-            else:
-                #Cpp
-                pass
-
-        elif aggregation == 'doubleOOB':
-            
-            if newdata is not None and self.sampsize != len(newdata.index):
-                raise ValueError('Attempting to do OOB predictions on a dataset which doesn\'t match the training data!')
-
-            if not self.doubleBootstrap:
-                raise ValueError('Attempting to do double OOB predictions with a forest that was not trained with doubleBootstrap = TRUE')
-
-            if newdata is None:
-                #Cpp
-                pass
-            
-            else:
-                #Cpp
-                pass
-
-        else:
-            #Cpp
             pass
+            #NEED TO FINISH THIS
 
-        # In the case aggregation is set to "linear"
-        # rccpPrediction is a list with an entry $coef
-        # which gives pointwise regression coeffficients averaged across the forest
-        if aggregation == 'coefs':
-            if len(self.linFeats) == 1:
-                newdata = pd.DataFrame(newdata)
-            coef_names = newdata.columns
-            coef_names = np.append(coef_names, 'Intercept')
-            #Cpp
 
-        # If we have scaled the observations, we want to rescale the predictions
+    def fit(
+        self,
+        x,
+        y,
+        interactionVariables = [],
+        featureWeights = None,
+        deepFeatureWeights = None,
+        observationWeights = None,
+        symmetric = None,  #Add a default value.
+        linFeats = None,   #Add a default value.
+        monotonicConstraints = None,   #Add a default value.
+        groups = None
+    ):
+        
+         # Make sure that all the parameters exist when passed to forestry
+
+        if isinstance(x, pd.DataFrame):
+            featNames = x.columns.values
+
+        elif type(x).__module__ == np.__name__ or isinstance(x, list) or isinstance(x, pd.Series):
+            featNames = None
+            print('x does not have column names. The check that columns are provided in the same order when training and predicting will be skipped', file=sys.stderr)
+
+        else:
+            raise AttributeError('x must be a Pandas DataFrame, a numpy array, a Pandas Series, or a regular list')
+
+        x = pd.DataFrame(x)
+        y = np.array(y)
+        
+        nrow, ncol = x.shape
+            
+        if self.sampsize is None:
+            self.sampsize = nrow if self.replace else math.ceil(0.632 * nrow)
+
+        # only if sample.fraction is given, update sampsize
+        if self.sample_fraction is not None:
+            self.sampsize = math.ceil(self.sample_fraction * nrow)
+
+        # make linFeats unique
+        if linFeats == None:
+            linFeats = np.arange(ncol)
+        linFeats = pd.unique(linFeats)
+
+        # Preprocess the data
+        hasNas = x.isnull().values.any()
+
+        # Create vectors with the column means and SD's for scaling
+        colMeans = np.repeat(0.0, ncol+1)
+        colSd = np.repeat(0.0, ncol+1)
+
+
+        # Translating interactionVariables to featureWeights syntax
+        if featureWeights is None:
+            featureWeights = np.repeat(1, ncol)
+            featureWeights[interactionVariables] = 0
+        if deepFeatureWeights is None:
+            deepFeatureWeights = np.repeat(1, ncol)
+        if observationWeights is None:
+            observationWeights = np.repeat(1, nrow)
+
+        # Giving default values
+        if self.mtry is None:
+            self.mtry = max((ncol // 3), 1)
+
+        if self.maxDepth is None:
+            self.maxDepth = round(nrow / 2) + 1
+        
+        if self.interactionDepth is None:
+            self.interactionDepth = self.maxDepth
+
+        if self.maxObs is None:
+            self.maxObs = y.size
+
+        if symmetric is None:
+            symmetric = np.repeat(0, ncol)
+
+        if monotonicConstraints is None:
+            monotonicConstraints = np.repeat(0, ncol)
+
+        
+        (x,
+        y,
+        linFeats,
+        monotonicConstraints,
+        groups,
+        observationWeights,
+        symmetric,
+        hasNas) = Py_preprocessing.training_data_checker(
+            self,
+            x,
+            y,
+            linFeats,
+            monotonicConstraints,
+            groups,
+            observationWeights,
+            symmetric,
+            hasNas)
+
+        (featureWeightsVariables, featureWeights) = Py_preprocessing.sample_weights_checker(featureWeights, self.mtry, ncol)
+        (deepFeatureWeightsVariables, deepFeatureWeights) = Py_preprocessing.sample_weights_checker(deepFeatureWeights, self.mtry, ncol)    
+        
+        groupsMapping = dict()
+        if groups is not None:
+            groupsMapping['groupValue'] = groups.cat.categories
+            groupsMapping['groupNumericValue'] = np.arange(len(groups.cat.categories))
+
+            groupVector = pd.to_numeric(groups)
+
+            # Print warning if the group number and minTreesPerGroup results in a large forest
+            if object.minTreesPerGroup > 0 and len(groups.cat.categories) * object.minTreesPerGroup > 2000:
+                warnings.warn('Using ' + str(len(groups.cat.categories)) + ' groups with ' + str(object.minTreesPerGroup) + ' trees per group will train ' + str(len(groups.cat.categories) * object.minTreesPerGroup) + ' trees in the forest')
+        
+        else:
+            groupVector = np.repeat(0, nrow)
+
+
+        #IGNORING reuseforestry FOR NOW
+
+        (processed_x, categoricalFeatureCols_cpp, categoricalFeatureMapping) =  Py_preprocessing.preprocess_training(x, y)
+        
+        if categoricalFeatureCols_cpp.size != 0:
+            monotonicConstraints[categoricalFeatureCols_cpp] = 0
+        
         if self.scale:
-            #Cpp\
-            pass
+            for col_idx in range(ncol):
+                if col_idx not in categoricalFeatureCols_cpp:
+                    colMeans[col_idx] = np.nanmean(processed_x.iloc[:, col_idx])
+                    colSd[col_idx] = np.nanstd(processed_x.iloc[:, col_idx])
 
-        if aggregation == 'average' and weightMatrix:
-            #Cpp
-            pass
-        elif aggregation == 'oob' and weightMatrix:
-            #Cpp
-            pass
-        elif aggregation == 'doubleOOB' and weightMatrix:
-            #Cpp
-            pass
-        elif aggregation == 'average':
-            #Cpp
-            pass
-        elif aggregation == 'oob':
-            #Cpp
-            pass
-        elif aggregation == 'doubleOOB':
-            #Cpp
-            pass
-        elif aggregation == 'coefs':
-            #Cpp
-            pass
-        elif aggregation == 'terminalNodes':
-            #Cpp
-            pass
-        
-
-
-
-    # -- Calculate OOB Error -------------------------------------------------------
-    #' getOOB-forestry
-    #' @name getOOB-forestry
-    #' @rdname getOOB-forestry
-    #' @description Calculate the out-of-bag error of a given forest. This is done
-    #' by using the out-of-bag predictions for each observation, and calculating the
-    #' MSE over the entire forest.
-    #' @param object A `forestry` object.
-    #' @param noWarning flag to not display warnings
-    #' @aliases getOOB,forestry-method
-    #' @return The OOB error of the forest.
-    #' @export
-    def getOOB(self, noWarning):
-        # TODO (all): find a better threshold for throwing such warning. 25 is
-        # currently set up arbitrarily.
-
-        Py_preprocessing.forest_checker(self)
-
-        #cpp check
-
-        try:
-            preds = self.predict(self, aggregation = 'oob')
-            # Only calc mse on non missing predictions
-            if self.scale:
-                y_true = self.processed_dta['y'][not np.isnan(preds)] * self.colSd[-1] + self.colMeans[-1]
+            # Scale columns of X
+            processed_x = Py_preprocessing.scale_center(processed_x, categoricalFeatureCols_cpp, colMeans, colSd)
+                
+            # Center and scale Y
+            colMeans[ncol] = np.nanmean(y)
+            colSd[ncol] = np.nanstd(y)
+            if colSd[ncol] != 0:
+                y = (y - colMeans[ncol]) / colSd[ncol]    
             else:
-                y_true = self.processed_dta['y'][not np.isnan(preds)]
-
-            mse = np.mean((preds[not np.isnan(preds)] - y_true)**2)
-
-            return mse
-
-        except:
-            return
-            ###FILL THIS LATER
-
-    # -- make savable --------------------------------------------------------------
-    #' make_savable
-    #' @name make_savable
-    #' @rdname make_savable
-    #' @description When a `foresty` object is saved and then reloaded the Cpp
-    #'   pointers for the data set and the Cpp forest have to be reconstructed
-    #' @param object an object of class `forestry`
-    #' @note  `make_savable` does not translate all of the private member variables
-    #'   of the C++ forestry object so when the forest is reconstructed with
-    #'   `relinkCPP_prt` some attributes are lost. For example, `nthreads` will be
-    #'   reset to zero. This makes it impossible to disable threading when
-    #'   predicting for forests loaded from disk.
-    #' @examples
-    #' set.seed(323652639)
-    #' x <- iris[, -1]
-    #' y <- iris[, 1]
-    #' forest <- forestry(x, y, ntree = 3, nthread = 2)
-    #' y_pred_before <- predict(forest, x)
-    #'
-    #' forest <- make_savable(forest)
-    #'
-    #' wd <- tempdir()
-    #
-    #' saveForestry(forest, filename = file.path(wd, "forest.Rda"))
-    #' rm(forest)
-    #'
-    #' forest <- loadForestry(file.path(wd, "forest.Rda"))
-    #'
-    #' y_pred_after <- predict(forest, x)
-    #'
-    #' file.remove(file.path(wd, "forest.Rda"))
-    #' @return A list of lists. Each sublist contains the information to span a
-    #'   tree.
-    #' @aliases make_savable,forestry-method
-    #' @export
-    def make_savable(self):
-        pass
-        #multilayerForestry not done yet
+                y = y - colMeans[ncol]
 
 
+        # Get the symmetric feature if one is set
+        symmetricIndex = -1
+        idxs = np.where(symmetric > 0)[0]
+        if idxs.size != 0:
+            symmetricIndex = idxs[0]  
 
-    # -- Calculate Splitting Proportions -------------------------------------------
-    #' getSplitProps-forestry
-    #' @name getSplitProps-forestry
-    #' @rdname getSplitProps-forestry
-    #' @description Retrieves the proportion of splits for each feature in the given
-    #'  forestry object. These proportions are calculated as the number of splits
-    #'  on feature i in the entire forest over total the number of splits in the
-    #'  forest.
-    #' @param object A trained model object of class "forestry".
-    #' @return A vector of length equal to the number of columns
-    #' @seealso \code{\link{forestry}}
-    #' @export
-    def getSplitProps(self):
-        ## call make_savable
+        
+        # cpp linking
 
-        # Dataframe to hold the splitting counts for each tree
-        #data = pd.DataFrame(np.repeat(0, self.ntree*(self.processed_dta['featNames']).size).reshape(self.ntree, (self.processed_dta['featNames']).size))
-        pass
+        
+        # Update the fields 
+
+        self.processed_dta['processed_x'] = processed_x
+        self.processed_dta['y'] = y
+        self.processed_dta['categoricalFeatureCols_cpp'] = categoricalFeatureCols_cpp
+        self.processed_dta['linearFeatureCols_cpp'] = linFeats
+        self.processed_dta['nObservations'] = nrow
+        self.processed_dta['numColumns'] = ncol
+        self.processed_dta['featNames'] = featNames
+        
+        self.categoricalFeatureMapping = categoricalFeatureMapping
+        self.featureWeights = featureWeights
+        self.featureWeightsVariables = featureWeightsVariables
+        self.deepFeatureWeights =  deepFeatureWeights
+        self.deepFeatureWeightsVariables = deepFeatureWeightsVariables
+        self.observationWeights = observationWeights
+        self.hasNas = hasNas
+        self.symmetric = symmetric
+        self.monotonicConstraints = monotonicConstraints
+        self.groupsMapping = groupsMapping
+        self.groups = groups
+        self.colMeans = colMeans
+        self.colSd = colSd

@@ -17,7 +17,9 @@ include_directories(${Armadillo_LIBRARY_DIR})
 # Set up compiler and relevant files
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_COMPILER clang++)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -framework Accelerate -install_name forestryCpp.so")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -install_name forestryCpp.so")
+# Add framework Accelerate flag
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -framework Accelerate -install_name forestryCpp.so")
 
 set(SOURCE_FILES DataFrame.cpp DataFrame.h RFNode.cpp RFNode.h forestryTree.cpp forestryTree.h forestry.cpp forestry.h utils.cpp utils.h treeSplitting.cpp treeSplitting.h api.h api.cpp)
 

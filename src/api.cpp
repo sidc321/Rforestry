@@ -11,6 +11,19 @@ extern "C"{
 
     void* get_data (
             double** arr,
+            int* categorical_vars,
+            int count_categorical_vars,
+            int* linFeat_idx,
+            int count_linFeat,
+            double* feat_weights,
+            int* feat_weight_vars,
+            int count_feat_weight_vars,
+            double* observation_weights,
+            int* mon_constraints,
+            int* groupMemberships,
+            bool monotoneAvg,
+            int* symmetricIndices,
+            int countSymmetricIndices,
             int n_rows,
             int n_cols
             ) {
@@ -46,42 +59,97 @@ extern "C"{
             outcomeData->push_back(data_numpy[n_cols-1][i]);
         }
 
+
         // Categorical features column
         std::unique_ptr< std::vector<size_t> > categoricalFeatureCols (
                 new std::vector<size_t>
         );
 
+        size_t countCategoricals = count_categorical_vars;
+        for (size_t i = 0; i < countCategoricals; i++) {
+            categoricalFeatureCols->push_back(categorical_vars[i]);
+        }
+
+
         // seed RNG generator
         std::mt19937_64 random_number_generator;
         random_number_generator.seed(24750371);
 
+        // Linear features column
         std::unique_ptr< std::vector<size_t> > linearFeatures (
                 new std::vector<size_t>
         );
 
+        size_t countLinFeat = count_linFeat;
+        for (size_t i = 0; i < countLinFeat; i++) {
+            linearFeatures->push_back(linFeat_idx[i]);
+        }
+
+        // Feature weights for each column
         std::unique_ptr< std::vector<double> > feature_weights (
-                new std::vector<double>(numColumns, ((double) 1.0)/((double) numColumns))
+                new std::vector<double>(numColumns)
         );
 
+        for (size_t i = 0; i < numColumns; i++)
+        {
+                feature_weights->at(i) = feat_weights[i];
+        }
+        
+
+        // Feature indecies based on feature_weights
         std::unique_ptr< std::vector<size_t> > feature_weight_vars (
                 new std::vector<size_t>
         );
 
+        size_t countFtWeight = count_feat_weight_vars;
+        for (size_t i = 0; i < countFtWeight; i++) {
+            feature_weight_vars->push_back(feat_weight_vars[i]);
+        }
+        
+
+        // Observation weights
         std::unique_ptr< std::vector<double> > obs_weights (
-                new std::vector<double>(numRows, ((double) 1.0)/((double) numRows))
+                new std::vector<double>(numRows)
         );
 
+        for (size_t i = 0; i < numRows; i++)
+        {
+                obs_weights->at(i) = observation_weights[i];
+        }
+        
+
+        // monotone constraints for each column
         std::unique_ptr< std::vector<int> > monotone_constraints (
-                new std::vector<int>(numColumns, 0)
+                new std::vector<int>(numColumns)
         );
 
+        for (size_t i = 0; i < numColumns; i++)
+        {
+                monotone_constraints->at(i) = mon_constraints[i];
+        }
+
+
+        // group membership for each observation
         std::unique_ptr< std::vector<size_t> > groups (
-                new std::vector<size_t>(numRows, 0)
+                new std::vector<size_t>(numRows)
         );
 
+        for (size_t i = 0; i < numRows; i++)
+        {
+                groups->at(i) = groupMemberships[i];
+        }
+
+
+        // symmetric variable indices
         std::unique_ptr< std::vector<size_t> > symmetric_constraints (
                 new std::vector<size_t>
         );
+
+        size_t countSym = countSymmetricIndices;
+        for (size_t i = 0; i < countSym; i++) {
+            symmetric_constraints->push_back(symmetricIndices[i]);
+        }
+
 
         DataFrame* test_df = new DataFrame(
                 std::move(featureData),
@@ -97,7 +165,7 @@ extern "C"{
                 std::move(obs_weights),
                 std::move(monotone_constraints),
                 std::move(groups),
-                false,
+                monotoneAvg,
                 std::move(symmetric_constraints)
         );
         return test_df;

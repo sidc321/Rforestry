@@ -30,25 +30,19 @@ def find_match(A, B):
             
     return np.array([d[str(val)] for val in A])
 
+
 """
-#' @include the preprocessign file
 #-- Sanity Checker -------------------------------------------------------------
-#' @name training_data_checker
-#' @title Training data check
-#' @rdname training_data_checker-forestry
-#' @description Check the input to forestry constructor
+#' @name forest_parameter_checker
+#' @description Check the input parameters to the forestry constructor
 #' @inheritParams forestry
-#' @param featureWeights weights used when subsampling features for nodes above or at interactionDepth.
-#' @param deepFeatureWeights weights used when subsampling features for nodes below interactionDepth.
-#' @param hasNas indicates if there is any missingness in x.
-#' @return A list of parameters after checking the selected parameters are valid.
+#' @return A tuple of parameters after checking the selected parameters are valid.
 """
-def training_data_checker(
-    x,
-    y,
+def forest_parameter_checker(
     ntree,
     replace,
     sampsize,
+    sample_fraction,
     mtry,
     nodesizeSpl,
     nodesizeAvg,
@@ -59,55 +53,36 @@ def training_data_checker(
     interactionDepth,
     splitratio,
     OOBhonest,
+    doubleBootstrap,
+    seed,
+    verbose,
     nthread,
     middleSplit,
-    doubleTree,
-    linFeats,
-    monotonicConstraints,
-    groups,
-    featureWeights,
-    deepFeatureWeights,
-    observationWeights,
+    maxObs,
     linear,
-    symmetric,
+    minTreesPerGroup,
+    monotoneAvg,
+    overfitPenalty,
     scale,
-    hasNas
+    doubleTree
 ):
-    
-    x = pd.DataFrame(x)
-    y = np.array(y)
-    nrows, nfeatures = x.shape
 
-    # Check if the input dimension of x matches y
-    if nrows != len(y):
-        raise ValueError('The dimension of input dataset x doesn\'t match the output y.')
-
-    if linear and hasNas:
-        raise ValueError('Cannot do imputation splitting with linear.')
-
-    if np.isnan(y).any():
-        raise ValueError('y contains missing data.')
-
-    if not isinstance(replace, bool):
-        raise AttributeError('replace must be True or False.')
+    #Check for types and ranges
 
     if (not isinstance(ntree, int)) or ntree <= 0:
         raise ValueError('ntree must be a positive integer.')
+    
+    if not isinstance(replace, bool):
+        raise AttributeError('replace must be True or False.')
 
-    if (not isinstance(sampsize, int)) or sampsize <= 0:
-        raise ValueError('sampsize must be a positive integer.')
+    if (sampsize is not None) and ( (not isinstance(sampsize, int)) or sampsize <= 0 ):
+        raise ValueError('sampsize must be a positive integer.') 
 
-    if any(i < 0 or i >= nfeatures for i in linFeats):
-        raise ValueError('linFeats must contain positive integers less than len(x.columns).')
+    if (sample_fraction is not None) and ( (not isinstance(sample_fraction, (int, float))) or sample_fraction <= 0 ):
+        raise ValueError('sample_fraction must be a positive integer.')  
 
-    if (not replace) and sampsize > nrows:
-        raise ValueError('You cannot sample without replacement with size more than total number of observations.')
-
-    if (not isinstance(mtry, int)) or mtry <= 0:
+    if (mtry is not None) and ( (not isinstance(mtry, int)) or mtry <= 0 ):
         raise ValueError('mtry must be a positive integer.')
-
-    if mtry > nfeatures:
-        raise ValueError('mtry cannot exceed total amount of features in x.')
 
     if (not isinstance(nodesizeSpl, int)) or nodesizeSpl <= 0:
         raise ValueError('nodesizeSpl must be a positive integer.')
@@ -121,17 +96,160 @@ def training_data_checker(
     if (not isinstance(nodesizeStrictAvg, int)) or nodesizeStrictAvg <= 0:
         raise ValueError('nodesizeStrictAvg must be a positive integer.')
 
-    if minSplitGain < 0:
-        raise ValueError('minSplitGain must be greater than or equal to 0.')
+    if (not isinstance(minSplitGain, (int, float))) or minSplitGain < 0:
+        raise ValueError('minSplitGain must be a number greater than or equal to 0.')
+
+    if (maxDepth is not None) and ( (not isinstance(maxDepth, int)) or maxDepth <= 0 ):
+        raise ValueError('maxDepth must be a positive integer.')
+
+    if (interactionDepth is not None) and ( (not isinstance(interactionDepth, int)) or interactionDepth <= 0 ):
+        raise ValueError('interactionDepth must be a positive integer.')
+
+    if (not isinstance(splitratio, (int, float))) or (splitratio < 0 or splitratio > 1):
+        raise ValueError('splitratio must be a number between 0 and 1.')
+
+    if not isinstance(OOBhonest, bool):
+        raise AttributeError('OOBhonest must be True or False.')
+
+    if not isinstance(doubleBootstrap, bool):
+        raise AttributeError('doubleBootstrap must be True or False.')
+
+    if (not isinstance(seed, int)) or seed < 0:
+        raise ValueError('seed must be a nonnegative integer.')
+
+    if not isinstance(verbose, bool):
+        raise AttributeError('verbose must be True or False.')
+
+    if (not isinstance(nthread, int)) or nthread < 0:
+        raise ValueError('nthread must be a nonnegative integer.')
+
+    if nthread > 0:
+        if nthread > os.cpu_count():
+            raise ValueError('nthread cannot exceed total cores in the computer: ' + str(os.cpu_count()))
+      
+    if not isinstance(middleSplit, bool):
+        raise ValueError('middleSplit must be True or False.')
+
+    if (maxObs is not None) and ( (not isinstance(maxObs, int)) or maxObs <= 0 ):
+        raise ValueError('maxObs must be a positive integer.') 
+
+    if not isinstance(linear, bool):
+        raise ValueError('linear must be True or False.')
+
+    if (minTreesPerGroup is not None) and ( (not isinstance(minTreesPerGroup, int)) or minTreesPerGroup < 0 ):
+        raise ValueError('minTreesPerGroup must be a nonnegative integer.') 
+
+    if not isinstance(monotoneAvg, bool):
+        raise AttributeError('monotoneAvg must be True or False.')
+
+    if (not isinstance(overfitPenalty, (int, float))):
+        raise AttributeError("overfitPenalty must be a number.")
+
+    if not isinstance(scale, bool):
+        raise ValueError('scale must be True or False.')
+
+    if not isinstance(doubleTree, bool):
+        raise ValueError('doubleTree must be True or False.')
+
+
+
+    # Some more checks
 
     if minSplitGain > 0 and (not linear):
         raise ValueError('minSplitGain cannot be set without setting linear to be true.')
 
-    if (not isinstance(maxDepth, int)) or maxDepth <= 0:
-        raise ValueError('maxDepth must be a positive integer.')
+    if OOBhonest and (splitratio != 1):
+        warnings.warn('OOBhonest is set to true, so we will run OOBhonesty rather than standard honesty.')
+        splitratio = 1
 
-    if (not isinstance(interactionDepth, int)) or interactionDepth <= 0:
-        raise ValueError('interactionDepth must be a positive integer.')
+    if OOBhonest and (replace == False):
+        warnings.warn('replace must be set to TRUE to use OOBhonesty, setting this to True now')
+        replace = True
+
+    if doubleTree and (splitratio == 0 or splitratio == 1):
+        warnings.warn('Trees cannot be doubled if splitratio is 1. We have set doubleTree to False.')
+        doubleTree = False
+
+    
+    return (
+        ntree,
+        replace,
+        sampsize,
+        sample_fraction,
+        mtry,
+        nodesizeSpl,
+        nodesizeAvg,
+        nodesizeStrictSpl,
+        nodesizeStrictAvg,
+        minSplitGain,
+        maxDepth,
+        interactionDepth,
+        splitratio,
+        OOBhonest,
+        doubleBootstrap,
+        seed,
+        verbose,
+        nthread,
+        middleSplit,
+        maxObs,
+        linear,
+        minTreesPerGroup,
+        monotoneAvg,
+        overfitPenalty,
+        scale,
+        doubleTree
+    )
+    
+
+
+
+
+"""
+#-- Sanity Checker -------------------------------------------------------------
+#' @name training_data_checker
+#' @title Training data check
+#' @rdname training_data_checker-forestry
+#' @description Check the input to forestry constructor
+#' @inheritParams forestry
+#' @param featureWeights weights used when subsampling features for nodes above or at interactionDepth.
+#' @param deepFeatureWeights weights used when subsampling features for nodes below interactionDepth.
+#' @param hasNas indicates if there is any missingness in x.
+#' @return A tuple of parameters after checking the selected parameters are valid.
+"""
+def training_data_checker(
+    object,
+    x,
+    y,
+    linFeats,
+    monotonicConstraints,
+    groups,
+    observationWeights,
+    symmetric,
+    hasNas
+):
+    
+    x = pd.DataFrame(x)
+    y = np.array(y)
+    nrows, nfeatures = x.shape
+
+    # Check if the input dimension of x matches y
+    if nrows != len(y):
+        raise ValueError('The dimension of input dataset x doesn\'t match the output y.')
+
+    if object.linear and hasNas:
+        raise ValueError('Cannot do imputation splitting with linear.')
+
+    if np.isnan(y).any():
+        raise ValueError('y contains missing data.')
+
+    if any(i < 0 or i >= nfeatures for i in linFeats):
+        raise ValueError('linFeats must contain positive integers less than len(x.columns).')
+
+    if (not object.replace) and object.sampsize > nrows:
+        raise ValueError('You cannot sample without replacement with size more than total number of observations.')
+
+    if object.mtry > nfeatures:
+        raise ValueError('mtry cannot exceed total amount of features in x.')
 
     if len(monotonicConstraints) != nfeatures:
         raise ValueError('monotonicConstraints must be the size of x')
@@ -139,11 +257,11 @@ def training_data_checker(
     if any(i != 0 and i != 1 and i != -1 for i in monotonicConstraints):
         raise ValueError('monotonicConstraints must be either 1, 0, or -1')
 
-    if any(i != 0 for i in monotonicConstraints) and linear:
+    if any(i != 0 for i in monotonicConstraints) and object.linear:
         raise ValueError('Cannot use linear splitting with monotonicConstraints')
 
-    if not replace:
-        observationWeights = [1 for _ in range(nrows)]
+    if not object.replace:
+        observationWeights = np.repeat(0, nrows)
 
     if len(observationWeights) != nrows:
         raise ValueError('observationWeights must have length len(x)')
@@ -155,18 +273,18 @@ def training_data_checker(
         raise ValueError('There must be at least one non-zero weight in observationWeights')
 
     if any(i != 0 for i in symmetric):
-        if linear:
+        if object.linear:
            raise ValueError('Symmetric forests cannot be combined with linear aggregation please set either symmetric = False or linear = False') 
 
         if hasNas:
             raise ValueError('Symmetric forests cannot be combined with missing values please impute the missing features before training a forest with symmetry')
 
-        if scale:
+        if object.scale:
             warnings.warn('As symmetry is implementing pseudo outcomes, this causes problems when the Y values are scaled. Setting scale = False')
 
         # for now don't scale when we run symmetric splitting since we use pseudo outcomes
         # and wnat to retain the scaling of Y
-        scale = False
+        object.scale = False
 
         #OPTIMIZE ???
         if any(j != 1 and j != 0 for j in symmetric):
@@ -176,43 +294,37 @@ def training_data_checker(
             warnings.warn('Running symmetric splits in more than 10 features is very slow')
 
     
-    s = sum(observationWeights)
-    observationWeights = [i/s for i in observationWeights]
+    observationWeights = np.array(observationWeights)
+    observationWeights = observationWeights / np.sum(observationWeights)
 
     # if the splitratio is 1, then we use adaptive rf and avgSampleSize is
     # equal to the total sampsize
 
-    if splitratio == 0 or splitratio == 1:
-        splitSampleSize = sampsize
-        avgSampleSize = sampsize
+    if object.splitratio == 0 or object.splitratio == 1:
+        splitSampleSize = object.sampsize
+        avgSampleSize = object.sampsize
     else:
-        splitSampleSize = splitratio * sampsize
-        avgSampleSize = math.floor(sampsize - splitSampleSize)
+        splitSampleSize = object.splitratio * object.sampsize
+        avgSampleSize = math.floor(object.sampsize - splitSampleSize)
         splitSampleSize = math.floor(splitSampleSize)
 
-    if nodesizeStrictSpl > splitSampleSize:
+    if object.nodesizeStrictSpl > splitSampleSize:
         warnings.warn('nodesizeStrictSpl cannot exceed splitting sample size. We have set nodesizeStrictSpl to be the maximum.')
-        nodesizeStrictSpl = splitSampleSize
+        object.nodesizeStrictSpl = splitSampleSize
 
-    if nodesizeStrictAvg > avgSampleSize:
+    if object.nodesizeStrictAvg > avgSampleSize:
         warnings.warn('nodesizeStrictAvg cannot exceed averaging sample size. We have set nodesizeStrictAvg to be the maximum.')
-        nodesizeStrictAvg = avgSampleSize
+        object.nodesizeStrictAvg = avgSampleSize
 
 
-    if doubleTree:
-        if splitratio == 0 or splitratio == 1:
-            warnings.warn('Trees cannot be doubled if splitratio is 1. We have set doubleTree to False.')
-            doubleTree = False
-        else:
-            if nodesizeStrictAvg > splitSampleSize:
-                warnings.warn('nodesizeStrictAvg cannot exceed splitting sample size. We have set nodesizeStrictAvg to be the maximum.')
-                nodesizeStrictAvg = splitSampleSize
-            if nodesizeStrictSpl > avgSampleSize:
-                warnings.warn('nodesizeStrictSpl cannot exceed averaging sample size. We have set nodesizeStrictSpl to be the maximum.')
-                nodesizeStrictSpl = avgSampleSize
+    if object.doubleTree:
+        if object.nodesizeStrictAvg > splitSampleSize:
+            warnings.warn('nodesizeStrictAvg cannot exceed splitting sample size. We have set nodesizeStrictAvg to be the maximum.')
+            object.nodesizeStrictAvg = splitSampleSize
+        if object.nodesizeStrictSpl > avgSampleSize:
+            warnings.warn('nodesizeStrictSpl cannot exceed averaging sample size. We have set nodesizeStrictSpl to be the maximum.')
+            object.nodesizeStrictSpl = avgSampleSize
 
-    if splitratio < 0 or splitratio > 1:
-        raise ValueError('splitratio must in between 0 and 1.')
 
     if groups is not None:
         if not pd.api.types.is_categorical_dtype(groups):
@@ -221,20 +333,6 @@ def training_data_checker(
             raise ValueError('groups must have more than 1 level to be left out from sampling.')
         groups = pd.Series(groups, dtype='category')
 
-    if OOBhonest and (splitratio != 1):
-        warnings.warn('OOBhonest is set to true, so we will run OOBhonesty rather than standard honesty.')
-        splitratio = 1
-
-    if OOBhonest and (replace == False):
-        warnings.warn('replace must be set to TRUE to use OOBhonesty, setting this to True now')
-        replace = True
-
-    if nthread > 0:
-        if nthread > os.cpu_count():
-            raise ValueError('nthread cannot exceed total cores in the computer: ' + str(os.cpu_count()))
-      
-    if not isinstance(middleSplit, bool):
-        raise ValueError('middleSplit must be True or False.')
 
     #make an np arrays
     monotonicConstraints = np.array(monotonicConstraints)
@@ -243,29 +341,11 @@ def training_data_checker(
     return (
         x,
         y,
-        ntree,
-        replace,
-        sampsize,
-        mtry,
-        nodesizeSpl,
-        nodesizeAvg,
-        nodesizeStrictSpl,
-        nodesizeStrictAvg,
-        minSplitGain,
-        maxDepth,
-        interactionDepth,
-        splitratio,
-        OOBhonest,
-        nthread,
-        groups,
-        middleSplit,
-        doubleTree,
         linFeats,
         monotonicConstraints,
-        featureWeights,
-        scale,
-        deepFeatureWeights,
+        groups,
         observationWeights,
+        symmetric,
         hasNas
     )
 
@@ -299,20 +379,23 @@ def testing_data_checker(object, newdata, hasNas):
 
 
 def sample_weights_checker(featureWeights, mtry, ncol):
-    if len(featureWeights) != ncol:
+    featureWeights = np.array(featureWeights)
+    if featureWeights.size != ncol:
         raise ValueError('featureWeights and deepFeatureWeights must have length len(x.columns)')
 
     if any(i < 0 for i in featureWeights):
         raise ValueError('The entries in featureWeights and deepFeatureWeights must be non negative')
 
-    if sum(featureWeights) == 0:
+    if np.sum(featureWeights) == 0:
         raise ValueError('There must be at least one non-zero weight in featureWeights and deepFeatureWeights')
 
 
-    featureWeightsVariables = [i for i in range(len(featureWeights)) if featureWeights[i] > max(featureWeights)*0.001]
+    featureWeightsVariables = [i for i in range(featureWeights.size) if featureWeights[i] > max(featureWeights)*0.001]
     if len(featureWeightsVariables) < mtry:
         featureWeights = []
     
+    featureWeightsVariables = np.array(featureWeightsVariables)
+    featureWeights = featureWeights / np.sum(featureWeights)
     return (featureWeightsVariables, featureWeights)
 
 """
@@ -336,10 +419,10 @@ def forest_checker(object):
 #' @return A list of two datasets along with necessary information that encodes
 #'   the preprocessing.
 
-def preprocess_training(x,y):
+def preprocess_training(x, y):
     x = pd.DataFrame(x)
     # Check if the input dimension of x matches y
-    if len(x.index) != len(y):
+    if len(x.index) != y.size:
         raise ValueError('The dimension of input dataset x doesn\'t match the output vector y.')
 
     # Track the order of all features
