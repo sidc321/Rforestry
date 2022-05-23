@@ -102,7 +102,7 @@ fr = forestry(
 
 fr.fit(df2, y,  interactionVariables=[0], symmetric=[1,0,0,1,0])
 
-print(fr.processed_dta)
+print(fr.dataframe)
 
 
 # QUESTIONS

@@ -11,9 +11,18 @@ import math
 import os
 import sys
 from random import randrange
+import ctypes
+import lib_setup
 
 import Py_preprocessing
 
+
+
+# --- Loading the dynamic library -----------------
+
+lib = (ctypes.CDLL("../src/libforestryCpp.so"))  #CHANGE TO DLL IF NECESSARY
+#forestry = (ctypes.CDLL("src/libforestryCpp.dylib")) 
+lib_setup.setup_lib(lib)
 
 # -- Random Forest Constructor -------------------------------------------------
 
@@ -261,8 +270,8 @@ class forestry:
 
         if reuseforestry is None:
             
-            rcppDataFrame = None  #Cpp pointer
-            rcppForest = None  #Cpp pointer
+            cppDataFrame = None  #Cpp pointer
+            cppForest = None  #Cpp pointer
             processed_dta = {
                 'processed_x': None,
                 'y': None,
@@ -275,8 +284,8 @@ class forestry:
             Py_forest = np.array([])  # for printing
 
             #Data Fields
-            self.forest = rcppForest
-            self.dataframe = rcppDataFrame
+            self.forest = cppForest
+            self.dataframe = cppDataFrame
             self.processed_dta = processed_dta
             self.Py_forest = Py_forest
             self.categoricalFeatureMapping = None
@@ -471,6 +480,21 @@ class forestry:
 
         
         # cpp linking
+
+        self.dataframe = ctypes.c_void_p(lib.get_data(
+            lib_setup.get_data_pointer(processed_x, y),
+            lib_setup.get_array_pointer(categoricalFeatureCols_cpp, dtype=np.intc), categoricalFeatureCols_cpp.size,
+            lib_setup.get_array_pointer(linFeats, dtype=np.intc), linFeats.size,
+            lib_setup.get_array_pointer(featureWeights, dtype=np.double),
+            lib_setup.get_array_pointer(featureWeightsVariables, dtype=np.intc), featureWeightsVariables.size,
+            lib_setup.get_array_pointer(observationWeights, dtype=np.double),
+            lib_setup.get_array_pointer(monotonicConstraints, dtype=np.intc),
+            lib_setup.get_array_pointer(groupVector, dtype=np.intc),
+            self.monotoneAvg,
+            lib_setup.get_array_pointer(symmetric, dtype=np.intc), symmetric.size,
+            nrow, ncol+1
+        ))
+
 
         
         # Update the fields 
