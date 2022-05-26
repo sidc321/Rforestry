@@ -8,20 +8,21 @@ def setup_lib(lib):
     # set up the get_data function
     lib.get_data.argtypes = [
         ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
-        ctypes.POINTER(ctypes.c_int),
-        ctypes.c_int,
-        ctypes.POINTER(ctypes.c_int),
-        ctypes.c_int,
+        ctypes.POINTER(ctypes.c_size_t),
+        ctypes.c_size_t,
+        ctypes.POINTER(ctypes.c_size_t),
+        ctypes.c_size_t,
+        ctypes.POINTER(ctypes.c_double),
+        ctypes.POINTER(ctypes.c_size_t),
+        ctypes.c_size_t,
         ctypes.POINTER(ctypes.c_double),
         ctypes.POINTER(ctypes.c_int),
-        ctypes.c_int,
-        ctypes.POINTER(ctypes.c_double),
-        ctypes.POINTER(ctypes.c_int),
-        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_size_t),
         ctypes.c_bool,
-        ctypes.POINTER(ctypes.c_int),
-        ctypes.c_int,
-        ctypes.c_int, 
+        ctypes.POINTER(ctypes.c_size_t),
+        ctypes.c_size_t,
+        ctypes.c_size_t, 
+        ctypes.c_size_t,
         ctypes.c_int
         ]
     lib.get_data.restype =  ctypes.c_void_p
@@ -71,9 +72,8 @@ def setup_lib(lib):
     lib.vector_get.restype = ctypes.c_double
 
 
-def get_data_pointer(X, y):
-    X = pd.concat([X, pd.Series(y)], axis=1)
-    data = np.ascontiguousarray(X.values[:,:], np.double)
+def get_data_pointer(data):
+    data = np.ascontiguousarray(data.values[:,:], np.double)
 
     kdoublePtr = ctypes.POINTER(ctypes.c_double)
     kdoublePtrPtr = ctypes.POINTER(kdoublePtr)

@@ -11,29 +11,30 @@ extern "C"{
 
     void* get_data (
             double** arr,
-            int* categorical_vars,
-            int count_categorical_vars,
-            int* linFeat_idx,
-            int count_linFeat,
+            size_t* categorical_vars,
+            size_t countCategoricals,
+            size_t* linFeat_idx,
+            size_t countLinFeats,
             double* feat_weights,
-            int* feat_weight_vars,
-            int count_feat_weight_vars,
+            size_t* feat_weight_vars,
+            size_t countFtWeightVars,
             double* observation_weights,
             int* mon_constraints,
-            int* groupMemberships,
+            size_t* groupMemberships,
             bool monotoneAvg,
-            int* symmetricIndices,
-            int countSymmetricIndices,
-            int n_rows,
-            int n_cols
+            size_t* symmetricIndices,
+            size_t countSym,
+            size_t numRows,
+            size_t numColumns,
+            int seed
             ) {
         // Create Data: first n_cols - 1 are features, last is outcome
         std::vector<std::vector<double>> data_numpy;
 
 
-        for (int j = 0; j<n_cols; j++) {
+        for (int j = 0; j<numColumns; j++) {
             std::vector<double> col;
-            for (int i = 0; i<n_rows; i++){
+            for (int i = 0; i<numRows; i++){
                 col.push_back(arr[i][j]);
             }
             data_numpy.push_back(col);
@@ -43,47 +44,47 @@ extern "C"{
                 new std::vector<std::vector<double> >
         };
 
-        for (size_t i = 0; i < n_cols-1; i++) {
+
+        for (size_t i = 0; i < numColumns-1; i++) {
             featureData->push_back(data_numpy[i]);
         }
 
-        size_t numRows = n_rows;
-        size_t numColumns = n_cols-1;
+        numColumns--;
 
         // Create outcome data
         std::unique_ptr< std::vector<double> > outcomeData {
-                new std::vector<double>
+                new std::vector<double>(numRows)
         };
 
         for (size_t i = 0; i < numRows; i++) {
-            outcomeData->push_back(data_numpy[n_cols-1][i]);
+            outcomeData->at(i) = data_numpy[numColumns][i];
         }
 
 
         // Categorical features column
         std::unique_ptr< std::vector<size_t> > categoricalFeatureCols (
-                new std::vector<size_t>
+                new std::vector<size_t> (countCategoricals)
         );
 
-        size_t countCategoricals = count_categorical_vars;
         for (size_t i = 0; i < countCategoricals; i++) {
-            categoricalFeatureCols->push_back(categorical_vars[i]);
+            categoricalFeatureCols->at(i) = categorical_vars[i];
         }
 
 
         // seed RNG generator
         std::mt19937_64 random_number_generator;
-        random_number_generator.seed(24750371);
+        random_number_generator.seed(seed);
+
 
         // Linear features column
         std::unique_ptr< std::vector<size_t> > linearFeatures (
-                new std::vector<size_t>
+                new std::vector<size_t> (countLinFeats)
         );
 
-        size_t countLinFeat = count_linFeat;
-        for (size_t i = 0; i < countLinFeat; i++) {
-            linearFeatures->push_back(linFeat_idx[i]);
+        for (size_t i = 0; i < countLinFeats; i++) {
+            linearFeatures->at(i) = linFeat_idx[i];
         }
+
 
         // Feature weights for each column
         std::unique_ptr< std::vector<double> > feature_weights (
@@ -98,12 +99,11 @@ extern "C"{
 
         // Feature indecies based on feature_weights
         std::unique_ptr< std::vector<size_t> > feature_weight_vars (
-                new std::vector<size_t>
+                new std::vector<size_t> (countFtWeightVars)
         );
 
-        size_t countFtWeight = count_feat_weight_vars;
-        for (size_t i = 0; i < countFtWeight; i++) {
-            feature_weight_vars->push_back(feat_weight_vars[i]);
+        for (size_t i = 0; i < countFtWeightVars; i++) {
+            feature_weight_vars->at(i) = feat_weight_vars[i];
         }
         
 
@@ -142,12 +142,11 @@ extern "C"{
 
         // symmetric variable indices
         std::unique_ptr< std::vector<size_t> > symmetric_constraints (
-                new std::vector<size_t>
+                new std::vector<size_t> (countSym)
         );
 
-        size_t countSym = countSymmetricIndices;
         for (size_t i = 0; i < countSym; i++) {
-            symmetric_constraints->push_back(symmetricIndices[i]);
+            symmetric_constraints->at(i) = symmetricIndices[i];
         }
 
 

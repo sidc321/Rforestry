@@ -392,7 +392,7 @@ def sample_weights_checker(featureWeights, mtry, ncol):
 
     featureWeightsVariables = [i for i in range(featureWeights.size) if featureWeights[i] > max(featureWeights)*0.001]
     if len(featureWeightsVariables) < mtry:
-        featureWeights = []
+        raise ValueError('mtry is too large. Given the feature weights, can\'t select that many features.')
     
     featureWeightsVariables = np.array(featureWeightsVariables)
     featureWeights = featureWeights / np.sum(featureWeights)
@@ -426,7 +426,7 @@ def preprocess_training(x, y):
         raise ValueError('The dimension of input dataset x doesn\'t match the output vector y.')
 
     # Track the order of all features
-    featureNames = np.array(x.columns)
+    featureNames = x.columns.values
     if featureNames.size == 0:
         warnings.warn('No names are given for each column.')
 
@@ -477,9 +477,9 @@ def preprocess_training(x, y):
 #' @return A preprocessed training dataaset x
 def preprocess_testing (x, categoricalFeatureCols, categoricalFeatureMapping):
     x = pd.DataFrame(x)
-    print(x, categoricalFeatureCols, categoricalFeatureMapping)
+
     # Track the order of all features
-    testingFeatureNames = np.array(x.columns)
+    testingFeatureNames = x.columns.values
     if testingFeatureNames.size == 0:
         warnings.warn('No names are given for each column.')
     
@@ -491,7 +491,7 @@ def preprocess_testing (x, categoricalFeatureCols, categoricalFeatureMapping):
     testingCategoricalFeatureCols = x.columns.get_indexer(testingCategoricalFeatureCols)
 
 
-    if set(categoricalFeatureCols) - set(testingCategoricalFeatureCols):
+    if (set(categoricalFeatureCols) - set(testingCategoricalFeatureCols)) or (set(testingCategoricalFeatureCols) - set(categoricalFeatureCols)):
         raise ValueError('Categorical columns are different between testing and training data.')
 
     # For each categorical feature, encode x into numeric representation
@@ -512,7 +512,7 @@ def preprocess_testing (x, categoricalFeatureCols, categoricalFeatureMapping):
             categoricalFeatureMapping_['uniqueFeatureValues'] = uniqueFeatureValues
             categoricalFeatureMapping_['numericFeatureValues'] = numericFeatureValues
 
-        x[categoricalFeatureCol] = pd.Series(find_match(x.iloc[:, categoricalFeatureCol], uniqueFeatureValues), dtype='category')
+        x.iloc[:, categoricalFeatureCol] = pd.Series(find_match(x.iloc[:, categoricalFeatureCol], uniqueFeatureValues), dtype='category')
     
     # Return transformed data and encoding information
     return x

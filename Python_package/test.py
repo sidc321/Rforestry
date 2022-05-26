@@ -1,8 +1,4 @@
 
-from cmath import nan
-from re import T
-from tempfile import TemporaryDirectory
-from traceback import print_tb
 import numpy as np
 import pandas as pd
 import warnings
@@ -12,7 +8,7 @@ from random import randrange
 import sys
 from forestry import forestry
 import Py_preprocessing
-#from sklearn.ensemble import RandomForestClassifier
+from sklearn.datasets import load_iris
 
 df2 = pd.DataFrame(np.array([[1, 2, 3], [4, 7, 8], [7, 8, 100]]),
                    columns=['a', 'b', 'c'])
@@ -51,24 +47,22 @@ y = [0, 0, 1]
 #     hasNas = False
 # )
 
-# #ONLY NUMERUCAL CATEGORICAL DATA?????
+data = load_iris()
+df = pd.DataFrame(data['data'], columns=data['feature_names'])
+df['target'] = data['target']
+X = df.loc[:, df.columns != 'target']
+y = df['target']
 
-cat1 = pd.Series([1,1,3], dtype='category')
-cat2 = pd.Series(['a', 'b', 'c'])
+art_cat1 = np.concatenate((np.repeat(0, 30), np.repeat(1, 55), np.repeat(2, 15), np.repeat(3, 50)), axis=0)
+art_cat2 = np.concatenate((np.repeat(0, 30), np.repeat(1, 40), np.repeat(2, 30), np.repeat(3, 50)), axis=0)
+np.random.shuffle(art_cat1)
+np.random.shuffle(art_cat2)
 
-df2['cat1'] = cat1
-df2['cat2'] = cat2
-
-
-# fr = forestry(x=df2, y=y, scale=True, linear=True)
-
-
-# co = df2.columns
-# co = np.append(co, 'hey')
-# print(co)
+art_df = pd.DataFrame({'cat1': art_cat2, 'cat2': art_cat2})
+X = pd.concat([X, art_df], axis=1)
 
 fr = forestry(
-    ntree = 500,
+        ntree = 500,
         replace = True,
         sampsize = 3,  #Add a default value.
         sample_fraction = 0.7,
@@ -84,8 +78,8 @@ fr = forestry(
         OOBhonest = False,
         doubleBootstrap = None, #Add a default value.
         seed = randrange(1001),
-        verbose = False,
-        nthread = 0,
+        verbose = True,
+        nthread = 8,
         splitrule = 'variance',
         middleSplit = False,
         maxObs = None,    #Add a default value.
@@ -100,16 +94,12 @@ fr = forestry(
         saveable = True
 )
 
-fr.fit(df2, y,  interactionVariables=[0], symmetric=[1,0,0,1,0])
 
-print(fr.dataframe)
+print("Fitting the forest")
+fr.fit(X, y)
 
 
-# QUESTIONS
+print("Predicting with the forest")
+forest_preds = fr.predict(X)
 
-# 1) we set featureWeights[interactionVariables] = 0 only when featureWeights
-#    is not provided. Shouldn't we always do this? How about for deepFeatureWeights? 
-# 2) should we normalize featureWeights by dividing it by thee total sum?
-# 3) sample_feature_checker feature_variables less than mtry
-# 4) use push_back or not
-# 5) symmetric indices or 0-1
+print(forest_preds)

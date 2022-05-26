@@ -276,7 +276,20 @@ class forestry:
                 'processed_x': None,
                 'y': None,
                 'categoricalFeatureCols_cpp': None,
+                'categoricalFeatureMapping': None,
+                'featureWeights': None,
+                'featureWeightsVariables': None,
+                'deepFeatureWeights': None,
+                'deepFeatureWeightsVariables': None,
+                'observationWeights': None,
+                'symmetric': None,
+                'monotonicConstraints': None,
                 'linearFeatureCols_cpp': None,
+                'groupsMapping': None,
+                'groups': None,
+                'colMeans': None,
+                'colSd': None,
+                'hasNas': None,
                 'nObservations': None,
                 'numColumns': None,
                 'featNames': None
@@ -288,7 +301,6 @@ class forestry:
             self.dataframe = cppDataFrame
             self.processed_dta = processed_dta
             self.Py_forest = Py_forest
-            self.categoricalFeatureMapping = None
             self.ntree = ntree
             self.replace = replace
             self.sampsize = sampsize
@@ -304,24 +316,15 @@ class forestry:
             self.splitratio = splitratio
             self.OOBhonest = OOBhonest
             self.doubleBootstrap = doubleBootstrap
+            self.seed = seed
+            self.verbose = verbose
+            self.nthread = nthread
             self.middleSplit = middleSplit
             self.maxObs = maxObs
-            self.featureWeights = None
-            self.featureWeightsVariables = None
-            self.deepFeatureWeights =  None
-            self.deepFeatureWeightsVariables = None
-            self.observationWeights = None
-            self.hasNas = None
             self.linear = linear
-            self.symmetric = None
-            self.monotonicConstraints = None
             self.monotoneAvg = monotoneAvg
             self.overfitPenalty = overfitPenalty
             self.doubleTree = doubleTree
-            self.groupsMapping = None
-            self.groups = None
-            self.colMeans = None
-            self.colSd = None
             self.scale = scale
             self.minTreesPerGroup = minTreesPerGroup
 
@@ -454,6 +457,7 @@ class forestry:
         if categoricalFeatureCols_cpp.size != 0:
             monotonicConstraints[categoricalFeatureCols_cpp] = 0
         
+
         if self.scale:
             for col_idx in range(ncol):
                 if col_idx not in categoricalFeatureCols_cpp:
@@ -478,45 +482,218 @@ class forestry:
         if idxs.size != 0:
             symmetricIndex = idxs[0]  
 
-        
-        # cpp linking
+        isSymmetric = symmetricIndex == -1
 
+        # cpp linking
+        X = pd.concat([processed_x, pd.Series(y)], axis=1)
         self.dataframe = ctypes.c_void_p(lib.get_data(
-            lib_setup.get_data_pointer(processed_x, y),
-            lib_setup.get_array_pointer(categoricalFeatureCols_cpp, dtype=np.intc), categoricalFeatureCols_cpp.size,
-            lib_setup.get_array_pointer(linFeats, dtype=np.intc), linFeats.size,
+            lib_setup.get_data_pointer(X),
+            lib_setup.get_array_pointer(categoricalFeatureCols_cpp, dtype=np.ulonglong), categoricalFeatureCols_cpp.size,
+            lib_setup.get_array_pointer(linFeats, dtype=np.ulonglong), linFeats.size,
             lib_setup.get_array_pointer(featureWeights, dtype=np.double),
-            lib_setup.get_array_pointer(featureWeightsVariables, dtype=np.intc), featureWeightsVariables.size,
+            lib_setup.get_array_pointer(featureWeightsVariables, dtype=np.ulonglong), featureWeightsVariables.size,
             lib_setup.get_array_pointer(observationWeights, dtype=np.double),
             lib_setup.get_array_pointer(monotonicConstraints, dtype=np.intc),
-            lib_setup.get_array_pointer(groupVector, dtype=np.intc),
+            lib_setup.get_array_pointer(groupVector, dtype=np.ulonglong),
             self.monotoneAvg,
-            lib_setup.get_array_pointer(symmetric, dtype=np.intc), symmetric.size,
-            nrow, ncol+1
+            lib_setup.get_array_pointer(symmetric, dtype=np.ulonglong), symmetric.size,
+            nrow, ncol+1,
+            self.seed
         ))
 
-
+        self.forest = ctypes.c_void_p(lib.train_forest(
+            self.dataframe,
+            self.ntree,
+            self.replace,
+            self.sampsize,
+            self.splitratio,
+            self.OOBhonest,
+            self.doubleBootstrap,
+            self.mtry,
+            self.nodesizeSpl,
+            self.nodesizeAvg,
+            self.nodesizeStrictSpl,
+            self.nodesizeStrictAvg,
+            self.minSplitGain,
+            self.maxDepth,
+            self.interactionDepth,
+            self.seed,
+            self.nthread,
+            self.verbose,
+            self.middleSplit,
+            self.maxObs,
+            self.minTreesPerGroup,
+            hasNas,
+            self.linear,
+            isSymmetric,
+            self.overfitPenalty,
+            self.doubleTree
+        ))
         
         # Update the fields 
 
         self.processed_dta['processed_x'] = processed_x
         self.processed_dta['y'] = y
         self.processed_dta['categoricalFeatureCols_cpp'] = categoricalFeatureCols_cpp
+        self.processed_dta['categoricalFeatureMapping'] = categoricalFeatureMapping
+        self.processed_dta['featureWeights'] = featureWeights
+        self.processed_dta['featureWeightsVariables'] = featureWeightsVariables
+        self.processed_dta['deepFeatureWeights'] = deepFeatureWeights
+        self.processed_dta['deepFeatureWeightsVariables'] = deepFeatureWeightsVariables
+        self.processed_dta['observationWeights'] = observationWeights
+        self.processed_dta['symmetric'] = symmetric
+        self.processed_dta['monotonicConstraints'] = monotonicConstraints
         self.processed_dta['linearFeatureCols_cpp'] = linFeats
+        self.processed_dta['groupsMapping'] = groupsMapping
+        self.processed_dta['groups'] = groups
+        self.processed_dta['colMeans'] = colMeans
+        self.processed_dta['colSd'] = colSd
+        self.processed_dta['hasNas'] = hasNas
         self.processed_dta['nObservations'] = nrow
         self.processed_dta['numColumns'] = ncol
         self.processed_dta['featNames'] = featNames
+
+
+
+    # -- Predict Method ------------------------------------------------------------
+    #' predict-forestry
+    #' @name predict-forestry
+    #' @rdname predict-forestry
+    #' @description Return the prediction from the forest.
+    #' @param object A `forestry` object.
+    #' @param newdata A data frame of testing predictors.
+    #' @param aggregation How the individual tree predictions are aggregated:
+    #'   `average` returns the mean of all trees in the forest; `terminalNodes` also returns
+    #'   the weightMatrix, as well as "terminalNodes", a matrix where
+    #'   the ith entry of the jth column is the index of the leaf node to which the
+    #'   ith observation is assigned in the jth tree; and "sparse", a matrix
+    #'   where the ith entry in the jth column is 1 if the ith observation in
+    #'   newdata is assigned to the jth leaf and 0 otherwise. In each tree the
+    #'   leaves are indexed using a depth first ordering, and, in the "sparse"
+    #'   representation, the first leaf in the second tree has column index one more than
+    #'   the number of leaves in the first tree and so on. So, for example, if the
+    #'   first tree has 5 leaves, the sixth column of the "sparse" matrix corresponds
+    #'   to the first leaf in the second tree.
+    #'   `oob` returns the out-of-bag predictions for the forest. We assume
+    #'   that the ordering of the observations in newdata have not changed from
+    #'   training. If the ordering has changed, we will get the wrong OOB indices.
+    #'   `doubleOOB` is an experimental flag, which can only be used when OOBhonest = TRUE
+    #'   and doubleBootstrap = TRUE. When both of these settings are on, the
+    #'   splitting set is selected as a bootstrap sample of observations and the
+    #'   averaging set is selected as a bootstrap sample of the observations which
+    #'   were left out of bag during the splitting set selection. This leaves a third
+    #'   set which is the observations which were not selected in either bootstrap sample.
+    #'   This predict flag gives the predictions using- for each observation- only the trees
+    #'   in which the observation fell into this third set (so was neither a splitting
+    #'   nor averaging example).
+    #'   `coefs` is an aggregation option which works only when linear aggregation
+    #'   functions have been used. This returns the linear coefficients for each
+    #'   linear feature which were used in the leaf node regression of each predicted
+    #'   point.
+    #' @param seed random seed
+    #' @param nthread The number of threads with which to run the predictions with.
+    #'   This will default to the number of threads with which the forest was trained
+    #'   with.
+    #' @param exact This specifies whether the forest predictions should be aggregated
+    #'   in a reproducible ordering. Due to the non-associativity of floating point
+    #'   addition, when we predict in parallel, predictions will be aggregated in
+    #'   varied orders as different threads finish at different times.
+    #'   By default, exact is TRUE unless N > 100,000 or a custom aggregation
+    #'   function is used.
+    #' @param trees A vector of indices in the range 1:ntree which tells
+    #'   predict which trees in the forest to use for the prediction. Predict will by
+    #'   default take the average of all trees in the forest, although this flag
+    #'   can be used to get single tree predictions, or averages of diffferent trees
+    #'   with different weightings. Duplicate entries are allowed, so if trees = c(1,2,2)
+    #'   this will predict the weighted average prediction of only trees 1 and 2 weighted by:
+    #'   predict(..., trees = c(1,2,2)) = (predict(..., trees = c(1)) +
+    #'                                      2*predict(..., trees = c(2))) / 3.
+    #'   note we must have exact = TRUE, and aggregation = "average" to use tree indices.
+    #' @param weightMatrix An indicator of whether or not we should also return a
+    #'   matrix of the weights given to each training observation when making each
+    #'   prediction. When getting the weight matrix, aggregation must be one of
+    #'   `average`, `oob`, and `doubleOOB`.
+    #' @param ... additional arguments.
+    #' @return A vector of predicted responses.
+    #' @export  
+
+    def predict(self, newdata=None, aggregation = 'average', seed = None, nthread = 8, exact = None, trees = None, weightMatrix = False):
+        if (newdata is None) and not (aggregation == 'oob' or aggregation == 'doubleOOB'):
+            raise ValueError('When using an aggregation that is not oob or doubleOOB, one must supply newdata')
+
+        if (not self.linear) and aggregation == 'coefs':
+            raise ValueError('Aggregation can only be linear with setting the parameter linear = TRUE.')
+
+
+        # Preprocess the data. We only run the data checker if ridge is turned on,
+        # because even in the case where there were no NAs in train, we still want to predict.
+
+        if newdata is not None:
+            Py_preprocessing.forest_checker(self)
+
+            if not (isinstance(newdata, pd.DataFrame) or type(newdata).__module__ == np.__name__ or isinstance(newdata, list) or isinstance(newdata, pd.Series)):
+                raise AttributeError('newdata must be a Pandas DataFrame, a numpy array, a Pandas Series, or a regular list')
+
+            newdata = pd.DataFrame(newdata)
+            newdata = Py_preprocessing.testing_data_checker(self, newdata, self.processed_dta['hasNas'])
+            
+            processed_x = Py_preprocessing.preprocess_testing(newdata, self.processed_dta['categoricalFeatureCols_cpp'], self.processed_dta['categoricalFeatureMapping'])
+
+        # Set exact aggregation method if nobs < 100,000 and average aggregation
+        if exact is None:
+            if (newdata is not None) and len(newdata.index) > 1e5:
+                exact = False
+            else:
+                exact = True
+    
+        # We can only use tree aggregations if exact = TRUE and aggregation = "average"
+        if (trees is not None) and ((not exact) or (aggregation != 'average')):
+            raise ValueError('When using tree indices, we must have exact = True and aggregation = \'average\' ')
+
+        if any((not isinstance(i, int)) or (i < 0) or (i >= self.ntree) for i in trees):
+            raise ValueError('trees must contain indices which are integers between 1 and ntree')
+
+        # If trees are being used, we need to convert them into a weight vector
+        tree_weights = np.repeat(0, self.ntree)
+        if trees is not None:
+            for i in range(len(trees)):
+                tree_weights[trees[i]] += 1
+            use_weights = True
+        else:
+            use_weights = False
+
+
+        # If option set to terminalNodes, we need to make matrix of ID's
+        if aggregation == 'oob':
+
+            if (newdata is not None) and (self.processed_dta['nObservations'] != len(newdata.index)):
+                warnings.warn('Attempting to do OOB predictions on a dataset which doesn\'t match the training data!')
+                return None
+
+            if newdata is None:
+                #Cpp oob prediction
+                pass
+
+            else:
+                #Cpp
+                pass
         
-        self.categoricalFeatureMapping = categoricalFeatureMapping
-        self.featureWeights = featureWeights
-        self.featureWeightsVariables = featureWeightsVariables
-        self.deepFeatureWeights =  deepFeatureWeights
-        self.deepFeatureWeightsVariables = deepFeatureWeightsVariables
-        self.observationWeights = observationWeights
-        self.hasNas = hasNas
-        self.symmetric = symmetric
-        self.monotonicConstraints = monotonicConstraints
-        self.groupsMapping = groupsMapping
-        self.groups = groups
-        self.colMeans = colMeans
-        self.colSd = colSd
+
+        forest_preds = ctypes.c_void_p(lib.predict_forest(
+            self.forest,
+            self.dataframe,
+            lib_setup.get_data_pointer(processed_x),
+            len(processed_x.index),
+            self.verbose
+        ))
+
+        res = np.empty(len(processed_x.index))
+        for i in range(len(processed_x.index)):
+            res[i] = lib.vector_get(forest_preds, i)
+        
+        return res
+
+
+
+
+#make linFeats same as symmetric...

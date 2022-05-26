@@ -14,20 +14,21 @@ print(forestry)
 #Setting up argument types and result types 
 forestry.get_data.argtypes = [
     ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
-    ctypes.POINTER(ctypes.c_int),
-    ctypes.c_int,
-    ctypes.POINTER(ctypes.c_int),
-    ctypes.c_int,
+    ctypes.POINTER(ctypes.c_size_t),
+    ctypes.c_size_t,
+    ctypes.POINTER(ctypes.c_size_t),
+    ctypes.c_size_t,
+    ctypes.POINTER(ctypes.c_double),
+    ctypes.POINTER(ctypes.c_size_t),
+    ctypes.c_size_t,
     ctypes.POINTER(ctypes.c_double),
     ctypes.POINTER(ctypes.c_int),
-    ctypes.c_int,
-    ctypes.POINTER(ctypes.c_double),
-    ctypes.POINTER(ctypes.c_int),
-    ctypes.POINTER(ctypes.c_int),
+    ctypes.POINTER(ctypes.c_size_t),
     ctypes.c_bool,
-    ctypes.POINTER(ctypes.c_int),
-    ctypes.c_int,
-    ctypes.c_int, 
+    ctypes.POINTER(ctypes.c_size_t),
+    ctypes.c_size_t,
+    ctypes.c_size_t, 
+    ctypes.c_size_t,
     ctypes.c_int
     ]
 forestry.get_data.restype =  ctypes.c_void_p
@@ -144,16 +145,16 @@ class Forestry:
         array = np.ascontiguousarray(X.values[:,:], np.double)
         ct_ptr = get_data_pointer(array)
 
-        categoricalFeatureCols_arr = np.ascontiguousarray(categoricalFeatureCols, np.intc)
+        categoricalFeatureCols_arr = np.ascontiguousarray(categoricalFeatureCols, np.ulonglong)
         categoricalFeatureCols_ptr = np.ctypeslib.as_ctypes(categoricalFeatureCols_arr)
 
-        linearFeatures_arr = np.ascontiguousarray(linearFeatures, np.intc)
+        linearFeatures_arr = np.ascontiguousarray(linearFeatures, np.ulonglong)
         linearFeatures_ptr = np.ctypeslib.as_ctypes(linearFeatures_arr)
 
         featureWeights_arr = np.ascontiguousarray(featureWeights, np.double)
         featureWeights_ptr = np.ctypeslib.as_ctypes(featureWeights_arr)
 
-        featureWeightsVars_arr = np.ascontiguousarray(featureWeightsVars, np.intc)
+        featureWeightsVars_arr = np.ascontiguousarray(featureWeightsVars, np.ulonglong)
         featureWeightsVars_ptr = np.ctypeslib.as_ctypes(featureWeightsVars_arr)
 
         obsWeights_arr = np.ascontiguousarray(obsWeights, np.double)
@@ -162,10 +163,10 @@ class Forestry:
         monotone_constr_arr = np.ascontiguousarray(monotone_constr, np.intc)
         monotone_constr_ptr = np.ctypeslib.as_ctypes(monotone_constr_arr)
 
-        groups_arr = np.ascontiguousarray(groups, np.intc)
+        groups_arr = np.ascontiguousarray(groups, np.ulonglong)
         groups_ptr = np.ctypeslib.as_ctypes(groups_arr)
 
-        symmetricIndices_arr = np.ascontiguousarray(symmetricIndices, np.intc)
+        symmetricIndices_arr = np.ascontiguousarray(symmetricIndices, np.ulonglong)
         symmetricIndices_ptr = np.ctypeslib.as_ctypes(symmetricIndices_arr)
 
         data_pr = ctypes.c_void_p(forestry.get_data(
@@ -179,7 +180,8 @@ class Forestry:
             groups_ptr,
             monotoneAvg,
             symmetricIndices_ptr, symmetricIndices_arr.size,
-            array.shape[0], array.shape[1]
+            array.shape[0], array.shape[1],
+            self.seed
             ))
 
 
@@ -263,10 +265,8 @@ X = pd.concat([X, pd.Series(art_cat1)], axis=1)
 X = pd.concat([X, pd.Series(art_cat2)], axis=1)
 
 # !!!MINSPLITGAIN minTreesPerGroup BUG!!!
-# Using push_back?
 
-
-fr = Forestry(5, replace=True, splitRatio=0.5, OOBhonest=True, doubleBootstrap=True, mtry=4, minNodeSizeSpt=4, minNodeSizeToSplitSpt=4, maxDepth=20, seed=729, nthread=4, verbose=False, maxObs=160, linear=True, overfitPenalty=10, doubleTree=True)
+fr = Forestry(5, replace=True, splitRatio=0.5, OOBhonest=True, doubleBootstrap=True, mtry=4, minNodeSizeSpt=4, minNodeSizeToSplitSpt=4, maxDepth=20, seed=729, nthread=1, verbose=True, maxObs=160, linear=True, overfitPenalty=10, doubleTree=True)
 
 print("Fitting the forest")
 fr.fit(X, y, categoricalFeatureCols=np.array([4,5]), linearFeatures=np.arange(6), featureWeights=(np.array([0.1,0.2,0.2,0.3,0.1,0.1])), featureWeightsVars=[0,1,2,3,4], obsWeights=np.repeat(1/150, 150), monotone_constr=np.repeat(0,6), groups=np.repeat(0,150), monotoneAvg=False, symmetricIndices=[1])
