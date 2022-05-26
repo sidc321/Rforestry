@@ -11,8 +11,7 @@ std::mutex mutex_weightMatrix;
 
 
 RFNode::RFNode():
-  _averagingSampleIndex(nullptr), _splittingSampleIndex(nullptr),
-  _splitFeature(0), _splitValue(0),_trinary(false),
+  _splitFeature(0), _splitValue(0),_trinary(false), _predictWeight(std::numeric_limits<double>::quiet_NaN()),
   _leftChild(nullptr),_rightChild(nullptr),_naLeftCount(0), _naRightCount(0),
   _averageCount(0), _splitCount(0) {}
 
@@ -21,26 +20,25 @@ RFNode::~RFNode() {
 };
 
 void RFNode::setLeafNode(
-  std::unique_ptr< std::vector<size_t> > averagingSampleIndex,
-  std::unique_ptr< std::vector<size_t> > splittingSampleIndex,
+  size_t averagingSampleIndexSize,
+  size_t splittingSampleIndexSize,
   size_t nodeId,
   bool trinary,
-  std::vector<double> weights
+  std::vector<double> weights,
+  double predictWeight
 ) {
-  if (
-      (*averagingSampleIndex).size() == 0 &&
-        (*splittingSampleIndex).size() == 0
-  ) {
-    throw std::runtime_error("Intend to create an empty node.");
-  }
+
   // Give the ownership of the index pointer to the RFNode object
   this->_naLeftCount = 0;
   this->_naRightCount = 0;
   this->_nodeId = nodeId;
-  this->_averagingSampleIndex = std::move(averagingSampleIndex);
-  this->_averageCount = (*_averagingSampleIndex).size();
-  this->_splittingSampleIndex = std::move(splittingSampleIndex);
-  this->_splitCount = (*_splittingSampleIndex).size();
+
+  this->_averageCount = averagingSampleIndexSize;
+  this->_splitCount = splittingSampleIndexSize;
+
+  // Set the prediction weight for the node
+  this->_predictWeight = predictWeight;
+
   if (trinary) {
     this->_trinary = trinary;
     this->_weights = weights;
@@ -70,6 +68,52 @@ void RFNode::setSplitNode(
   _nodeId = -1;
 }
 
+void RFNode::setRidgeCoefficients(
+        std::vector<size_t>* averagingIndices,
+        DataFrame* trainingData,
+        double lambda
+ ) {
+
+    //Observations to do regression with
+    std::vector<size_t>* leafObs = averagingIndices;
+
+    //Number of linear features in training data
+    size_t dimension = (trainingData->getLinObsData((*leafObs)[0])).size();
+
+    arma::Mat<double> x(leafObs->size(),
+                        dimension + 1);
+
+    arma::Mat<double> identity(dimension + 1,
+                               dimension + 1);
+    identity.eye();
+
+    //Don't penalize intercept
+    identity(dimension, dimension) = 0.0;
+
+    std::vector<double> outcomePoints;
+    std::vector<double> currentObservation;
+
+    //Contruct X and outcome vector
+    for (size_t i = 0; i < leafObs->size(); i++) {
+        currentObservation = trainingData->getLinObsData((*leafObs)[i]);
+        currentObservation.push_back(1.0);
+
+        x.row(i) = arma::conv_to<arma::Row<double> >::from(currentObservation);
+
+        outcomePoints.push_back(trainingData->getOutcomePoint((*leafObs)[i]));
+    }
+
+    arma::Mat<double> y(outcomePoints.size(),
+                        1);
+    y.col(0) = arma::conv_to<arma::Col<double> >::from(outcomePoints);
+
+    //Compute XtX + lambda * I * Y = C
+    arma::Mat<double> coefficients = (x.t() * x +
+                                      identity * lambda).i() * x.t() * y;
+
+    this->_ridgeCoefficients = coefficients;
+}
+
 void RFNode::ridgePredict(
   std::vector<double> &outputPrediction,
   std::vector< std::vector<double> > &outputCoefficients,
@@ -79,43 +123,12 @@ void RFNode::ridgePredict(
   double lambda
 ) {
 
+    //Number of linear features in training data
+    size_t dimension = (trainingData->getLinObsData(0)).size();
 
-  //Observations to do regression with
-  std::vector<size_t>* leafObs = getAveragingIndex();
+    // Pull the ridge regression coefficients
+    arma::Mat<double> coefficients = getRidgeCoefficients();
 
-  //Number of linear features in training data
-  size_t dimension = (trainingData->getLinObsData((*leafObs)[0])).size();
-
-  arma::Mat<double> x(leafObs->size(),
-                     dimension + 1);
-
-  arma::Mat<double> identity(dimension + 1,
-                             dimension + 1);
-  identity.eye();
-
-  //Don't penalize intercept
-  identity(dimension, dimension) = 0.0;
-
-  std::vector<double> outcomePoints;
-  std::vector<double> currentObservation;
-
-  //Contruct X and outcome vector
-  for (size_t i = 0; i < leafObs->size(); i++) {
-    currentObservation = trainingData->getLinObsData((*leafObs)[i]);
-    currentObservation.push_back(1.0);
-
-    x.row(i) = arma::conv_to<arma::Row<double> >::from(currentObservation);
-
-    outcomePoints.push_back(trainingData->getOutcomePoint((*leafObs)[i]));
-  }
-
-  arma::Mat<double> y(outcomePoints.size(),
-                      1);
-  y.col(0) = arma::conv_to<arma::Col<double> >::from(outcomePoints);
-
-  //Compute XtX + lambda * I * Y = C
-  arma::Mat<double> coefficients = (x.t() * x +
-                                  identity * lambda).i() * x.t() * y;
 
   //Map xNew into Eigen matrix
   arma::Mat<double> xn(updateIndex->size(),
@@ -191,6 +204,8 @@ void RFNode::predict(
           predictedMean = std::numeric_limits<double>::quiet_NaN();
         } else if (getTrinary()) {
           predictedMean = 0;
+        } else if (!std::isnan(getPredictWeight())) {
+          predictedMean = getPredictWeight();
         } else {
           predictedMean = (*trainingData).partitionMean(getAveragingIndex());
         }
