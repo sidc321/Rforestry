@@ -100,6 +100,6 @@ fr.fit(X, y)
 
 
 print("Predicting with the forest")
-forest_preds = fr.predict(X)
+forest_preds = fr.predict(aggregation='oob')
 
 print(forest_preds)

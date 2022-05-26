@@ -63,8 +63,23 @@ def setup_lib(lib):
     # set up the predict_forest function
     lib.predict_forest.argtypes = [ctypes.c_void_p, ctypes.c_void_p, 
                                         ctypes.POINTER(ctypes.POINTER(ctypes.c_double)), 
-                                        ctypes.c_int, ctypes.c_bool]
+                                        ctypes.c_uint,
+                                        ctypes.c_size_t,
+                                        ctypes.c_bool,
+                                        ctypes.c_bool,
+                                        ctypes.c_void_p,
+                                        ctypes.c_int, 
+                                        ctypes.c_bool]
     lib.predict_forest.restype =  ctypes.c_void_p
+
+    # set up the predictOOB_forest function
+    lib.predictOOB_forest.argtypes = [ctypes.c_void_p, ctypes.c_void_p, 
+                                        ctypes.POINTER(ctypes.POINTER(ctypes.c_double)), 
+                                        ctypes.c_bool,
+                                        ctypes.c_bool,
+                                        ctypes.c_int,
+                                        ctypes.c_bool]
+    lib.predictOOB_forest.restype =  ctypes.c_void_p
 
 
     # set up the vector_get function

@@ -617,7 +617,7 @@ class forestry:
     #' @return A vector of predicted responses.
     #' @export  
 
-    def predict(self, newdata=None, aggregation = 'average', seed = None, nthread = 8, exact = None, trees = None, weightMatrix = False):
+    def predict(self, newdata=None, aggregation = 'oob', seed = randrange(1001), nthread = 0, exact = None, trees = None, weightMatrix = False):
         if (newdata is None) and not (aggregation == 'oob' or aggregation == 'doubleOOB'):
             raise ValueError('When using an aggregation that is not oob or doubleOOB, one must supply newdata')
 
@@ -647,11 +647,12 @@ class forestry:
                 exact = True
     
         # We can only use tree aggregations if exact = TRUE and aggregation = "average"
-        if (trees is not None) and ((not exact) or (aggregation != 'average')):
-            raise ValueError('When using tree indices, we must have exact = True and aggregation = \'average\' ')
+        if trees is not None:
+          if (not exact) or (aggregation != 'average'):
+              raise ValueError('When using tree indices, we must have exact = True and aggregation = \'average\' ')
 
-        if any((not isinstance(i, int)) or (i < 0) or (i >= self.ntree) for i in trees):
-            raise ValueError('trees must contain indices which are integers between 1 and ntree')
+          if any((not isinstance(i, int)) or (i < 0) or (i >= self.ntree) for i in trees):
+              raise ValueError('trees must contain indices which are integers between 0 and ntree')
 
         # If trees are being used, we need to convert them into a weight vector
         tree_weights = np.repeat(0, self.ntree)
@@ -663,6 +664,8 @@ class forestry:
             use_weights = False
 
 
+        nPreds = len(processed_x.index) if newdata is not None else self.processed_dta['nObservations']
+
         # If option set to terminalNodes, we need to make matrix of ID's
         if aggregation == 'oob':
 
@@ -671,24 +674,75 @@ class forestry:
                 return None
 
             if newdata is None:
-                #Cpp oob prediction
-                pass
+                forest_preds = ctypes.c_void_p(lib.predictOOB_forest(
+                    self.forest,
+                    self.dataframe,
+                    lib_setup.get_data_pointer(self.processed_dta['processed_x']),
+                    False,
+                    exact,
+                    nPreds,
+                    self.verbose
+                ))
 
             else:
-                #Cpp
-                pass
+                forest_preds = ctypes.c_void_p(lib.predictOOB_forest(
+                    self.forest,
+                    self.dataframe,
+                    lib_setup.get_data_pointer(processed_x),
+                    False,
+                    exact,
+                    nPreds,
+                    self.verbose
+                ))
+
+        elif aggregation == 'doubleOOB':
+
+            if (newdata is not None) and (len(processed_x.index) != self.processed_dta['nObservations']):
+                raise ValueError('Attempting to do OOB predictions on a dataset which doesn\'t match the training data!')
+
+            if not self.doubleBootstrap:
+                raise ValueError('Attempting to do double OOB predictions with a forest that was not trained with doubleBootstrap = TRUE')
+
+            if newdata is None:
+                forest_preds = ctypes.c_void_p(lib.predictOOB_forest(
+                    self.forest,
+                    self.dataframe,
+                    lib_setup.get_data_pointer(self.processed_dta['processed_x']),
+                    True,
+                    exact,
+                    nPreds,
+                    self.verbose
+                ))
+
+            else:
+                forest_preds = ctypes.c_void_p(lib.predictOOB_forest(
+                    self.forest,
+                    self.dataframe,
+                    lib_setup.get_data_pointer(processed_x),
+                    False,
+                    exact,
+                    len(processed_x.index),
+                    self.verbose
+                ))
+
         
+        else:
+            forest_preds = ctypes.c_void_p(lib.predict_forest(
+                self.forest,
+                self.dataframe,
+                lib_setup.get_data_pointer(processed_x),
+                seed,
+                nthread,
+                exact,
+                use_weights,
+                lib_setup.get_array_pointer(tree_weights, dtype=np.ulonglong),
+                len(processed_x.index),
+                self.verbose
+            ))
 
-        forest_preds = ctypes.c_void_p(lib.predict_forest(
-            self.forest,
-            self.dataframe,
-            lib_setup.get_data_pointer(processed_x),
-            len(processed_x.index),
-            self.verbose
-        ))
 
-        res = np.empty(len(processed_x.index))
-        for i in range(len(processed_x.index)):
+        res = np.empty(nPreds)
+        for i in range(nPreds):
             res[i] = lib.vector_get(forest_preds, i)
         
         return res

@@ -240,6 +240,11 @@ extern "C"{
             void* forest_pt,
             void* dataframe_pt,
             double** test_data,
+            unsigned int seed,
+            size_t nthread,
+            bool exact,
+            bool use_weights,
+            size_t* tree_weights,
             int num_test_rows,
             bool verbose
     ){
@@ -272,20 +277,93 @@ extern "C"{
         }
 
 
+        // tree_weights vector
+        std::vector<size_t>* weights (
+                new std::vector<size_t>(forest->getMtry())
+        );
+
+        for (size_t i = 0; i < forest->getMtry(); i++)
+        {
+                weights->at(i) = tree_weights[i];
+        }
+        
+
+
         std::vector<double>* testForestPrediction = forest->predict(
                 predi_data,
                 nullptr,
                 nullptr,
                 nullptr,
-                1,
-                0,
-                true,
-                false,
-                nullptr
+                seed,
+                nthread,
+                exact,
+                use_weights,
+                weights
         );
 
         return testForestPrediction;
     }
+
+
+
+        std::vector<double>* predictOOB_forest(
+            void* forest_pt,
+            void* dataframe_pt,
+            double** test_data,
+            bool doubleOOB,
+            bool exact,
+            int num_test_rows,
+            bool verbose
+    ){
+        if (verbose)
+            std::cout << forest_pt << std::endl;
+
+        forestry* forest = reinterpret_cast<forestry *>(forest_pt);
+        DataFrame* dta_frame = reinterpret_cast<DataFrame *>(dataframe_pt);
+
+        forest->_trainingData = dta_frame;
+
+        // Create Data
+        std::vector<std::vector<double>> data_numpy;
+
+
+        for (int j = 0; j<dta_frame->getNumColumns(); j++) {
+            std::vector<double> col;
+            for (int i = 0; i<num_test_rows; i++){
+                col.push_back(test_data[i][j]);
+            }
+            data_numpy.push_back(col);
+        }
+
+        std::vector< std::vector<double> >* predi_data (
+                new std::vector< std::vector<double> >
+                );
+
+        for (size_t i = 0; i < dta_frame->getNumColumns(); i++) {
+            predi_data->push_back(data_numpy[i]);
+        }
+        
+
+
+        std::vector<double> testForestPredictionOOB = forest->predictOOB(
+                predi_data,
+                nullptr,
+                doubleOOB,
+                exact
+        );
+
+        std::vector<double>* preds (
+                new std::vector<double>(num_test_rows)
+        ) ;
+
+        for (size_t i = 0; i < num_test_rows; i++){
+                preds->at(i) = testForestPredictionOOB[i];
+        }
+        
+
+        return preds;
+    }
+
 
 }
 
