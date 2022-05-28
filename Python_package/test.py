@@ -75,8 +75,8 @@ fr = forestry(
         maxDepth = None,  #Add a default value.
         interactionDepth = None,   #Add a default value.
         splitratio = 1,
-        OOBhonest = False,
-        doubleBootstrap = None, #Add a default value.
+        OOBhonest = True,
+        doubleBootstrap = True, #Add a default value.
         seed = randrange(1001),
         verbose = True,
         nthread = 8,
@@ -103,3 +103,7 @@ print("Predicting with the forest")
 forest_preds = fr.predict(aggregation='oob')
 
 print(forest_preds)
+
+print(fr.getVI())
+
+print(fr.getCI(X, method='OOB-conformal'))

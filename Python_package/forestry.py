@@ -617,7 +617,7 @@ class forestry:
     #' @return A vector of predicted responses.
     #' @export  
 
-    def predict(self, newdata=None, aggregation = 'oob', seed = randrange(1001), nthread = 0, exact = None, trees = None, weightMatrix = False):
+    def predict(self, newdata=None, aggregation = 'average', seed = randrange(1001), nthread = 0, exact = None, trees = None, weightMatrix = False):
         if (newdata is None) and not (aggregation == 'oob' or aggregation == 'doubleOOB'):
             raise ValueError('When using an aggregation that is not oob or doubleOOB, one must supply newdata')
 
@@ -652,6 +652,7 @@ class forestry:
               raise ValueError('When using tree indices, we must have exact = True and aggregation = \'average\' ')
 
           if any((not isinstance(i, int)) or (i < 0) or (i >= self.ntree) for i in trees):
+              print(type(trees[0]))
               raise ValueError('trees must contain indices which are integers between 0 and ntree')
 
         # If trees are being used, we need to convert them into a weight vector
@@ -748,6 +749,221 @@ class forestry:
         return res
 
 
+    # -- Calculate OOB Error -------------------------------------------------------
+    #' getOOB-forestry
+    #' @name getOOB-forestry
+    #' @rdname getOOB-forestry
+    #' @description Calculate the out-of-bag error of a given forest. This is done
+    #' by using the out-of-bag predictions for each observation, and calculating the
+    #' MSE over the entire forest.
+    #' @param object A `forestry` object.
+    #' @param noWarning flag to not display warnings
+    #' @aliases getOOB,forestry-method
+    #' @return The OOB error of the forest.
+    def getOOB(self, noWarning=False):
+        # TODO (all): find a better threshold for throwing such warning. 25 is
+        # currently set up arbitrarily.
+        Py_preprocessing.forest_checker(self)
+        if (not self.replace) and (self.ntree*(self.processed_dta['nObservations'] - self.sampsize)) < 10:
+            if not noWarning:
+                warnings.warn('Samples are drawn without replacement and sample size is too big!')
+            return None
 
+        preds = self.predict(newdata=None, aggregation='oob', exact=True)
+        preds = preds[~np.isnan(preds)]
+
+        # Only calc mse on non missing predictions
+        y_true = self.processed_dta['y']
+        y_true = y_true[~np.isnan(y_true)]
+
+        if self.scale:
+            y_true = y_true * self.processed_dta['colSd'][-1] + self.processed_dta['colMeans'][-1]
+        
+        return np.mean((y_true - preds)**2)
+
+
+    # -- Calculate Splitting Proportions -------------------------------------------
+    #' getSplitProps-forestry
+    #' @name getSplitProps-forestry
+    #' @rdname getSplitProps-forestry
+    #' @description Retrieves the proportion of splits for each feature in the given
+    #'  forestry object. These proportions are calculated as the number of splits
+    #'  on feature i in the entire forest over total the number of splits in the
+    #'  forest.
+    #' @param object A trained model object of class "forestry".
+    #' @return A vector of length equal to the number of columns
+    #' @seealso \code{\link{forestry}}
+    def getSplitProps(self):
+        pass
+
+
+
+    # -- Calculate Variable Importance ---------------------------------------------
+    #' getVI-forestry
+    #' @rdname getVI-forestry
+    #' @description Calculate the percentage increase in OOB error of the forest
+    #'  when each feature is shuffled.
+    #' @param object A `forestry` object.
+    #' @param noWarning flag to not display warnings
+    #' @note No seed is passed to this function so it is
+    #'   not possible in the current implementation to replicate the vector
+    #'   permutations used when measuring feature importance.
+    #' @return The variable importance of the forest.
+    #' @export
+    def getVI(self, noWarning=False):
+        Py_preprocessing.forest_checker(self)
+        if (not self.replace) and (self.ntree*(self.processed_dta['nObservations'] - self.sampsize)) < 10:
+            if not noWarning:
+                warnings.warn('Samples are drawn without replacement and sample size is too big!')
+            return None
+
+        cppVI = ctypes.c_void_p(lib.getVI(self.forest))
+
+        res = np.empty(self.processed_dta['numColumns'])
+        for i in range(self.processed_dta['numColumns']):
+            res[i] = lib.vector_get(cppVI, i)
+        
+        return res
+
+
+
+    # -- Calculate Confidence Interval estimates for a new feature -----------------
+    #' getCI-forestry
+    #' @rdname getCI-forestry
+    #' @description For a new set of features, calculate the confidence intervals
+    #'  for each new observation.
+    #' @param object A `forestry` object.
+    #' @param newdata A set of new observations for which we want to predict the
+    #'  outcomes and use confidence intervals.
+    #' @param level The confidence level at which we want to make our intervals. Default
+    #'  is to use .95 which corresponds to 95 percentile confidence intervals.
+    #' @param B Number of bootstrap draws to use when using method = "OOB-bootstrap"
+    #' @param method A flag for the different ways to create the confidence intervals.
+    #'  Right now we have two ways of doing this. One is the `OOB-bootstrap` flag which
+    #'  uses many bootstrap pulls from the set of OOB trees then with these different
+    #'  pulls, we use the set of trees to predict for the new feature and give the
+    #'  confidence set over the many bootstrap draws. The other method- `OOB-conformal`-
+    #'  creates intervals by taking the set of doubleOOB trees for each observation, and
+    #'  using the predictions of these trees to give conformal intervals. So for an
+    #'  observation obs_i, let S_i be the set of trees for which obs_i was in neither
+    #'  the splitting set nor the averaging set (or the set of trees for which obs_i
+    #'  was "doubleOOB"), we then predict for obs_i with only the trees in S_i.
+    #'  doubleOOB_tree_preds <- predict(S_i, obs_i):
+    #'  Then CI(obs_i, alpha = .95) = quantile(doubleOOB_tree_preds - y_i, probs = .95).
+    #'  The `local-conformal` option takes the residuals of each training point (using)
+    #'  OOB predictions, and then uses the weights of the random forest to determine
+    #'  the quantiles of the residuals in the local neighborhood of the predicted point.
+    #'  Default is `OOB-conformal`.
+    #' @param noWarning flag to not display warnings
+    #' @return The confidence intervals for each observation in newdata.
+    #' @export
+
+    def getCI(self, newdata, level=.95, B=100, method='OOB-conformal', noWarning=False):
+        
+        if method not in ['OOB-conformal', 'OOB-bootstrap', 'local-conformal']:
+            raise ValueError('Method must be one of OOB-conformal, OOB-bootstrap, or local-conformal')
+
+        if method == 'OOB-conformal' and not (self.OOBhonest and self.doubleBootstrap):
+            raise ValueError('We cannot do OOB-conformal intervals unless both OOBhonest and doubleBootstrap are TRUE')
+
+        if method == 'OOB-bootstrap' and not self.OOBhonest:
+            raise ValueError('We cannot do OOB-bootstrap intervals unless OOBhonest is TRUE')
+
+        if method == 'local-conformal' and not self.OOBhonest:
+            raise ValueError('We cannot do local-conformal intervals unless OOBhonest is TRUE')
+
+        #Check the forestry object
+        Py_preprocessing.forest_checker(self)
+
+        #Check the newdata
+        newdata = Py_preprocessing.testing_data_checker(self, newdata, self.processed_dta['hasNas'])
+        newdata = pd.DataFrame(newdata)
+        processed_x = Py_preprocessing.preprocess_testing(newdata, self.processed_dta['categoricalFeatureCols_cpp'], self.processed_dta['categoricalFeatureMapping'])
+
+        
+        if method == 'OOB-bootstrap':
+            
+            # Now we do B bootstrap pulls of the trees in order to do prediction
+            # intervals for newdata
+            prediction_array = pd.DataFrame(np.empty((len(newdata.index), B)))
+
+            for i in range(B):
+                bootstrap_i = np.random.choice(self.ntree, size=self.ntree, replace=True, p=None)
+                
+                pred_i = self.predict(newdata=newdata, trees=bootstrap_i.tolist())
+                prediction_array.iloc[:,i] = pred_i
+
+            quantiles = np.quantile(prediction_array, [(1 - level)/2, 1 - (1 - level)/2], axis=1)
+
+            predictions = {
+                'Predictions': self.predict(newdata=newdata),
+                'CI.upper':  quantiles[1, :],
+                'CI.lower':  quantiles[0, :],
+                'level':  level
+            }
+
+            return predictions
+
+        elif method == 'OOB-conformal':
+            # Get double OOB predictions and the residuals
+            y_pred = self.predict(aggregation='doubleOOB')
+
+            if self.scale:
+                res = y_pred - (self.processed_dta['y'] * self.processed_dta['colSd'][-1] + self.processed_dta['colMeans'][-1])
+            else:
+                res = y_pred - self.processed_dta['y']
+
+
+            # Get (1-level) / 2 and 1 - (1-level) / 2 quantiles of the residuals
+            quantiles = np.quantile(res, [(1 - level)/2, 1 - (1 - level)/2])
+
+            # Get predictions on newdata
+            predictions_new = self.predict(newdata)
+
+            predictions = {
+                'Predictions': predictions_new,
+                'CI.upper':  predictions_new + quantiles[1],
+                'CI.lower':  predictions_new + quantiles[0],
+                'level':  level
+            }
+
+            return predictions
+
+        else: # method == 'local-conformal'
+
+            OOB_preds = self.predict(aggregation='oob')
+            if self.scale:
+                OOB_res = (self.processed_dta['y'] * self.processed_dta['colSd'][-1] + self.processed_dta['colMeans'][-1]) - OOB_preds
+            else:
+                OOB_res = self.processed_dta['y'] - OOB_preds
+
+            pass ### weightmatrix not implemented yet!!!!
+
+
+    # -- Get the observations used for prediction ----------------------------------
+    #' predictInfo-forestry
+    #' @rdname predictInfo-forestry
+    #' @description Get the observations which are used to predict for a set of new
+    #'  observations using either all trees (for out of sample observations), or
+    #'  tree for which the observation is out of averaging set or out of sample entirely.
+    #' @param object A `forestry` object.
+    #' @param newdata Data on which we want to do predictions. Must be the same length
+    #'  as the training set if we are doing `oob` or `doubleOOB` aggregation.
+    #' @param aggregation Specifies which aggregation version is used to predict for the
+    #' observation, must be one of `average`,`oob`, and `doubleOOB`.
+    #' @return A list with four entries. `weightMatrix` is a matrix specifying the
+    #'  weight given to training observatio i when prediction on observation j.
+    #'  `avgIndices` gives the indices which are in the averaging set for each new
+    #'  observation. `avgWeights` gives the weights corresponding to each averaging
+    #'  observation returned in `avgIndices`. `obsInfo` gives the full observation vectors
+    #'  which were used to predict for an observation, as well as the weight given
+    #'  each observation.
+    #' @export
+    def predictInfo(self, newdata, aggregation='oob'):
+
+        if aggregation not in ['average', 'oob', 'doubleOOB']:
+            raise ValueError('Aggregation must be one of average, oob, or doubleOOB')
+
+        pass ### weightmatrix not implemented yet!!!!
 
 #make linFeats same as symmetric...

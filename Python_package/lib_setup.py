@@ -87,6 +87,10 @@ def setup_lib(lib):
     lib.vector_get.restype = ctypes.c_double
 
 
+    lib.getVI.argtypes = [ctypes.c_void_p]
+    lib.getVI.restype = ctypes.c_void_p
+
+
 def get_data_pointer(data):
     data = np.ascontiguousarray(data.values[:,:], np.double)
 

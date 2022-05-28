@@ -365,5 +365,18 @@ extern "C"{
     }
 
 
+        std::vector<double>* getVI(void* forest_pt){
+                forestry* forest = reinterpret_cast<forestry *>(forest_pt);
+                forest->calculateVariableImportance();
+
+                std::vector<double> VI = forest->getVariableImportance();
+
+                std::vector<double>* variableImportances(
+      new std::vector<double>(VI)
+  );
+
+                return variableImportances;
+        }
+
 }
 
