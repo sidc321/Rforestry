@@ -62,7 +62,10 @@ def test_newdata_shuffled_warning(get_forest):
 
 def test_equal_predictions(get_forest):
     X, y = get_data()
-    assert np.array_equal(get_forest.predict(X.iloc[:, ::-1]), get_forest.predict(X)) == True
+    p1 = get_forest.predict(X)
+    p2 = get_forest.predict(X.iloc[:, ::-1])
+
+    assert np.array_equal(p1, p2) == True
 
 def test_error(get_predictions):
     X, y = get_data()
