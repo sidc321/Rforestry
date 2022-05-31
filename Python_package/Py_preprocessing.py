@@ -68,37 +68,37 @@ def forest_parameter_checker(
 
     #Check for types and ranges
 
-    if (not isinstance(ntree, int)) or ntree <= 0:
+    if (not isinstance(ntree, (int, np.integer))) or ntree <= 0:
         raise ValueError('ntree must be a positive integer.')
     
     if not isinstance(replace, bool):
         raise AttributeError('replace must be True or False.')
 
-    if (sampsize is not None) and ( (not isinstance(sampsize, int)) or sampsize <= 0 ):
+    if (sampsize is not None) and ( (not isinstance(sampsize, (int, np.integer))) or sampsize <= 0 ):
         raise ValueError('sampsize must be a positive integer.') 
 
     if (sample_fraction is not None) and ( (not isinstance(sample_fraction, (int, float))) or sample_fraction <= 0 ):
         raise ValueError('sample_fraction must be a positive integer.')  
 
-    if (mtry is not None) and ( (not isinstance(mtry, int)) or mtry <= 0 ):
+    if (mtry is not None) and ( (not isinstance(mtry, (int, np.integer))) or mtry <= 0 ):
         raise ValueError('mtry must be a positive integer.')
 
-    if (not isinstance(nodesizeSpl, int)) or nodesizeSpl <= 0:
+    if (not isinstance(nodesizeSpl, (int, np.integer))) or nodesizeSpl <= 0:
         raise ValueError('nodesizeSpl must be a positive integer.')
 
-    if (not isinstance(nodesizeAvg, int)) or nodesizeAvg <= 0:
+    if (not isinstance(nodesizeAvg, (int, np.integer))) or nodesizeAvg <= 0:
         raise ValueError('nodesizeAvg must be a positive integer.')
 
-    if (not isinstance(nodesizeStrictSpl, int)) or nodesizeStrictSpl <= 0:
+    if (not isinstance(nodesizeStrictSpl, (int, np.integer))) or nodesizeStrictSpl <= 0:
         raise ValueError('nodesizeStrictSpl must be a positive integer.')
 
-    if (not isinstance(nodesizeStrictAvg, int)) or nodesizeStrictAvg <= 0:
+    if (not isinstance(nodesizeStrictAvg, (int, np.integer))) or nodesizeStrictAvg <= 0:
         raise ValueError('nodesizeStrictAvg must be a positive integer.')
 
     if (not isinstance(minSplitGain, (int, float))) or minSplitGain < 0:
         raise ValueError('minSplitGain must be a number greater than or equal to 0.')
 
-    if (maxDepth is not None) and ( (not isinstance(maxDepth, int)) or maxDepth <= 0 ):
+    if (maxDepth is not None) and ( (not isinstance(maxDepth, (int, np.integer))) or maxDepth <= 0 ):
         raise ValueError('maxDepth must be a positive integer.')
 
     if (interactionDepth is not None) and ( (not isinstance(interactionDepth, int)) or interactionDepth <= 0 ):
@@ -129,13 +129,13 @@ def forest_parameter_checker(
     if not isinstance(middleSplit, bool):
         raise ValueError('middleSplit must be True or False.')
 
-    if (maxObs is not None) and ( (not isinstance(maxObs, int)) or maxObs <= 0 ):
+    if (maxObs is not None) and ( (not isinstance(maxObs, (int, np.integer))) or maxObs <= 0 ):
         raise ValueError('maxObs must be a positive integer.') 
 
     if not isinstance(linear, bool):
         raise ValueError('linear must be True or False.')
 
-    if (minTreesPerGroup is not None) and ( (not isinstance(minTreesPerGroup, int)) or minTreesPerGroup < 0 ):
+    if (minTreesPerGroup is not None) and ( (not isinstance(minTreesPerGroup, (int, np.integer))) or minTreesPerGroup < 0 ):
         raise ValueError('minTreesPerGroup must be a nonnegative integer.') 
 
     if not isinstance(monotoneAvg, bool):

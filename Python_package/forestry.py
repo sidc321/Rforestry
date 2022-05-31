@@ -652,6 +652,7 @@ class forestry:
             
             processed_x = Py_preprocessing.preprocess_testing(newdata, self.processed_dta['categoricalFeatureCols_cpp'], self.processed_dta['categoricalFeatureMapping'])
 
+
         # Set exact aggregation method if nobs < 100,000 and average aggregation
         if exact is None:
             if (newdata is not None) and len(newdata.index) > 1e5:
@@ -664,9 +665,8 @@ class forestry:
           if (not exact) or (aggregation != 'average'):
               raise ValueError('When using tree indices, we must have exact = True and aggregation = \'average\' ')
 
-          if any((not isinstance(i, int)) or (i < 0) or (i >= self.ntree) for i in trees):
-              print(type(trees[0]))
-              raise ValueError('trees must contain indices which are integers between 0 and ntree')
+          if any((not isinstance(i, (int, np.integer))) or (i < -self.ntree) or (i >= self.ntree) for i in trees):
+              raise ValueError('trees must contain indices which are integers between -ntree and ntree-1')
 
         # If trees are being used, we need to convert them into a weight vector
         tree_weights = np.repeat(0, self.ntree)
@@ -903,7 +903,7 @@ class forestry:
             for i in range(B):
                 bootstrap_i = np.random.choice(self.ntree, size=self.ntree, replace=True, p=None)
                 
-                pred_i = self.predict(newdata=newdata, trees=bootstrap_i.tolist())
+                pred_i = self.predict(newdata=newdata, trees=bootstrap_i)
                 prediction_array.iloc[:,i] = pred_i
 
             quantiles = np.quantile(prediction_array, [(1 - level)/2, 1 - (1 - level)/2], axis=1)
