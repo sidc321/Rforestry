@@ -20,7 +20,7 @@ import Py_preprocessing
 
 # --- Loading the dynamic library -----------------
 
-lib = (ctypes.CDLL("../src/libforestryCpp.so"))  #CHANGE TO DLL IF NECESSARY
+lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src/libforestryCpp.so")))  #CHANGE TO DLL IF NECESSARY
 #forestry = (ctypes.CDLL("src/libforestryCpp.dylib")) 
 lib_setup.setup_lib(lib)
 
@@ -345,7 +345,8 @@ class forestry:
         symmetric = None,  #Add a default value.
         linFeats = None,   #Add a default value.
         monotonicConstraints = None,   #Add a default value.
-        groups = None
+        groups = None,
+        seed = None,
     ):
         
          # Make sure that all the parameters exist when passed to forestry
@@ -413,6 +414,12 @@ class forestry:
         if monotonicConstraints is None:
             monotonicConstraints = np.repeat(0, ncol)
 
+        if seed is None:
+            seed = self.seed
+        else:
+            if (not isinstance(seed, int)) or seed < 0:
+                raise ValueError('seed must be a nonnegative integer.')
+        
         
         (x,
         y,
@@ -498,7 +505,7 @@ class forestry:
             self.monotoneAvg,
             lib_setup.get_array_pointer(symmetric, dtype=np.ulonglong), symmetric.size,
             nrow, ncol+1,
-            self.seed
+            seed
         ))
 
         self.forest = ctypes.c_void_p(lib.train_forest(
@@ -517,7 +524,7 @@ class forestry:
             self.minSplitGain,
             self.maxDepth,
             self.interactionDepth,
-            self.seed,
+            seed,
             self.nthread,
             self.verbose,
             self.middleSplit,
@@ -617,12 +624,18 @@ class forestry:
     #' @return A vector of predicted responses.
     #' @export  
 
-    def predict(self, newdata=None, aggregation = 'average', seed = randrange(1001), nthread = 0, exact = None, trees = None, weightMatrix = False):
+    def predict(self, newdata=None, aggregation = 'average', seed = None, nthread = 0, exact = None, trees = None, weightMatrix = False):
         if (newdata is None) and not (aggregation == 'oob' or aggregation == 'doubleOOB'):
             raise ValueError('When using an aggregation that is not oob or doubleOOB, one must supply newdata')
 
         if (not self.linear) and aggregation == 'coefs':
             raise ValueError('Aggregation can only be linear with setting the parameter linear = TRUE.')
+
+        if seed is None:
+            seed = self.seed
+        else:
+            if (not isinstance(seed, int)) or seed < 0:
+                raise ValueError('seed must be a nonnegative integer.')
 
 
         # Preprocess the data. We only run the data checker if ridge is turned on,

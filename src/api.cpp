@@ -26,7 +26,7 @@ extern "C"{
             size_t countSym,
             size_t numRows,
             size_t numColumns,
-            int seed
+            unsigned int seed
             ) {
         // Create Data: first n_cols - 1 are features, last is outcome
         std::vector<std::vector<double>> data_numpy;

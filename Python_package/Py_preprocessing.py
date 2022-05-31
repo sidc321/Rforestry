@@ -3,7 +3,6 @@ LIBRARIES NEEDED
 ----------------------
 """
 
-from multiprocessing.sharedctypes import Value
 import numpy as np
 import pandas as pd
 import warnings
@@ -361,7 +360,7 @@ def training_data_checker(
 """
 def testing_data_checker(object, newdata, hasNas):
     if len(newdata.columns) != object.processed_dta['numColumns']:
-        raise ValueError('newdata has ' + len(newdata.columns) + ' but the forest was trained with ' + object.processed_dta['numColumns'] + ' columns.')
+        raise ValueError('newdata has ' + str(len(newdata.columns)) + ' but the forest was trained with ' + str(object.processed_dta['numColumns']) + ' columns.')
 
     if object.processed_dta['featNames'] is not None:
         if not (set(newdata.columns) == set(object.processed_dta['featNames'])):

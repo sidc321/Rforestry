@@ -23,7 +23,7 @@ def setup_lib(lib):
         ctypes.c_size_t,
         ctypes.c_size_t, 
         ctypes.c_size_t,
-        ctypes.c_int
+        ctypes.c_uint
         ]
     lib.get_data.restype =  ctypes.c_void_p
 
