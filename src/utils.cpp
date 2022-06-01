@@ -13,6 +13,18 @@ void print_vector(
   std::cout << std::endl;
   std::cout << std::endl;
 }
+
+void print_vector(
+        std::vector<size_t> v
+){
+    for (auto i = v.begin(); i != v.end(); ++i){
+        std::cout << *i << ' ';
+        // Rcpp's equivalent of std::flush
+    }
+    std::cout << std::endl;
+    std::cout << std::endl;
+}
+
 extern "C" int add_one(
         int i
 ){

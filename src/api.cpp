@@ -70,12 +70,6 @@ extern "C"{
             categoricalFeatureCols->at(i) = categorical_vars[i];
         }
 
-
-        // seed RNG generator
-        std::mt19937_64 random_number_generator;
-        random_number_generator.seed(seed);
-
-
         // Linear features column
         std::unique_ptr< std::vector<size_t> > linearFeatures (
                 new std::vector<size_t> (countLinFeats)
@@ -232,6 +226,8 @@ extern "C"{
 
         if (verbose)
             std::cout << forest << std::endl;
+            std::cout << "Forest seed: " << seed << std::endl;
+            forest->getForest()->at(0)->printTree();
 
         return forest;
     }

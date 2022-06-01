@@ -195,6 +195,9 @@ void forestry::addTrees(size_t ntree) {
           std::mt19937_64 random_number_generator;
           random_number_generator.seed(myseed);
 
+          if (isVerbose())
+              std::cout << "Tree seed " << myseed << std::endl;
+
           // Generate a sample index for each tree
           std::vector<size_t> sampleIndex;
 
@@ -384,6 +387,11 @@ void forestry::addTrees(size_t ntree) {
                 new std::vector<size_t>(averageSampleIndex_)
               );
             }
+          }
+
+          if (isVerbose()) {
+              std::cout << "Splitting indices" << std::endl;
+              print_vector(sampleIndex);
           }
 
           try{

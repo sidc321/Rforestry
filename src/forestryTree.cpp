@@ -134,6 +134,13 @@ forestryTree::forestryTree(
 
   /* If ridge splitting, initialize RSS components to pass to leaves*/
 
+  std::cout << "Tree seed inside tree " << seed << std::endl;
+  std::cout << "Splitting indices" << std::endl;
+  print_vector(*getSplittingIndex());
+
+  std::cout << "MT Pull" << std::endl;
+  std::cout << random_number_generator() << std::endl;
+
   std::vector<size_t>* splitIndexes = getSplittingIndex();
   size_t numLinearFeatures;
   std::vector<double> firstOb = trainingData->getLinObsData((*splitIndexes)[0]);
@@ -943,6 +950,9 @@ void forestryTree::recursivePartition(
       featureWeightsUsed,
       sampledWeightsVariablesUsed
     );
+
+    std::cout << "Features selected with Mtry" << std::endl;
+    print_vector(featureList);
 
   // Select best feature
   size_t bestSplitFeature;
