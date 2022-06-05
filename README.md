@@ -20,7 +20,9 @@ and Linear Random Forests, with an emphasis on inference and interpretability.
 
 ## How to install - Python Package
 
-The python package must be compiled before it can be used. For example, one can run:
+The python package must be compiled before it can be used. 
+Note that to compile and link the C++ version of forestry, one must be using either OSX or Linux and must have a C++ compiler installed.
+For example, one can run:
 
 ```
 mkdir build
