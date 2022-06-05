@@ -21,7 +21,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -install_name forestryCpp.so"
 # Add framework Accelerate flag
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -framework Accelerate -install_name forestryCpp.so")
 
-set(SOURCE_FILES DataFrame.cpp DataFrame.h RFNode.cpp RFNode.h forestryTree.cpp forestryTree.h forestry.cpp forestry.h utils.cpp utils.h treeSplitting.cpp treeSplitting.h api.h api.cpp)
+include_directories(R-package/src)
+
+set(SOURCE_FILES R-package/src/DataFrame.cpp R-package/src/DataFrame.h R-package/src/RFNode.cpp R-package/src/RFNode.h
+R-package/src/forestryTree.cpp R-package/src/forestryTree.h R-package/src/forestry.cpp R-package/src/forestry.h R-package/src/utils.cpp R-package/src/utils.h R-package/src/treeSplitting.cpp R-package/src/treeSplitting.h R-package/src/api.h R-package/src/api.cpp)
 
 # Build settings
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR})

@@ -20,8 +20,8 @@ import Py_preprocessing
 
 # --- Loading the dynamic library -----------------
 
-lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src/libforestryCpp.so")))  #CHANGE TO DLL IF NECESSARY
-#forestry = (ctypes.CDLL("src/libforestryCpp.dylib")) 
+lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "../libforestryCpp.so")))  #CHANGE TO DLL IF NECESSARY
+#forestry = (ctypes.CDLL("../libforestryCpp.dylib")) 
 lib_setup.setup_lib(lib)
 
 # -- Random Forest Constructor -------------------------------------------------

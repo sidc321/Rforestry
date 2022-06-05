@@ -177,16 +177,18 @@ void multilayerForestry::addForests(size_t ntree) {
     // floating point numbers. This is a very small problem for one round of
     // predictions, but when we continue to train forests on the residuals of
     // previous forests, the problem spirals out of control.
-    std::unique_ptr< std::vector<double> > predictedResiduals =
-      residualForest->predict(getTrainingData()->getAllFeatureData(),
-                              NULL,
-                              NULL,
-                              NULL,
-                              _seed,
-                              1,
-                              false,
-                              false,
-                              NULL);
+    std::unique_ptr< std::vector<double> > predictedResiduals (
+        residualForest->predict(getTrainingData()->getAllFeatureData(),
+                                NULL,
+                                NULL,
+                                NULL,
+                                _seed,
+                                1,
+                                false,
+                                false,
+                                NULL)
+    );
+
 
     // Calculate and store best gamma value
     // std::vector<double> bestPredictedResiduals(trainingData->getNumRows());
@@ -251,16 +253,18 @@ std::unique_ptr< std::vector<double> > multilayerForestry::predict(
   // For now we let nthread = 1 for multilayer predictions, for reproducibility
   // this can be changed later
 
-  std::unique_ptr< std::vector<double> > initialPrediction =
-    multilayerForests[0]->predict(xNew,
-                                  weightMatrix,
-                                  NULL,
-                                  NULL,
-                                  seed,
-                                  nthread,
-                                  exact,
-                                  false,
-                                  NULL);
+  std::unique_ptr< std::vector<double> > initialPrediction (
+      multilayerForests[0]->predict(xNew,
+                                    weightMatrix,
+                                    NULL,
+                                    NULL,
+                                    seed,
+                                    nthread,
+                                    exact,
+                                    false,
+                                    NULL)
+  );
+
 
   std::vector<double> prediction(initialPrediction->size(), getMeanOutcome());
 
@@ -272,16 +276,17 @@ std::unique_ptr< std::vector<double> > multilayerForestry::predict(
     //   print_vector(*multilayerForests[i]->getTrainingData()->getOutcomeData());
     // }
 
-    std::unique_ptr< std::vector<double> > predictedResiduals =
-      multilayerForests[i]->predict(xNew,
-                                    weightMatrix,
-                                    NULL,
-                                    NULL,
-                                    seed,
-                                    nthread,
-                                    exact,
-                                    false,
-                                    NULL);
+    std::unique_ptr< std::vector<double> > predictedResiduals(
+        multilayerForests[i]->predict(xNew,
+                                      weightMatrix,
+                                      NULL,
+                                      NULL,
+                                      seed,
+                                      nthread,
+                                      exact,
+                                      false,
+                                      NULL)
+    );
 
     std::transform(predictedResiduals->begin(), predictedResiduals->end(),
                    predictedResiduals->begin(), std::bind(std::multiplies<double>(), gammas[i], std::placeholders::_1));
