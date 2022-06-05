@@ -31,7 +31,7 @@ NUL
 *.Rda
 
 *.log
-
+*.tar.gz
 
 CMakeLists.txt.user
 CMakeCache.txt
