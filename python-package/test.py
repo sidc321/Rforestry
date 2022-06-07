@@ -10,6 +10,8 @@ from forestry import forestry
 import Py_preprocessing
 from sklearn.datasets import load_iris
 
+#%%
+
 df2 = pd.DataFrame(np.array([[1, 2, 3], [4, 7, 8], [7, 8, 100]]),
                    columns=['a', 'b', 'c'])
 
@@ -61,6 +63,8 @@ np.random.shuffle(art_cat2)
 art_df = pd.DataFrame({'cat1': art_cat2, 'cat2': art_cat2})
 X = pd.concat([X, art_df], axis=1)
 
+#%%
+
 fr = forestry(
         ntree = 500,
         replace = True,
@@ -94,14 +98,15 @@ fr = forestry(
         saveable = True
 )
 
-
+#%%
 print("Fitting the forest")
 fr.fit(X, y)
 
-
+#%%
 print("Predicting with the forest")
 forest_preds = fr.predict(aggregation='oob')
 
+#%%
 print(forest_preds)
 
 print(fr.getVI())
