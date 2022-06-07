@@ -81,7 +81,7 @@ fr = forestry(
         splitratio = 1,
         OOBhonest = True,
         doubleBootstrap = True, #Add a default value.
-        seed = randrange(1001),
+        seed = 12,
         verbose = True,
         nthread = 8,
         splitrule = 'variance',
@@ -105,7 +105,7 @@ fr.fit(X, y)
 #%%
 print("Predicting with the forest")
 forest_preds = fr.predict(aggregation='oob')
-
+print(forest_preds)
 #%%
 print(forest_preds)
 

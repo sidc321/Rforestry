@@ -7,7 +7,7 @@ def setup_lib(lib):
     
     # set up the get_data function
     lib.get_data.argtypes = [
-        ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
+        ctypes.POINTER(ctypes.c_double),
         ctypes.POINTER(ctypes.c_size_t),
         ctypes.c_size_t,
         ctypes.POINTER(ctypes.c_size_t),
@@ -62,7 +62,7 @@ def setup_lib(lib):
 
     # set up the predict_forest function
     lib.predict_forest.argtypes = [ctypes.c_void_p, ctypes.c_void_p, 
-                                        ctypes.POINTER(ctypes.POINTER(ctypes.c_double)), 
+                                        ctypes.POINTER(ctypes.c_double), 
                                         ctypes.c_uint,
                                         ctypes.c_size_t,
                                         ctypes.c_bool,
@@ -74,7 +74,7 @@ def setup_lib(lib):
 
     # set up the predictOOB_forest function
     lib.predictOOB_forest.argtypes = [ctypes.c_void_p, ctypes.c_void_p, 
-                                        ctypes.POINTER(ctypes.POINTER(ctypes.c_double)), 
+                                        ctypes.POINTER(ctypes.c_double), 
                                         ctypes.c_bool,
                                         ctypes.c_bool,
                                         ctypes.c_int,
@@ -94,12 +94,19 @@ def setup_lib(lib):
 def get_data_pointer(data):
     data = np.ascontiguousarray(data.values[:,:], np.double)
 
-    kdoublePtr = ctypes.POINTER(ctypes.c_double)
-    kdoublePtrPtr = ctypes.POINTER(kdoublePtr)
-    ct_arr = np.ctypeslib.as_ctypes(data)
-    doublePtrArr = kdoublePtr * ct_arr._length_
-    ct_ptr = ctypes.cast(doublePtrArr(*(ctypes.cast(row, kdoublePtr) for row in ct_arr)), kdoublePtrPtr)
-    return ct_ptr
+    # kdoublePtr = ctypes.POINTER(ctypes.c_double)
+    # kdoublePtrPtr = ctypes.POINTER(kdoublePtr)
+    # ct_arr = np.ctypeslib.as_ctypes(data)
+    # doublePtrArr = kdoublePtr * ct_arr._length_
+    # ct_ptr = ctypes.cast(doublePtrArr(*(ctypes.cast(row, kdoublePtr) for row in ct_arr)), kdoublePtrPtr)
+    # return ct_ptr
+
+    # c_double_p = ctypes.POINTER(ctypes.c_double)
+    # in_array_ptrs = (c_double_p * len(data))(*(r.ctypes.data_as(c_double_p) for r in data))
+    # return in_array_ptrs
+
+    return get_array_pointer(data.flatten(), np.double)
+
 
 
 def get_array_pointer(array, dtype):

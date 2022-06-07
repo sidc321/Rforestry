@@ -20,8 +20,8 @@ import Py_preprocessing
 
 # --- Loading the dynamic library -----------------
 
-#lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "libforestryCpp.so")))  #CHANGE TO DLL IF NECESSARY
-lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "libforestryCpp.dylib")))
+#lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "../libforestryCpp.so")))  #CHANGE TO DLL IF NECESSARY
+lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "libforestryCpp.dylib")))  #CHANGE TO DLL IF NECESSARY
 lib_setup.setup_lib(lib)
 
 # -- Random Forest Constructor -------------------------------------------------
@@ -361,8 +361,8 @@ class forestry:
         else:
             raise AttributeError('x must be a Pandas DataFrame, a numpy array, a Pandas Series, or a regular list')
 
-        x = pd.DataFrame(x)
-        y = np.array(y)
+        x = (pd.DataFrame(x)).copy()
+        y = (np.array(y)).copy()
         
         nrow, ncol = x.shape
             
@@ -489,7 +489,7 @@ class forestry:
         if idxs.size != 0:
             symmetricIndex = idxs[0]  
 
-        isSymmetric = symmetricIndex == -1
+        isSymmetric = symmetricIndex != -1
 
         # cpp linking
         X = pd.concat([processed_x, pd.Series(y)], axis=1)
@@ -676,7 +676,6 @@ class forestry:
             use_weights = True
         else:
             use_weights = False
-
 
         nPreds = len(processed_x.index) if newdata is not None else self.processed_dta['nObservations']
 
