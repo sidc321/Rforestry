@@ -10,6 +10,7 @@ import warnings
 import math
 import os
 import sys
+import platform
 from random import randrange
 import ctypes
 import lib_setup
@@ -19,9 +20,10 @@ import Py_preprocessing
 
 
 # --- Loading the dynamic library -----------------
-
-#lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "../libforestryCpp.so")))  #CHANGE TO DLL IF NECESSARY
-lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "libforestryCpp.so")))  #CHANGE TO DLL IF NECESSARY
+if platform.system() == "Linux":
+  lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "../libforestryCpp.so")))
+elif platform.system() == "Darwin":
+  lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "libforestryCpp.dylib")))
 lib_setup.setup_lib(lib)
 
 # -- Random Forest Constructor -------------------------------------------------

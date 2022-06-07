@@ -112,3 +112,22 @@ print(forest_preds)
 print(fr.getVI())
 
 print(fr.getCI(X, method='OOB-conformal'))
+
+#%%
+from sklearn.datasets import *
+from sklearn import tree
+from dtreeviz.trees import *
+import platform
+
+
+#%%
+
+regr = tree.DecisionTreeRegressor(max_depth=2)
+boston = load_boston()
+regr.fit(boston.data, boston.target)
+viz = dtreeviz(regr,
+               boston.data,
+               boston.target,
+               target_name='price',
+               feature_names=boston.feature_names)
+viz.view()
