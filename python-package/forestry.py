@@ -21,7 +21,7 @@ import Py_preprocessing
 # --- Loading the dynamic library -----------------
 
 #lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "../libforestryCpp.so")))  #CHANGE TO DLL IF NECESSARY
-lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "libforestryCpp.dylib")))  #CHANGE TO DLL IF NECESSARY
+lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "libforestryCpp.so")))  #CHANGE TO DLL IF NECESSARY
 lib_setup.setup_lib(lib)
 
 # -- Random Forest Constructor -------------------------------------------------
@@ -492,7 +492,9 @@ class forestry:
         isSymmetric = symmetricIndex != -1
 
         # cpp linking
+        processed_x.reset_index(drop=True, inplace=True)
         X = pd.concat([processed_x, pd.Series(y)], axis=1)
+
         self.dataframe = ctypes.c_void_p(lib.get_data(
             lib_setup.get_data_pointer(X),
             lib_setup.get_array_pointer(categoricalFeatureCols_cpp, dtype=np.ulonglong), categoricalFeatureCols_cpp.size,
@@ -647,7 +649,8 @@ class forestry:
             if not (isinstance(newdata, pd.DataFrame) or type(newdata).__module__ == np.__name__ or isinstance(newdata, list) or isinstance(newdata, pd.Series)):
                 raise AttributeError('newdata must be a Pandas DataFrame, a numpy array, a Pandas Series, or a regular list')
 
-            newdata = pd.DataFrame(newdata)
+            newdata = (pd.DataFrame(newdata)).copy()
+            newdata.reset_index(drop=True, inplace=True)
             newdata = Py_preprocessing.testing_data_checker(self, newdata, self.processed_dta['hasNas'])
             
             processed_x = Py_preprocessing.preprocess_testing(newdata, self.processed_dta['categoricalFeatureCols_cpp'], self.processed_dta['categoricalFeatureMapping'])
@@ -678,7 +681,6 @@ class forestry:
             use_weights = False
 
         nPreds = len(processed_x.index) if newdata is not None else self.processed_dta['nObservations']
-
         # If option set to terminalNodes, we need to make matrix of ID's
         if aggregation == 'oob':
 
