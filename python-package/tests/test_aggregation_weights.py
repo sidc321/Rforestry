@@ -2,8 +2,7 @@ import os
 from re import T
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../Python_package'))
-print(sys.path)
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sklearn.datasets import load_iris
 from forestry import forestry
@@ -74,6 +73,6 @@ def test_linearity(get_forest):
 
 
     p_all = get_forest.predict(newdata=X, trees = [1,1,1,2,2])
-    p_agg = 0.2*(p1*3 + p2*2)
+    p_agg = (p1*3 + p2*2)/5
 
     assert np.array_equal(p_all, p_agg) == True
