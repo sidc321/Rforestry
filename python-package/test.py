@@ -29,7 +29,7 @@ y
 
 fr = forestry(
     #ntree = 1,
-    #maxDepth=2,
+    maxDepth=3,
     seed=1,
     verbose=True,
     scale=False
