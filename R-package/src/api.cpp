@@ -374,4 +374,66 @@ std::vector<double>* getVI(void* forest_pt){
     return variableImportances;
 }
 
+int getTreeNodeCount(void* forest_ptr,
+                     int tree_idx) {
+    forestry* forest = reinterpret_cast<forestry *>(forest_ptr);
+
+    return ((int) forest->getForest()->at(tree_idx)->getNodeCount());
+}
+
+std::vector<int>* get_children_left(void* forest_ptr) {
+    std::vector<int>* children_left(
+            new std::vector<int> { 1,  2, -1, -1,  5, -1, -1}
+            );
+    return children_left;
+}
+
+std::vector<int>* get_children_right(void* forest_ptr) {
+    std::vector<int>* children_right(
+            new std::vector<int> { 4,  3, -1, -1,  6, -1, -1}
+    );
+    return children_right;
+}
+
+std::vector<int>* get_feature(void* forest_ptr,
+                              void* dataframe_ptr) {
+
+    forestry* forest = reinterpret_cast<forestry *>(forest_ptr);
+    DataFrame* dta_frame = reinterpret_cast<DataFrame *>(dataframe_ptr);
+    forest->_trainingData = dta_frame;
+
+    std::unique_ptr<tree_info> info_holder;
+
+    info_holder = forest->getForest()->at(0)->getTreeInfo(forest->getTrainingData());
+
+    std::vector<int>* feature(
+            new std::vector<int> (info_holder->var_id)
+    );
+    return feature;
+}
+
+std::vector<int>* get_num_samples(void* forest_ptr) {
+    std::vector<int>* num_samples(
+            new std::vector<int> { 506, 430, 255, 175,  76,  46,  30}
+    );
+    return num_samples;
+}
+
+std::vector<double>* get_threshold(void* forest_ptr) {
+    std::vector<double>* threshold(
+            new std::vector<double> { 6.94099998, 14.4000001 , -2.0        , -2.0        ,  7.43700004,
+                                   -2.0        , -2.0 }
+    );
+    return threshold;
+}
+
+std::vector<double>* get_values(void* forest_ptr) {
+    std::vector<double>* values(
+            new std::vector<double> { 22.53280632, 19.93372093 , 23.34980392      , 14.956      ,  37.23815789,
+                                      32.11304348        , 45.09666667 }
+    );
+    return values;
+}
+
+
 }

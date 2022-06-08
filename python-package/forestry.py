@@ -15,13 +15,18 @@ from random import randrange
 import ctypes
 import lib_setup
 
+# TODO: Added these Just for testing, remove later
+from sklearn.datasets import *
+from sklearn import tree
+
+
 import Py_preprocessing
 
 
 
 # --- Loading the dynamic library -----------------
 if platform.system() == "Linux":
-  lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "../libforestryCpp.so")))
+  lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "libforestryCpp.so")))
 elif platform.system() == "Darwin":
   lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "libforestryCpp.dylib")))
 lib_setup.setup_lib(lib)
@@ -174,7 +179,6 @@ the monotone constraints, the split will be rejected.
 @export
 """
 class forestry:
-    ##### NOTE: Remeve params x, y
     def __init__(
         self,
         ntree = 500,
@@ -296,7 +300,7 @@ class forestry:
                 'numColumns': None,
                 'featNames': None
             }
-            Py_forest = np.array([])  # for printing
+            Py_forest = dict()  # for printing
 
             #Data Fields
             self.forest = cppForest
@@ -777,8 +781,7 @@ class forestry:
     #' @aliases getOOB,forestry-method
     #' @return The OOB error of the forest.
     def getOOB(self, noWarning=False):
-        # TODO (all): find a better threshold for throwing such warning. 25 is
-        # currently set up arbitrarily.
+
         Py_preprocessing.forest_checker(self)
         if (not self.replace) and (self.ntree*(self.processed_dta['nObservations'] - self.sampsize)) < 10:
             if not noWarning:
@@ -981,5 +984,98 @@ class forestry:
             raise ValueError('Aggregation must be one of average, oob, or doubleOOB')
 
         pass ### weightmatrix not implemented yet!!!!
+
+    def decision_path(self, X):
+
+        regr = tree.DecisionTreeRegressor(max_depth=2)
+        boston = load_boston()
+        regr.fit(boston.data, boston.target)
+        return regr.decision_path(boston.data)
+
+    # Given a trained forest, translate the selected tree to an SKlearn like
+    # form so that we can visualize the tree. Should have the following
+    # parameters:
+    #   @param children_left[i]: id of the left child of node i or -1 if leaf node
+    #   @param children_right[i]: id of the right child of node i or -1 if leaf node
+    #   @param feature[i]: feature used for splitting node i
+    #   @param threshold[i]: threshold value at node i
+    #   @param n_node_samples[i]:  the number of training samples reaching node i
+    #
+    def translate_tree_python(self, tree_id = 0):
+        #self.Py_forest = dict()
+
+        numNodes = lib.getTreeNodeCount(
+            self.forest,
+            0
+        )
+        print(numNodes)
+        # Now pull the relevant data from the forest and give to
+        # the tree dictionary
+        forest_l_children = ctypes.c_void_p(lib.get_children_left(
+            self.forest
+        ))
+
+        res = np.empty(7, dtype=np.int64)
+        for i in range(7):
+            res[i] = int(lib.vector_get_int(forest_l_children, i))
+
+        self.Py_forest["children_left"] = res
+
+        # Get right children
+        forest_r_children = ctypes.c_void_p(lib.get_children_right(
+            self.forest
+        ))
+
+        res = np.empty(7, dtype=np.int64)
+        for i in range(7):
+            res[i] = int(lib.vector_get_int(forest_r_children, i))
+
+        self.Py_forest["children_right"] = res
+
+        # Get feature
+        feats = ctypes.c_void_p(lib.get_feature(
+            self.forest,
+            self.dataframe
+        ))
+
+        res = np.empty(numNodes, dtype=np.int64)
+        for i in range(numNodes):
+            res[i] = int(lib.vector_get_int(feats, i))
+
+        self.Py_forest["feature"] = res
+
+        # Get num_samples
+        num_samps = ctypes.c_void_p(lib.get_num_samples(
+            self.forest
+        ))
+
+        res = np.empty(7, dtype=np.int64)
+        for i in range(7):
+            res[i] = int(lib.vector_get_int(num_samps, i))
+
+        self.Py_forest["n_node_samples"] = res
+
+        # Get thresholds
+        thresh = ctypes.c_void_p(lib.get_threshold(
+            self.forest
+        ))
+
+        res = np.empty(7)
+        for i in range(7):
+            res[i] = lib.vector_get(thresh, i)
+
+        self.Py_forest["threshold"] = res
+
+        # Get thresholds
+        values = ctypes.c_void_p(lib.get_values(
+            self.forest
+        ))
+
+        res = np.empty(7)
+        for i in range(7):
+            res[i] = lib.vector_get(values, i)
+
+        self.Py_forest["values"] = res
+        return
 
 #make linFeats same as symmetric...

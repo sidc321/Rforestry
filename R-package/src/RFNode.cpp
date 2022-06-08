@@ -536,6 +536,12 @@ void RFNode::write_node_info(
     treeInfo->naLeftCount.push_back(-1);
     treeInfo->naRightCount.push_back(-1);
 
+    // Add the new fields
+    treeInfo->left_child_id.push_back(-1);
+    treeInfo->right_child_id.push_back(-1);
+    treeInfo->num_avg_samples.push_back(getAveragingIndex()->size());
+    treeInfo->values.push_back(trainingData->partitionMean(getAveragingIndex()));
+
 
     std::vector<size_t> idx_in_leaf_Ave = *getAveragingIndex();
     for (size_t i = 0; i<idx_in_leaf_Ave.size(); i++) {
@@ -555,6 +561,11 @@ void RFNode::write_node_info(
     treeInfo->naLeftCount.push_back(getNaLeftCount());
     treeInfo->naRightCount.push_back(getNaRightCount());
 
+    // Add the new fields
+    treeInfo->left_child_id.push_back(getLeftChild()->getNodeId());
+    treeInfo->right_child_id.push_back(getRightChild()->getNodeId());
+    treeInfo->num_avg_samples.push_back(getAverageCountAlways());
+    treeInfo->values.push_back(0.0);
 
     getLeftChild()->write_node_info(treeInfo, trainingData);
     getRightChild()->write_node_info(treeInfo, trainingData);

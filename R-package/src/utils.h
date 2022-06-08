@@ -60,6 +60,17 @@ struct tree_info {
   // observations in a leaf for a leaf node
   std::vector< long double > split_val;
   // contains the split values for regular nodes
+  std::vector< double > values;
+  // contains the weights used for prediction in each node
+  // 0.0 for interior nodes
+  std::vector< int > num_avg_samples;
+  // Contains the counts of averaging samples at each node
+  std::vector< int > left_child_id;
+  // Contains the node_id's of the left child of each node
+  // -1 if the node is a leaf node
+  std::vector< int > right_child_id;
+  // Same as above but for the right child of each node
+  //-1 indicates leaf node
   std::vector< int > leafAveidx;
   // contains the indices of observations in a leaf.
   std::vector< int > leafSplidx;
