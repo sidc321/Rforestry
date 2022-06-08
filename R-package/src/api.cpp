@@ -225,9 +225,11 @@ void* train_forest(
             doubleTree
     ));
 
-    if (verbose)
+    if (verbose) {
         std::cout << forest << std::endl;
-    //     forest->getForest()->at(0)->printTree();
+        forest->getForest()->at(0)->printTree();
+    }
+
 
     return forest;
 }
