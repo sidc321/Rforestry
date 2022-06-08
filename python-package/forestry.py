@@ -1012,22 +1012,24 @@ class forestry:
         # Now pull the relevant data from the forest and give to
         # the tree dictionary
         forest_l_children = ctypes.c_void_p(lib.get_children_left(
-            self.forest
+            self.forest,
+            self.dataframe
         ))
 
-        res = np.empty(7, dtype=np.int64)
-        for i in range(7):
+        res = np.empty(numNodes, dtype=np.int64)
+        for i in range(numNodes):
             res[i] = int(lib.vector_get_int(forest_l_children, i))
 
         self.Py_forest["children_left"] = res
 
         # Get right children
         forest_r_children = ctypes.c_void_p(lib.get_children_right(
-            self.forest
+            self.forest,
+            self.dataframe
         ))
 
-        res = np.empty(7, dtype=np.int64)
-        for i in range(7):
+        res = np.empty(numNodes, dtype=np.int64)
+        for i in range(numNodes):
             res[i] = int(lib.vector_get_int(forest_r_children, i))
 
         self.Py_forest["children_right"] = res
@@ -1046,33 +1048,36 @@ class forestry:
 
         # Get num_samples
         num_samps = ctypes.c_void_p(lib.get_num_samples(
-            self.forest
+            self.forest,
+            self.dataframe
         ))
 
-        res = np.empty(7, dtype=np.int64)
-        for i in range(7):
+        res = np.empty(numNodes, dtype=np.int64)
+        for i in range(numNodes):
             res[i] = int(lib.vector_get_int(num_samps, i))
 
         self.Py_forest["n_node_samples"] = res
 
         # Get thresholds
         thresh = ctypes.c_void_p(lib.get_threshold(
-            self.forest
+            self.forest,
+            self.dataframe
         ))
 
-        res = np.empty(7)
-        for i in range(7):
+        res = np.empty(numNodes)
+        for i in range(numNodes):
             res[i] = lib.vector_get(thresh, i)
 
         self.Py_forest["threshold"] = res
 
         # Get thresholds
         values = ctypes.c_void_p(lib.get_values(
-            self.forest
+            self.forest,
+            self.dataframe
         ))
 
-        res = np.empty(7)
-        for i in range(7):
+        res = np.empty(numNodes)
+        for i in range(numNodes):
             res[i] = lib.vector_get(values, i)
 
         self.Py_forest["values"] = res
