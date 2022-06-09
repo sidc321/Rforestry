@@ -18,14 +18,6 @@ df['target'] = data['target']
 X = df.loc[:, df.columns != 'target']
 y = df['target']
 
-art_cat1 = np.concatenate((np.repeat(0, 30), np.repeat(1, 55), np.repeat(2, 15), np.repeat(3, 50)), axis=0)
-art_cat2 = np.concatenate((np.repeat(0, 30), np.repeat(1, 40), np.repeat(2, 30), np.repeat(3, 50)), axis=0)
-np.random.shuffle(art_cat1)
-np.random.shuffle(art_cat2)
-
-art_df = pd.DataFrame({'cat1': art_cat2, 'cat2': art_cat2})
-X = pd.concat([X, art_df], axis=1)
-
 fr = forestry(
         ntree = 1,
         maxDepth=2,
