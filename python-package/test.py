@@ -37,7 +37,7 @@ print(forest_preds)
 
 #%%
 
-f
+
 
 #%%
 print("Get the variable importance")
@@ -46,10 +46,7 @@ print(fr.getVI())
 print("Get the OOB Error")
 print(fr.getOOB())
 
-#%%
-# Now try getting a tree translated
-fr.translate_tree_python()
-print(fr.Py_forest)
+
 
 #%%
 from sklearn.datasets import *
@@ -60,14 +57,24 @@ from dtreeviz.models.sklearn_decision_trees import ShadowSKDTree
 from forestry_shadow import ShadowForestryTree
 
 #%%
+# Now try getting a tree translated
+fr.translate_tree_python()
+print(fr.Py_forest)
+shadow_forestry = ShadowForestryTree(fr, boston.data, boston.target, boston.feature_names, "price")
+
+
+#%%
 
 regr = tree.DecisionTreeRegressor(max_depth=3)
 boston = load_boston()
 regr.fit(boston.data, boston.target)
 
-#print(regr.decision_path(boston.data))
-#path_data = regr.decision_path(boston.data)
+print(regr.decision_path(boston.data))
+path_data = regr.decision_path(boston.data)
+
 shadow_dtree = ShadowSKDTree(regr, boston.data, boston.target, boston.feature_names, "price")
+
+shadow_forestry = ShadowForestryTree(fr, boston.data, boston.target, boston.feature_names, "price")
 
 
 #%%
