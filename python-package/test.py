@@ -16,12 +16,14 @@ data = load_iris()
 df = pd.DataFrame(data['data'], columns=data['feature_names'])
 df['target'] = data['target']
 X = df.loc[:, df.columns != 'target']
-y = df['target']
+X = X.loc[:, X.columns != 'sepal length (cm)']
+y = df['sepal length (cm)']
 
 fr = forestry(
         ntree = 1,
         maxDepth=2,
-        verbose=True
+        verbose=True,
+        scale=False
 )
 
 print("Fitting the forest")
@@ -30,6 +32,7 @@ fr.fit(X, y)
 #print("Predicting with the forest")
 #forest_preds = fr.predict(aggregation='oob')
 #print(forest_preds)
+
 
 #%%
 # Now try getting a tree translated

@@ -447,8 +447,8 @@ std::vector<int>* get_num_samples(void* forest_ptr,
     return num_samples;
 }
 
-std::vector<long double>* get_threshold(void* forest_ptr,
-                                        void* dataframe_ptr) {
+std::vector<double>* get_threshold(void* forest_ptr,
+                                   void* dataframe_ptr) {
     forestry* forest = reinterpret_cast<forestry *>(forest_ptr);
     DataFrame* dta_frame = reinterpret_cast<DataFrame *>(dataframe_ptr);
     forest->_trainingData = dta_frame;
@@ -457,8 +457,8 @@ std::vector<long double>* get_threshold(void* forest_ptr,
 
     info_holder = forest->getForest()->at(0)->getTreeInfo(forest->getTrainingData());
 
-    std::vector<long double>* threshold(
-            new std::vector<long double> (info_holder->split_val)
+    std::vector<double>* threshold(
+            new std::vector<double> (info_holder->split_val)
     );
     return threshold;
 }

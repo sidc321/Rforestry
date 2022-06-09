@@ -52,6 +52,7 @@ void RFNode::setSplitNode(
   double splitValue,
   std::unique_ptr< RFNode > leftChild,
   std::unique_ptr< RFNode > rightChild,
+  size_t nodeId,
   bool trinary,
   size_t naLeftCount,
   size_t naCenterCount,
@@ -67,7 +68,7 @@ void RFNode::setSplitNode(
   _naLeftCount = naLeftCount;
   _naRightCount = naRightCount;
   _trinary = trinary;
-  _nodeId = -1;
+  _nodeId = nodeId;
 }
 
 void RFNode::ridgePredict(
@@ -531,8 +532,7 @@ void RFNode::write_node_info(
   if (is_leaf()) {
     // If it is a leaf: set everything to be 0
     treeInfo->var_id.push_back(-getAveragingIndex()->size());
-    treeInfo->var_id.push_back(-getSplittingIndex()->size());
-    treeInfo->split_val.push_back(0);
+    treeInfo->split_val.push_back(0.0);
     treeInfo->naLeftCount.push_back(-1);
     treeInfo->naRightCount.push_back(-1);
 
@@ -567,6 +567,7 @@ void RFNode::write_node_info(
     treeInfo->num_avg_samples.push_back(getAverageCountAlways());
     treeInfo->values.push_back(0.0);
 
+    // Recurse
     getLeftChild()->write_node_info(treeInfo, trainingData);
     getRightChild()->write_node_info(treeInfo, trainingData);
   }

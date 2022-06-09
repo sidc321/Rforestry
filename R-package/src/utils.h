@@ -58,7 +58,7 @@ struct tree_info {
   std::vector< int > var_id;
   // contains the variable id for a splitting node and the negative number of
   // observations in a leaf for a leaf node
-  std::vector< long double > split_val;
+  std::vector< double > split_val;
   // contains the split values for regular nodes
   std::vector< double > values;
   // contains the weights used for prediction in each node
