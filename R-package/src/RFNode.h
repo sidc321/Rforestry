@@ -45,6 +45,13 @@ public:
       double lambda
   );
 
+  void getPath(
+  std::vector<size_t> &path,
+  std::vector<double>*  xNew,
+  DataFrame* trainingData,
+  unsigned int seed
+);
+
   void predict(
     std::vector<double> &outputPrediction,
     std::vector<int>* terminalNodes,

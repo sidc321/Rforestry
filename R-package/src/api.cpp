@@ -6,6 +6,8 @@
 #include "forestry.h"
 #include "DataFrame.h"
 #include "utils.h"
+#include "forestryTree.h"
+
 
 extern "C"{
 
@@ -453,6 +455,7 @@ std::vector<double>* get_threshold(void* forest_ptr,
     DataFrame* dta_frame = reinterpret_cast<DataFrame *>(dataframe_ptr);
     forest->_trainingData = dta_frame;
 
+
     std::unique_ptr<tree_info> info_holder;
 
     info_holder = forest->getForest()->at(0)->getTreeInfo(forest->getTrainingData());
@@ -477,6 +480,32 @@ std::vector<double>* get_values(void* forest_ptr,
             new std::vector<double> (info_holder->values)
     );
     return values;
+}
+
+std::vector<size_t>* get_path(void* forest_ptr,
+                           double* obs_ptr,
+                           int idx) {
+    forestry* forest = reinterpret_cast<forestry *>(forest_ptr);
+
+    std::vector<double>* observationDta = new std::vector<double>(forest->getTrainingData()->getNumColumns());
+
+    for (size_t i = 0; i < forest->getTrainingData()->getNumColumns(); i++) {
+        observationDta->at(i) = obs_ptr[i];
+    }
+
+    forestryTree* tree = (forest->getForest()->at(idx)).get();
+    
+    std::vector<size_t> path;
+    path.push_back(0);
+
+    tree->getRoot()->getPath(path, observationDta, forest->getTrainingData(), forest->getSeed());    
+
+    std::vector<size_t>* node_ids(
+            new std::vector<size_t> (path)
+    );
+
+    return node_ids;
+
 }
 
 

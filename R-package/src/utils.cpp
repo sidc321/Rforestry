@@ -163,6 +163,9 @@ double vector_get(std::vector<double>* v, int i){
 int vector_get_int(std::vector<int>* v, int i){
     return v->at(i);
 }
+size_t vector_get_size_t(std::vector<size_t>* v, int i){
+    return v->at(i);
+}
 void vector_push_back(std::vector<double>* v, int i){
     v->push_back(i);
 }
