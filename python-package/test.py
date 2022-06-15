@@ -41,14 +41,14 @@ print(fr.Py_forest)
 
 
 shadow_forestry = ShadowForestryTree(fr, X, y, X.columns.values, 'sepal length (cm)', 1)
-#print(shadow_forestry.get_children_left())
-#print(shadow_forestry.get_children_right())
+print(shadow_forestry.get_children_left())
+print(shadow_forestry.get_children_right())
 # print(shadow_forestry.get_node_samples())
-# print(shadow_forestry.get_split_samples(6)) --- error for leaf node, indeces messed up
+print(shadow_forestry.get_split_samples(6)) --- error for leaf node, indeces messed up
 # print(shadow_forestry.get_split_samples(3)) --- Still wrong
 # print(shadow_forestry.get_node_nsamples(6))
 
-print(shadow_forestry.get_score())
+# print(shadow_forestry.get_score())
 
 
 # Sklearn
