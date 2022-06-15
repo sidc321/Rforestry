@@ -262,7 +262,7 @@ public:
   }
 
   void assignNodeId(size_t& node_i) {
-    node_i = ++_nodeCount;
+    node_i = _nodeCount++;
   }
 
   size_t getNodeCount() {

@@ -676,7 +676,6 @@ void RFNode::write_node_info(
     DataFrame* trainingData
 ){
 
-  std::cout << "Node Id: " << getNodeId() << std::endl;
   if (is_leaf()) {
     // If it is a leaf: set everything to be 0
     treeInfo->var_id.push_back(-getAveragingIndex()->size());
