@@ -1183,6 +1183,10 @@ void forestryTree::recursivePartition(
       }
     }
 
+    // Assign Node id for split node
+    size_t node_id;
+    assignNodeId(node_id);
+
     // Recursively split on the left child node
     recursivePartition(
       leftChild.get(),
@@ -1225,8 +1229,7 @@ void forestryTree::recursivePartition(
       symmetric_details_right
     );
 
-    size_t node_id;
-    assignNodeId(node_id);
+
     (*rootNode).setSplitNode(
         bestSplitFeature,
         bestSplitValue,
