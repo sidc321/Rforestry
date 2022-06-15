@@ -985,12 +985,41 @@ class forestry:
 
         pass ### weightmatrix not implemented yet!!!!
 
-    def decision_path(self, X):
+    # Given a trained forest and the index of a tree, returns the decision path
+    # of each observation in the tree.
+    def decision_path(self, X, tree_idx):
 
-        regr = tree.DecisionTreeRegressor(max_depth=2)
-        boston = load_boston()
-        regr.fit(boston.data, boston.target)
-        return regr.decision_path(boston.data)
+        X = pd.DataFrame(X)
+        
+        res = np.empty(len(X.index), dtype=object)
+        for i in range(len(X.index)):
+            obs = X.iloc[i, :].values
+            path_ptr = ctypes.c_void_p(lib.get_path(
+                self.forest,
+                lib_setup.get_array_pointer(obs, dtype=np.double),
+                tree_idx
+            ))
+ 
+            path_length = int(lib.vector_get_size_t(path_ptr, 0))
+            path_array = np.empty(path_length, dtype=np.intc)
+        
+            for j in range(path_length):
+                path_array[j] = int(lib.vector_get_size_t(path_ptr, j+1))
+            
+            res[i] = path_array
+
+        return res
+        
+    # Retirns the ocefficient of determination of the prediction.
+    def score(self, X, y, sample_weight=None):
+        y_pred = self.predict(newdata=X, aggregation='average')
+        y = np.array(y)
+
+        u = np.sum((y_pred - y)**2)
+        v = np.sum((y - np.mean(y))**2)
+
+        return 1 - u/v
+
 
     # Given a trained forest, translate the selected tree to an SKlearn like
     # form so that we can visualize the tree. Should have the following
@@ -1008,7 +1037,7 @@ class forestry:
             self.forest,
             0
         )
-        print(numNodes)
+
         # Now pull the relevant data from the forest and give to
         # the tree dictionary
         forest_l_children = ctypes.c_void_p(lib.get_children_left(
@@ -1070,7 +1099,7 @@ class forestry:
 
         self.Py_forest["threshold"] = res
 
-        # Get thresholds
+        # Get values
         values = ctypes.c_void_p(lib.get_values(
             self.forest,
             self.dataframe

@@ -90,6 +90,10 @@ def setup_lib(lib):
     lib.vector_get_int.argtypes = [ctypes.c_void_p, ctypes.c_int]
     lib.vector_get_int.restype = ctypes.c_int
 
+    # Size_t get function
+    lib.vector_get_size_t.argtypes = [ctypes.c_void_p, ctypes.c_int]
+    lib.vector_get_size_t.restype = ctypes.c_size_t
+
 
     lib.getVI.argtypes = [ctypes.c_void_p]
     lib.getVI.restype = ctypes.c_void_p
@@ -114,6 +118,9 @@ def setup_lib(lib):
 
     lib.getTreeNodeCount.argtypes = [ctypes.c_void_p,ctypes.c_int]
     lib.getTreeNodeCount.restype = ctypes.c_int
+
+    lib.get_path.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_double), ctypes.c_int]
+    lib.get_path.restype = ctypes.c_void_p
 
 
 def get_data_pointer(data):

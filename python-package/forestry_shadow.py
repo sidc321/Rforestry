@@ -2,6 +2,7 @@ from collections import defaultdict
 from typing import List, Mapping
 
 import numpy as np
+import pandas as pd
 from sklearn.utils import compute_class_weight
 
 from dtreeviz.models.shadow_decision_tree import ShadowDecTree
@@ -42,7 +43,8 @@ class ShadowForestryTree(ShadowDecTree):
         return 'SQUARED_ERROR'
 
     def get_class_weight(self):
-        return self.tree_model.class_weight
+        if self.is_classifier():
+            return self.tree_model.class_weight
 
     def nclasses(self):
         return 1
@@ -51,22 +53,23 @@ class ShadowForestryTree(ShadowDecTree):
         if self.is_classifier():
             return self.tree_model.classes_
 
+    #TODO: Implement this
     def get_node_samples(self):
         if self.node_to_samples is not None:
             return self.node_to_samples
 
-        dec_paths = self.tree_model.decision_path(self.x_data)
+        dec_paths = self.tree_model.decision_path(self.x_data, self.tree_id)
 
         # each sample has path taken down tree
         node_to_samples = defaultdict(list)
         for sample_i, dec in enumerate(dec_paths):
-            _, nz_nodes = dec.nonzero()
-            for node_id in nz_nodes:
+            for node_id in dec:
                 node_to_samples[node_id].append(sample_i)
 
         self.node_to_samples = node_to_samples
         return node_to_samples
 
+    #TODO: Implement this
     def get_split_samples(self, id):
         samples = np.array(self.get_node_samples()[id])
         node_X_data = self.x_data[samples, self.get_node_feature(id)]
@@ -129,13 +132,14 @@ class ShadowForestryTree(ShadowDecTree):
         return gini
 
     def get_max_depth(self):
-        return self.tree_model.max_depth
+        return self.tree_model.maxDepth
 
     def get_score(self):
-        return self.tree_model.score(self.x_data, self.y_data)
+        X = pd.DataFrame(self.x_data, columns=self.feature_names)
+        return self.tree_model.score(X, self.y_data)
 
     def get_min_samples_leaf(self):
-        return self.tree_model.min_samples_leaf
+        return self.tree_model.nodesizeSpl
 
     def shouldGoLeftAtSplit(self, id, x):
         return x < self.get_node_split(id)
