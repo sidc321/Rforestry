@@ -703,7 +703,7 @@ void RFNode::write_node_info(
   } else {
     // If it is a usual node: remember split var and split value and recursively
     // call write_node_info on the left and the right child.
-    treeInfo->var_id.push_back(getSplitFeature() + 1);
+    treeInfo->var_id.push_back(getSplitFeature());
     treeInfo->split_val.push_back(getSplitValue());
     treeInfo->naLeftCount.push_back(getNaLeftCount());
     treeInfo->naRightCount.push_back(getNaRightCount());

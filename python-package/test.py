@@ -16,6 +16,7 @@ import platform
 from dtreeviz.models.sklearn_decision_trees import ShadowSKDTree
 from forestry_shadow import ShadowForestryTree
 
+#%%
 
 
 data = load_iris()
@@ -38,13 +39,24 @@ fr.fit(X, y)
 
 fr.translate_tree_python()
 print(fr.Py_forest)
-
+#%%
 
 shadow_forestry = ShadowForestryTree(fr, X, y, X.columns.values, 'sepal length (cm)', 1)
-print(shadow_forestry.get_children_left())
+X.columns.values
+#%%
+
+
+print(shadow_forestry.get_split_samples(0))
 print(shadow_forestry.get_children_right())
+print(X.columns.values)
+viz = dtreeviz(shadow_forestry,
+               scale=3.0,
+               target_name='sepal length (cm)',
+               feature_names=X.columns.values)
+
+viz.view()
+#%%
 # print(shadow_forestry.get_node_samples())
-print(shadow_forestry.get_split_samples(6)) --- error for leaf node, indeces messed up
 # print(shadow_forestry.get_split_samples(3)) --- Still wrong
 # print(shadow_forestry.get_node_nsamples(6))
 
@@ -52,11 +64,13 @@ print(shadow_forestry.get_split_samples(6)) --- error for leaf node, indeces mes
 
 
 # Sklearn
-
+#%%
 regr = tree.DecisionTreeRegressor(max_depth=2)
 regr.fit(X, y)
 
 shadow_dtree = ShadowSKDTree(regr, X, y, X.columns.values, 'sepal length (cm)')
+
+#%%
 # print(shadow_dtree.get_children_left())
 # print(shadow_dtree.get_children_right())
 # print(shadow_dtree.get_features())
