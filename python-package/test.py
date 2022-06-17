@@ -19,6 +19,7 @@ from forestry_shadow import ShadowForestryTree
 from sklearn.ensemble import RandomForestRegressor
 #%%
 
+# Load in the training data
 
 data = load_iris()
 df = pd.DataFrame(data['data'], columns=data['feature_names'])
@@ -26,6 +27,7 @@ df['target'] = data['target']
 X = df.loc[:, df.columns != 'target']
 X = X.loc[:, X.columns != 'sepal length (cm)']
 y = df['sepal length (cm)']
+
 
 fr = forestry(
         ntree = 500,
@@ -35,18 +37,41 @@ fr = forestry(
         seed=1729
 )
 
-print("Fitting the forest")
-fr.fit(X, y)
-print(fr.predict(X))
+
+
+#%%
+X
+y
+
+#%%
+
+fr = forestry(
+    #ntree = 1,
+    maxDepth=3,
+    seed=1,
+    verbose=True,
+    scale=False
+)
+
 
 # print(fr.correctedPredict(X, nrounds=4, params_forestry={'ntree': 500, 'maxDepth': 2, 'verbose': False, 'scale': False}, feats=[0,1,2], simple=True, verbose=True, linear=True, keep_fits=True))
 # print(fr.get_params())
-
-# #%%
-
+#%%
+print("Predicting with the forest")
+forest_preds = fr.predict(newdata = X)
+print(forest_preds)
+#%%
+print(forest_preds)
 # shadow_forestry = ShadowForestryTree(fr, X, y, X.columns.values, 'sepal length (cm)', 1)
 # # X.columns.values
 # # #%%
+
+
+#%%
+from sklearn.datasets import *
+from sklearn import tree
+from dtreeviz.trees import *
+import platform
 
 
 # # print(shadow_forestry.get_children_right())

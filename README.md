@@ -1,5 +1,7 @@
 [![R-CMD-check](https://github.com/forestry-labs/Rforestry/actions/workflows/check-noncontainerized.yaml/badge.svg)](https://github.com/forestry-labs/Rforestry/actions/workflows/check-noncontainerized.yaml)
 
+## This is an experimental fork of Rforestry, for the package repo, see (https://github.com/forestry-labs/Rforestry)
+
 ## Rforestry: Random Forests, Linear Trees, and Gradient Boosting for Inference and Interpretability
 
 Sören Künzel, Theo Saarinen, Simon Walter, Sam Antonyan, Edward Liu, Allen Tang, Jasjeet Sekhon

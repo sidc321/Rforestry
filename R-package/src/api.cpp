@@ -231,7 +231,6 @@ void* train_forest(
         std::cout << forest << std::endl;
         forest->getForest()->at(0)->printTree();
     }
-
     return forest;
 }
 
