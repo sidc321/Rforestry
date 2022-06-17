@@ -3,7 +3,8 @@ LIBRARIES NEEDED
 ----------------------
 """
 
-from hashlib import new
+from posixpath import isabs
+from xml.etree.ElementInclude import include
 import numpy as np
 import pandas as pd
 import warnings
@@ -11,14 +12,13 @@ import math
 import os
 import sys
 import platform
+import inspect
 from random import randrange
 import ctypes
+from sklearn.model_selection import LeaveOneOut
+import statsmodels.api as sm
+
 import lib_setup
-
-# TODO: Added these Just for testing, remove later
-from sklearn.datasets import *
-from sklearn import tree
-
 
 import Py_preprocessing
 
@@ -801,22 +801,6 @@ class forestry:
         return np.mean((y_true - preds)**2)
 
 
-    # -- Calculate Splitting Proportions -------------------------------------------
-    #' getSplitProps-forestry
-    #' @name getSplitProps-forestry
-    #' @rdname getSplitProps-forestry
-    #' @description Retrieves the proportion of splits for each feature in the given
-    #'  forestry object. These proportions are calculated as the number of splits
-    #'  on feature i in the entire forest over total the number of splits in the
-    #'  forest.
-    #' @param object A trained model object of class "forestry".
-    #' @return A vector of length equal to the number of columns
-    #' @seealso \code{\link{forestry}}
-    def getSplitProps(self):
-        pass
-
-
-
     # -- Calculate Variable Importance ---------------------------------------------
     #' getVI-forestry
     #' @rdname getVI-forestry
@@ -985,6 +969,7 @@ class forestry:
 
         pass ### weightmatrix not implemented yet!!!!
 
+
     # Given a trained forest and the index of a tree, returns the decision path
     # of each observation in the tree.
     def decision_path(self, X, tree_idx):
@@ -1035,14 +1020,15 @@ class forestry:
 
         numNodes = lib.getTreeNodeCount(
             self.forest,
-            0
+            tree_id
         )
 
         # Now pull the relevant data from the forest and give to
         # the tree dictionary
         forest_l_children = ctypes.c_void_p(lib.get_children_left(
             self.forest,
-            self.dataframe
+            self.dataframe,
+            tree_id
         ))
 
         res = np.empty(numNodes, dtype=np.int64)
@@ -1054,7 +1040,8 @@ class forestry:
         # Get right children
         forest_r_children = ctypes.c_void_p(lib.get_children_right(
             self.forest,
-            self.dataframe
+            self.dataframe,
+            tree_id
         ))
 
         res = np.empty(numNodes, dtype=np.int64)
@@ -1066,7 +1053,8 @@ class forestry:
         # Get feature
         feats = ctypes.c_void_p(lib.get_feature(
             self.forest,
-            self.dataframe
+            self.dataframe,
+            tree_id
         ))
 
         res = np.empty(numNodes, dtype=np.int64)
@@ -1078,7 +1066,8 @@ class forestry:
         # Get num_samples
         num_samps = ctypes.c_void_p(lib.get_num_samples(
             self.forest,
-            self.dataframe
+            self.dataframe,
+            tree_id
         ))
 
         res = np.empty(numNodes, dtype=np.int64)
@@ -1090,7 +1079,8 @@ class forestry:
         # Get thresholds
         thresh = ctypes.c_void_p(lib.get_threshold(
             self.forest,
-            self.dataframe
+            self.dataframe,
+            tree_id
         ))
 
         res = np.empty(numNodes)
@@ -1102,7 +1092,8 @@ class forestry:
         # Get values
         values = ctypes.c_void_p(lib.get_values(
             self.forest,
-            self.dataframe
+            self.dataframe,
+            tree_id
         ))
 
         res = np.empty(numNodes)
@@ -1112,4 +1103,336 @@ class forestry:
         self.Py_forest["values"] = res
         return
 
-#make linFeats same as symmetric...
+
+    # -- Perform bias corrected predictions ----------------------------------------
+    #' correctedPredict-forestry
+    #' @rdname correctedPredict-forestry
+    #' @description Perform predictions given the forest using a bias correction based on
+    #'   the out of bag predictions on the training set. By default we use a final linear
+    #'   correction based on the leave-one-out hat matrix after doing `nrounds` nonlinear
+    #'   corrections.
+    #' @param object A `forestry` object.
+    #' @param newdata Dataframe on which to predict. If this is left NULL, we
+    #'   predict on the in sample data.
+    #' @param feats A vector of feature indices which should be included in the bias
+    #'   correction. By default only the outcome and predicted outcomes are used.
+    #' @param nrounds The number of nonlinear bias correction steps which should be
+    #'   taken. By default this is zero, so just a single linear correction is used.
+    #' @param linear A flag indicating whether or not we want to do a final linear
+    #'   bias correction after doing the nonlinear corrections. Default is TRUE.
+    #' @param double A flag indicating if one should use aggregation = "doubleOOB" for
+    #'   the initial predictions rather than aggregation = "oob." Default is FALSE.
+    #' @param simple flag indicating whether we should do a simple linear adjustment
+    #'  or do different adjustments by quantiles. Default is TRUE.
+    #' @param verbose flag which displays the bias of each qunatile.
+    #' @param use_residuals flag indicating if we should use the residuals to fit the
+    #'  bias correction steps. Defualt is FALSE which means that we will use Y
+    #'  rather than Y-Y.hat as the regression outcome in the bias correction steps.
+    #' @param adaptive flag to indicate whether we use adaptiveForestry or not in the
+    #'  regression step. Default is FALSE.
+    #' @param monotone flag to indicate whether or not we should use monotonicity
+    #'  in the regression of Y on Y hat (when doing forest correction steps).
+    #'  If TRUE, will constrain the corrected prediction for Y to be monotone in the
+    #'  original prediction of Y. Default is FALSE.
+    #' @param num_quants Number of quantiles to use when doing quantile specific bias
+    #'  correction. Will only be used if simple = FALSE. Default is 5.
+    #' @param params.forestry A list of parameters to pass to the subsequent forestry
+    #'  calls. Note that these forests will be trained on features of dimension
+    #'  length(feats) + 1 as the correction forests are trained on Y ~ cbind(newdata[,feats], Y.hat).
+    #'  so monotonic constraints etc given to this list should be of size length(feats) + 1.
+    #'  Defaults to the standard forestry parameters for any parameters that are
+    #'  not included in the list.
+    #' @param keep_fits A flag that indicates if we should save the intermediate
+    #'  forests used for the bias correction. If this is TRUE, we return a list of
+    #'  the forestry objects for each iteration in the bias correction.
+    #' @return A vector of the bias corrected predictions
+    #' @examples
+    #'  library(Rforestry)
+    #'  set.seed(121235312)
+    #'  n <- 50
+    #'  p <- 10
+    #'  x <- matrix(rnorm(n * p), ncol = p)
+    #'  beta <- runif(p,min = 0, max = 1)
+    #'  y <- as.matrix(x) %*% beta + rnorm(50)
+    #'  x <- data.frame(x)
+    #'
+    #'  forest <- forestry(x =x,
+    #'                     y = y[,1],
+    #'                     OOBhonest = TRUE,
+    #'                     doubleBootstrap = TRUE)
+    #'  p <- predict(forest, x)
+    #'
+    #'  # Corrected predictions
+    #'  pred.bc <- correctedPredict(forest,
+    #'                              newdata = x,
+    #'                              simple = TRUE,
+    #'                              nrounds = 0)
+    #'
+    def correctedPredict(
+        self,
+        newdata = None,
+        feats = None,
+        nrounds = 0,
+        linear = True,
+        double = False,
+        simple = True,
+        verbose = False,
+        use_residuals = False,
+        adaptive = False,
+        monotone = False,
+        num_quants = 5,
+        params_forestry = dict(),
+        keep_fits = False
+    ):
+
+        # Check allowed settings for the bias correction
+        if (not linear) and nrounds < 1:
+            raise ValueError('We must do at least one round of bias corrections, with either linear = TRUE or nrounds > 0.')
+
+        if (not isinstance(nrounds, int)) or nrounds < 0:
+            raise ValueError('nrounds must be a non negative integer.')
+    
+        if feats is not None:
+            if any(not isinstance(x, (int, np.integer)) or x < -self.processed_dta['numColumns'] or x >= self.processed_dta['numColumns'] for x in feats):
+                raise ValueError('feats must be  a integer between -ncol and ncol(x)-1')
+
+        # Check the parameters match parameters for forestry or adaptiveForestry
+        if adaptive:
+            pass #Adaptive not implemented
+        else:
+            forestry_args = set(inspect.getargspec(forestry.__init__)[0])
+        for param in params_forestry:
+            if param not in forestry_args:
+                raise ValueError('Invalid parameter in params.forestry: ' + param)
+
+        if double:
+            agg = "doubleOOB"
+        else:
+            agg = "oob"
+
+        # First get out of bag preds
+        oob_preds = self.predict(aggregation = agg)
+
+        if feats is None:
+            adjust_data = pd.DataFrame({'Y': self.processed_dta['y'], 'Y.hat': oob_preds})
+        else:
+            adjust_data = self.processed_dta['processed_x'].iloc[:, feats]
+            adjust_data.columns = ['V' + str(x) for x in range(len(feats))]
+            adjust_data['Y'] = self.processed_dta['y']
+            adjust_data['Y.hat'] = oob_preds
+
+        # Store the RF fits
+        rf_fits = []
+
+        if nrounds > 0:
+            for round_i in range(nrounds):
+                # Set right outcome to regress for regression step
+                if use_residuals:
+                    y_reg = adjust_data['Y'] - adjust_data['Y.hat']
+                else:
+                    y_reg = adjust_data['Y']
+
+                if adaptive:
+                    pass #Adaptive not implemented
+
+                elif monotone:
+                    # Set default params for monotonicity in the Y.hat feature
+                    params_forestry_i = params_forestry.copy()
+                    params_forestry_i['OOBhonest'] = True
+                    params_forestry_i['monotoneAvg'] = True
+                    monotone_constraits = np.zeros(len(adjust_data.columns) - 1)
+                    monotone_constraits[-1] = 1
+
+                    forest_i = forestry(**params_forestry_i)
+                    forest_i.fit(x = adjust_data.loc[:, adjust_data.columns != 'Y'],
+                                 y = y_reg,
+                                 monotonicConstraints = monotone_constraits)
+
+                else:
+                    # Set default forestry params
+                    params_forestry_i = params_forestry.copy()
+                    params_forestry_i['OOBhonest'] = True
+
+                    forest_i = forestry(**params_forestry_i)
+                    forest_i.fit(x = adjust_data.loc[:, adjust_data.columns != 'Y'],
+                                 y = y_reg)
+
+                pred_i = forest_i.predict(adjust_data.loc[:, adjust_data.columns != 'Y'], aggregation = agg)
+
+                # Stror the ith fit
+                rf_fits.append(forest_i)
+
+                # If we predicted some residuals, we now have to add the old Y.hat to them
+                # to get the new Y.hat
+                if use_residuals:
+                    pred_i = adjust_data['Y.hat'] + pred_i
+                
+                # Adjust the predicted Y hats
+                adjust_data['Y.hat'] = pred_i 
+
+
+            # if we have a new feature, we need to run the correction fits on that as well# if we have a new feature, we need to run the correction fits on that as well
+            if newdata is not None:
+                # Get initial predictions
+                if feats is None: 
+                    pred_data = pd.DataFrame({'Y.hat': self.predict(newdata = newdata)})
+                else:
+                    pred_data = pd.DataFrame(newdata.iloc[:, feats])
+                    pred_data['Y.hat'] = self.predict(newdata = newdata) # aggregation = agg ?????
+
+                # Set column names to follow a format matching the features used
+                if feats is not None:
+                    pred_data.columns = ['V' + str(x) for x in range(len(feats))] + ['Y.hat']
+
+                for iter in range(nrounds):
+                    adjusted_pred = rf_fits[iter].predict(newdata = pred_data) # aggregation = agg ?????
+                    pred_data['Y.hat'] = adjusted_pred  #doesnt make sense??????
+
+        if newdata is not None:
+            if nrounds > 0:
+                preds_initial = pred_data['Y.hat']
+            else:
+                preds_initial = self.predict(newdata = newdata)
+
+
+        # Given a dataframe with Y and Y.hat at least, fits an OLS and gives the LOO
+        # predictions on the sample
+        def loo_pred_helper(df):
+
+            Y = df['Y']
+            X = df.loc[:, df.columns != 'Y']
+            X = sm.add_constant(X)
+
+            adjust_lm = sm.OLS(Y,X).fit()
+            
+            cv = LeaveOneOut()
+            cv_pred = np.empty(Y.size)
+
+            for i, (train, test) in enumerate(cv.split(X)):
+                # split data
+                X_train, X_test = X.iloc[train, :], X.iloc[test, :]
+                y_train, y_test = Y[train], Y[test]
+
+                # fit model
+                model = sm.OLS(y_train, X_train).fit()
+                cv_pred[i] = model.predict(X_test)
+
+            return {'insample_preds': cv_pred, 'adjustment_model': adjust_lm}
+
+        if linear:
+            # Now do linear adjustment
+            if simple:
+                # Now we either return the adjusted in sample predictions, or the
+                # out of sample predictions scaled according to the adjustment model
+                if newdata is None:
+                    preds_adjusted = loo_pred_helper(adjust_data)['insample_preds']
+                else:
+                    model = loo_pred_helper(adjust_data)['adjustment_model']
+                    
+                    if feats is None: 
+                        data_pred = pd.DataFrame({'Y.hat': preds_initial})
+                    else:
+                        pred_data = pd.DataFrame(newdata.iloc[:, feats])
+                        pred_data.columns = ['V' + str(x) for x in range(len(feats))]
+                        pred_data['Y.hat'] = preds_initial
+                    
+                    preds_adjusted = np.array(model.predict(sm.add_constant(pred_data)))
+
+            # Not simple
+            else:
+                # split Yhat into quantiles
+                Y_hat = adjust_data['Y.hat']
+                Y = np.array(adjust_data['Y'])
+
+                cuts, training_quantiles = pd.qcut(Y_hat, num_quants, retbins = True)
+                q_idx = np.array(cuts.cat.codes)
+
+                new_pred = np.empty(Y_hat.size)
+
+                for i in range(num_quants):
+                    # split data
+                    mask = q_idx == i
+                    if verbose:
+                        bias = np.mean(Y[mask] - Y_hat[mask])
+                        print('Quantile %d: ' % i + ' ' + str(cuts.cat.categories[i]) + ', Bias: %f' % bias)
+                    # Again we have to check if the data was in or out of sample, and do predictions
+                    # accordingly --????? why aren't we doing this?
+                    new_pred[mask] = loo_pred_helper(adjust_data.loc[mask, :].reset_index(drop=True))['insample_preds']
+
+                if newdata is not None:
+                    # Now we have fit the Q_num different models, we take the models and use
+                    # split Yhat into quantiles
+                    training_quantiles[-1] = np.inf
+                    training_quantiles[0] = -np.inf
+
+                    # Get the quantile each testing observation falls into
+                    testing_quantiles = np.empty(preds_initial.size, dtype=np.intc)
+                    for i in range(preds_initial.size):  #?????? Why use two loops??
+                        testing_quantiles[i] = np.argmax(training_quantiles >= preds_initial[i]) - 1
+
+                    # Now predict for each index set using the right model
+                    preds_adjusted = np.empty(len(newdata.index))
+                    for i in range(training_quantiles.size - 1):
+                        mask = testing_quantiles == i
+
+                        if feats is None:  #???? Check this later
+                            pred_df = pd.DataFrame({'Y.hat': preds_initial[mask].reset_index(drop=True)})
+                        else:
+                            pred_df = pd.DataFrame(newdata.iloc[mask, feats].reset_index(drop=True))
+                            pred_df.columns = ['V' + str(x) for x in range(len(feats))]
+                            pred_df['Y.hat'] = preds_initial[mask].reset_index(drop=True)
+
+                        fit_i = sm.OLS( Y[q_idx == i], sm.add_constant( adjust_data.loc[q_idx == i, adjust_data.columns != 'Y'].reset_index(drop=True))).fit()
+                        preds_adjusted[mask] = fit_i.predict(sm.add_constant(pred_df))
+                    
+                else:
+                    preds_adjusted = new_pred
+
+            if not keep_fits:
+                return preds_adjusted
+            else:
+                return {'predictions': preds_adjusted, 'fits': rf_fits}
+
+        # Not linear
+        else:
+            if not keep_fits:
+                return np.array(adjust_data.iloc[:, -1])
+            else:
+                return {'predictions': np.array(adjust_data.iloc[:, -1]), 'fits': rf_fits}
+
+        
+
+    # -- Calculate Splitting Proportions -------------------------------------------
+    #' getSplitProps-forestry
+    #' @name getSplitProps-forestry
+    #' @rdname getSplitProps-forestry
+    #' @description Retrieves the proportion of splits for each feature in the given
+    #'  forestry object. These proportions are calculated as the number of splits
+    #'  on feature i in the entire forest over total the number of splits in the
+    #'  forest.
+    #' @param object A trained model object of class "forestry".
+    #' @return A vector of length equal to the number of columns
+    #' @seealso \code{\link{forestry}}
+    def getSplitProps(self):
+        
+        split_nums = np.zeros(self.processed_dta['numColumns'])
+
+        for i in range(self.ntree):
+            self.translate_tree_python(i)
+
+            for feat in self.Py_forest['feature']:
+                if feat >= 0:
+                    split_nums[feat] += 1
+
+        return split_nums / np.sum(split_nums)
+
+
+
+    def get_params(self):
+        return self.__dict__
+
+
+    def set_params(self, **params):
+        self.__init__(**params)
+
+# make linFeats same as symmetric...

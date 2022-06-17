@@ -16,6 +16,7 @@ import platform
 from dtreeviz.models.sklearn_decision_trees import ShadowSKDTree
 from forestry_shadow import ShadowForestryTree
 
+from sklearn.ensemble import RandomForestRegressor
 #%%
 
 
@@ -36,44 +37,51 @@ fr = forestry(
 
 print("Fitting the forest")
 fr.fit(X, y)
+print(fr.predict(X))
 
-fr.translate_tree_python()
-print(fr.Py_forest)
-#%%
+# print(fr.correctedPredict(X, nrounds=4, params_forestry={'ntree': 500, 'maxDepth': 2, 'verbose': False, 'scale': False}, feats=[0,1,2], simple=True, verbose=True, linear=True, keep_fits=True))
+# print(fr.get_params())
 
-shadow_forestry = ShadowForestryTree(fr, X, y, X.columns.values, 'sepal length (cm)', 1)
-X.columns.values
-#%%
+# #%%
 
-
-print(shadow_forestry.get_split_samples(0))
-print(shadow_forestry.get_children_right())
-print(X.columns.values)
-viz = dtreeviz(shadow_forestry,
-               scale=3.0,
-               target_name='sepal length (cm)',
-               feature_names=X.columns.values)
-
-viz.view()
-#%%
-# print(shadow_forestry.get_node_samples())
-# print(shadow_forestry.get_split_samples(3)) --- Still wrong
-# print(shadow_forestry.get_node_nsamples(6))
-
-# print(shadow_forestry.get_score())
+# shadow_forestry = ShadowForestryTree(fr, X, y, X.columns.values, 'sepal length (cm)', 1)
+# # X.columns.values
+# # #%%
 
 
-# Sklearn
-#%%
-regr = tree.DecisionTreeRegressor(max_depth=2)
-regr.fit(X, y)
+# # print(shadow_forestry.get_children_right())
+# # print(X.columns.values)
+# viz = dtreeviz(shadow_forestry,
+#                scale=3.0,
+#                target_name='sepal length (cm)',
+#                feature_names=X.columns.values)
 
-shadow_dtree = ShadowSKDTree(regr, X, y, X.columns.values, 'sepal length (cm)')
+# viz.view()
+# #%%
+# # print(shadow_forestry.get_node_samples())
+# # print(shadow_forestry.get_split_samples(3)) --- Still wrong
+# # print(shadow_forestry.get_node_nsamples(6))
 
-#%%
-# print(shadow_dtree.get_children_left())
-# print(shadow_dtree.get_children_right())
-# print(shadow_dtree.get_features())
-# dec_paths = regr.decision_path(X)
-# print(dec_paths)
+# # print(shadow_forestry.get_score())
 
+
+# # Sklearn
+# #%%
+# regr = tree.DecisionTreeRegressor(max_depth=2)
+# regr.fit(X, y)
+
+# shadow_dtree = ShadowSKDTree(regr, X, y, X.columns.values, 'sepal length (cm)')
+
+# #%%
+# # print(shadow_dtree.get_children_left())
+# # print(shadow_dtree.get_children_right())
+# # print(shadow_dtree.get_features())
+# # dec_paths = regr.decision_path(X)
+# # print(dec_paths)
+
+
+sk_fr = RandomForestRegressor(n_estimators=500, max_depth=10, random_state=1729)
+sk_fr.fit(X, y)
+
+sk_fr.set_params(**{'n_estimators': 300, 'random_state': 1729})
+print(sk_fr.get_params())
