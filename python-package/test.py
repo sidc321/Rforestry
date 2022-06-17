@@ -31,7 +31,7 @@ fr = forestry(
     #ntree = 1,
     maxDepth=3,
     seed=1,
-    verbose=True,
+    verbose=False,
     scale=False
 )
 
