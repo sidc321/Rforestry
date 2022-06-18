@@ -30,6 +30,7 @@ public:
       double splitValue,
       std::unique_ptr< RFNode > leftChild,
       std::unique_ptr< RFNode > rightChild,
+      size_t nodeId,
       bool trinary,
       size_t naLeftCount,
       size_t naCenterCount,
@@ -45,11 +46,20 @@ public:
       double lambda
   );
 
+<<<<<<< HEAD
     void setRidgeCoefficients(
             std::vector<size_t>* averagingIndices,
             DataFrame* trainingData,
             double lambda
     );
+=======
+  void getPath(
+  std::vector<size_t> &path,
+  std::vector<double>*  xNew,
+  DataFrame* trainingData,
+  unsigned int seed
+);
+>>>>>>> plotting
 
   void predict(
     std::vector<double> &outputPrediction,

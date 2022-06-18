@@ -2478,7 +2478,7 @@ correctedPredict <- function(object,
   }
 
   if (nrounds < 0 || nrounds %% 1 != 0) {
-    stop("ntree must be a non negative integer.")
+    stop("nrounds must be a non negative integer.")
   }
 
   if (!is.null(feats)) {
@@ -2687,7 +2687,7 @@ correctedPredict <- function(object,
 
         # Get the quantile each testing observation falls into
         testing.quantiles <- rep(0,length(preds.initial))
-        for (i in 1:length(preds.initial)) {
+        for (i in 1:length(preds.initial)) { #TODO: do we need the second for loop
           for (q_i in 1:(length(training_quantiles)-1)) {
             testing.quantiles[i] <- sum(preds.initial[i]>training_quantiles[1:(length(training_quantiles)-1)])
           }

@@ -86,9 +86,41 @@ def setup_lib(lib):
     lib.vector_get.argtypes = [ctypes.c_void_p, ctypes.c_int]
     lib.vector_get.restype = ctypes.c_double
 
+    # Int get function
+    lib.vector_get_int.argtypes = [ctypes.c_void_p, ctypes.c_int]
+    lib.vector_get_int.restype = ctypes.c_int
+
+    # Size_t get function
+    lib.vector_get_size_t.argtypes = [ctypes.c_void_p, ctypes.c_int]
+    lib.vector_get_size_t.restype = ctypes.c_size_t
+
 
     lib.getVI.argtypes = [ctypes.c_void_p]
     lib.getVI.restype = ctypes.c_void_p
+
+    lib.get_children_left.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int]
+    lib.get_children_left.restype = ctypes.c_void_p
+
+    lib.get_children_right.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int]
+    lib.get_children_right.restype = ctypes.c_void_p
+
+    lib.get_feature.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int]
+    lib.get_feature.restype = ctypes.c_void_p
+
+    lib.get_num_samples.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int]
+    lib.get_num_samples.restype = ctypes.c_void_p
+
+    lib.get_threshold.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int]
+    lib.get_threshold.restype = ctypes.c_void_p
+
+    lib.get_values.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int]
+    lib.get_values.restype = ctypes.c_void_p
+
+    lib.getTreeNodeCount.argtypes = [ctypes.c_void_p,ctypes.c_int]
+    lib.getTreeNodeCount.restype = ctypes.c_int
+
+    lib.get_path.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_double), ctypes.c_int]
+    lib.get_path.restype = ctypes.c_void_p
 
 
 def get_data_pointer(data):

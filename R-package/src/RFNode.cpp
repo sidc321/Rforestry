@@ -50,6 +50,7 @@ void RFNode::setSplitNode(
   double splitValue,
   std::unique_ptr< RFNode > leftChild,
   std::unique_ptr< RFNode > rightChild,
+  size_t nodeId,
   bool trinary,
   size_t naLeftCount,
   size_t naCenterCount,
@@ -65,7 +66,7 @@ void RFNode::setSplitNode(
   _naLeftCount = naLeftCount;
   _naRightCount = naRightCount;
   _trinary = trinary;
-  _nodeId = -1;
+  _nodeId = nodeId;
 }
 
 void RFNode::setRidgeCoefficients(
@@ -167,6 +168,152 @@ void RFNode::ridgePredict(
     }
   }
 }
+
+
+void RFNode::getPath(
+  std::vector<size_t> &path,
+  std::vector<double>*  xNew,
+  DataFrame* trainingData,
+  unsigned int seed
+){
+  RFNode* currentNode = this;
+  while (!currentNode->is_leaf()) {
+
+    // Add the id of the current node to the path
+    path.push_back(currentNode->getNodeId());
+    path[0]++;
+
+    size_t splitFeature = currentNode->getSplitFeature();
+
+    //std::cout << "Node Id: " << currentNode->getNodeId() << " Split Feature: " << splitFeature  << " Split Value:" << currentNode->getSplitValue() << std::endl;
+
+    std::vector<size_t> categorialCols = *(*trainingData).getCatCols();
+    bool categorical_split = (std::find(categorialCols.begin(),
+                                       categorialCols.end(),
+                                       splitFeature) != categorialCols.end());
+
+    size_t naLeftCount = currentNode->getNaLeftCount();
+    size_t naRightCount = currentNode->getNaRightCount();
+
+
+    std::vector<size_t> naSampling;
+    if (!categorical_split) {
+      naSampling = {naLeftCount, naRightCount};
+    }
+
+    std::vector<size_t> naSampling_no_miss;
+    if (!categorical_split) {
+      naSampling_no_miss = {
+        currentNode->getLeftChild()->getAverageCountAlways(),
+        currentNode->getRightChild()->getAverageCountAlways()};
+    }
+
+
+    std::discrete_distribution<size_t> discrete_dist(
+        naSampling.begin(), naSampling.end()
+    );
+    std::discrete_distribution<size_t> discrete_dist_nonmissing(
+        naSampling_no_miss.begin(), naSampling_no_miss.end()
+    );
+    std::mt19937_64 random_number_generator;
+    random_number_generator.seed(seed);
+
+
+    double currentValue = (*xNew)[splitFeature];
+
+
+    if (categorical_split){
+
+      if (std::isnan(currentValue)){
+        size_t draw;
+
+        if ((naLeftCount == 0) && (naRightCount == 0)) {
+          draw = discrete_dist_nonmissing(random_number_generator);
+        } else {
+          draw = discrete_dist(random_number_generator);
+        }
+
+        if (draw == 0) {
+          currentNode = currentNode->getLeftChild();
+        } else {
+          currentNode = currentNode->getRightChild();
+        }
+      }
+
+      else if (currentValue == currentNode->getSplitValue()) {
+        currentNode = currentNode->getLeftChild();
+      } else {
+        currentNode = currentNode->getRightChild();
+      }
+
+    }
+
+    else {
+
+      if (std::isnan(currentValue)){
+        size_t draw;
+        
+        if (currentNode->getTrinary()){
+          if ((naLeftCount == 0) && (naRightCount == 0)) {
+            draw = discrete_dist_nonmissing(random_number_generator);
+          } else {
+            draw = discrete_dist(random_number_generator);
+          }
+
+          if (draw == -1) {
+            currentNode = currentNode->getLeftChild();
+          } else if (draw == 1) {
+            currentNode = currentNode->getRightChild();
+          }
+        }
+        else {
+          if ((naLeftCount == 0) && (naRightCount == 0)) {
+            draw = discrete_dist_nonmissing(random_number_generator);
+          } else {
+            draw = discrete_dist(random_number_generator);
+          }
+
+          if (draw == 0) {
+            currentNode = currentNode->getLeftChild();
+          } else {
+            currentNode = currentNode->getRightChild();
+          }
+        }
+      }
+
+      else {
+        // Check if the current split feature is a symmetric feature
+        if (currentNode->getTrinary() && (std::find(
+              trainingData->getSymmetricIndices()->begin(),
+              trainingData->getSymmetricIndices()->end(),
+              splitFeature) != trainingData->getSymmetricIndices()->end())){
+
+                // If this is a symmetric feature, have to use the absolute value
+                // of the feature value
+                if (std::fabs(currentValue) < currentNode->getSplitValue()){
+                  currentNode = currentNode->getLeftChild();
+                } else {
+                  currentNode = currentNode->getRightChild();
+                }
+              }
+        else{
+          // Run standard predictions
+          if (currentValue < currentNode->getSplitValue()) {
+            currentNode = currentNode->getLeftChild();
+          } else {
+            currentNode = currentNode->getRightChild();
+          }
+        }
+      }
+    }
+
+    
+  }
+
+  path.push_back(currentNode->getNodeId());
+  path[0]++;
+}
+
 
 void RFNode::predict(
   std::vector<double> &outputPrediction,
@@ -543,13 +690,19 @@ void RFNode::write_node_info(
     std::unique_ptr<tree_info> & treeInfo,
     DataFrame* trainingData
 ){
+
   if (is_leaf()) {
     // If it is a leaf: set everything to be 0
     treeInfo->var_id.push_back(-getAveragingIndex()->size());
-    treeInfo->var_id.push_back(-getSplittingIndex()->size());
-    treeInfo->split_val.push_back(0);
+    treeInfo->split_val.push_back(0.0);
     treeInfo->naLeftCount.push_back(-1);
     treeInfo->naRightCount.push_back(-1);
+
+    // Add the new fields
+    treeInfo->left_child_id.push_back(-1);
+    treeInfo->right_child_id.push_back(-1);
+    treeInfo->num_avg_samples.push_back(getAveragingIndex()->size());
+    treeInfo->values.push_back(trainingData->partitionMean(getAveragingIndex()));
 
 
     std::vector<size_t> idx_in_leaf_Ave = *getAveragingIndex();
@@ -565,12 +718,18 @@ void RFNode::write_node_info(
   } else {
     // If it is a usual node: remember split var and split value and recursively
     // call write_node_info on the left and the right child.
-    treeInfo->var_id.push_back(getSplitFeature() + 1);
+    treeInfo->var_id.push_back(getSplitFeature());
     treeInfo->split_val.push_back(getSplitValue());
     treeInfo->naLeftCount.push_back(getNaLeftCount());
     treeInfo->naRightCount.push_back(getNaRightCount());
 
+    // Add the new fields
+    treeInfo->left_child_id.push_back(getLeftChild()->getNodeId());
+    treeInfo->right_child_id.push_back(getRightChild()->getNodeId());
+    treeInfo->num_avg_samples.push_back(getAverageCountAlways());
+    treeInfo->values.push_back(0.0);
 
+    // Recurse
     getLeftChild()->write_node_info(treeInfo, trainingData);
     getRightChild()->write_node_info(treeInfo, trainingData);
   }
