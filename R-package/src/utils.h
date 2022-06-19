@@ -65,16 +65,18 @@ struct tree_info {
   // 0.0 for interior nodes
   std::vector< int > num_avg_samples;
   // Contains the counts of averaging samples at each node
+  std::vector< int > num_spl_samples;
+  // Counts of splitting samples at each node
   std::vector< int > left_child_id;
   // Contains the node_id's of the left child of each node
   // -1 if the node is a leaf node
   std::vector< int > right_child_id;
   // Same as above but for the right child of each node
   //-1 indicates leaf node
-  std::vector< int > leafAveidx;
-  // contains the indices of observations in a leaf.
-  std::vector< int > leafSplidx;
-  // contains the indices of observations in a leaf.
+
+  // These both pertain to the tree itself
+  // only reason to keep when we save load is
+  // so we can use OOB predictions
   std::vector< int > averagingSampleIndex;
   // contains the indices of the average set.
   std::vector< int > splittingSampleIndex;

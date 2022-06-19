@@ -1154,46 +1154,41 @@ void forestry::fillinTreeInfo(
   return ;
 };
 
-void forestry::reconstructTrees(
-    std::unique_ptr< std::vector<size_t> > & categoricalFeatureCols,
-    std::unique_ptr< std::vector<unsigned int> > & tree_seeds,
-    std::unique_ptr< std::vector< std::vector<int> >  > & var_ids,
-    std::unique_ptr< std::vector< std::vector<double> >  > & split_vals,
-    std::unique_ptr< std::vector< std::vector<int> >  > & naLeftCounts,
-    std::unique_ptr< std::vector< std::vector<int> >  > & naRightCounts,
-    std::unique_ptr< std::vector< std::vector<size_t> >  > & leafAveidxs,
-    std::unique_ptr< std::vector< std::vector<size_t> >  > & leafSplidxs,
-    std::unique_ptr< std::vector< std::vector<size_t> >  > &
-      averagingSampleIndex,
-    std::unique_ptr< std::vector< std::vector<size_t> >  > &
-      splittingSampleIndex){
+void forestry::reconstructTrees(std::unique_ptr<std::vector<size_t> > &categoricalFeatureCols,
+                                std::unique_ptr<std::vector<unsigned int> > &tree_seeds,
+                                std::unique_ptr<std::vector<std::vector<int> > > &var_ids,
+                                std::unique_ptr<std::vector<std::vector<double> > > &split_vals,
+                                std::unique_ptr<std::vector<std::vector<int> > > &naLeftCounts,
+                                std::unique_ptr<std::vector<std::vector<int> > > &naRightCounts,
+                                std::unique_ptr<std::vector<std::vector<size_t> > > &averagingSampleIndex,
+                                std::unique_ptr<std::vector<std::vector<size_t> > > &splittingSampleIndex,
+                                std::unique_ptr<std::vector<std::vector<double> > > &weights) {
 
     for (size_t i=0; i<split_vals->size(); i++) {
       try{
         forestryTree *oneTree = new forestryTree();
 
-        oneTree->reconstruct_tree(
-                getMtry(),
-                getMinNodeSizeSpt(),
-                getMinNodeSizeAvg(),
-                getMinNodeSizeToSplitSpt(),
-                getMinNodeSizeToSplitAvg(),
-                getMinSplitGain(),
-                getMaxDepth(),
-                getInteractionDepth(),
-                gethasNas(),
-                getlinear(),
-                getOverfitPenalty(),
-                (*tree_seeds)[i],
-                (*categoricalFeatureCols),
-                (*var_ids)[i],
-                (*split_vals)[i],
-                (*naLeftCounts)[i],
-                (*naRightCounts)[i],
-                (*leafAveidxs)[i],
-                (*leafSplidxs)[i],
-                (*averagingSampleIndex)[i],
-                (*splittingSampleIndex)[i]);
+          oneTree->reconstruct_tree(
+                  getMtry(),
+                  getMinNodeSizeSpt(),
+                  getMinNodeSizeAvg(),
+                  getMinNodeSizeToSplitSpt(),
+                  getMinNodeSizeToSplitAvg(),
+                  getMinSplitGain(),
+                  getMaxDepth(),
+                  getInteractionDepth(),
+                  gethasNas(),
+                  getlinear(),
+                  getOverfitPenalty(),
+                  (*tree_seeds)[i],
+                  (*categoricalFeatureCols),
+                  (*var_ids)[i],
+                  (*split_vals)[i],
+                  (*naLeftCounts)[i],
+                  (*naRightCounts)[i],
+                  (*averagingSampleIndex)[i],
+                  (*splittingSampleIndex)[i],
+                  (*weights)[i]);
 
         (*getForest()).emplace_back(oneTree);
         _ntree = _ntree + 1;
