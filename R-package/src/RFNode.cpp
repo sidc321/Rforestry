@@ -674,6 +674,8 @@ void RFNode::printSubtree(int indentSpace) {
               << getNaLeftCount()
               << " "
               << getNaRightCount()
+              << "Weight = "
+              << getPredictWeight()
               << std::endl;
 
 
@@ -693,7 +695,7 @@ void RFNode::write_node_info(
 
   if (is_leaf()) {
     // If it is a leaf: set everything to be 0
-    treeInfo->var_id.push_back(-getAveragingIndex()->size());
+    treeInfo->var_id.push_back(-getAverageCount());
     treeInfo->split_val.push_back(0.0);
     treeInfo->naLeftCount.push_back(-1);
     treeInfo->naRightCount.push_back(-1);
@@ -701,8 +703,8 @@ void RFNode::write_node_info(
     // Add the new fields
     treeInfo->left_child_id.push_back(-1);
     treeInfo->right_child_id.push_back(-1);
-    treeInfo->num_avg_samples.push_back(getAveragingIndex()->size());
-    treeInfo->values.push_back(trainingData->partitionMean(getAveragingIndex()));
+    treeInfo->num_avg_samples.push_back(getAverageCount());
+    treeInfo->values.push_back(getPredictWeight());
 
 
     std::vector<size_t> idx_in_leaf_Ave = *getAveragingIndex();
