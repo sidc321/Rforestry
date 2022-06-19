@@ -37,35 +37,26 @@ fr = forestry(
         seed=1729
 )
 
-
-
 #%%
-X
-y
-
-#%%
-
-fr = forestry(
-    #ntree = 1,
-    maxDepth=3,
-    seed=1,
-    verbose=True,
-    scale=False
-)
-
-
-# print(fr.correctedPredict(X, nrounds=4, params_forestry={'ntree': 500, 'maxDepth': 2, 'verbose': False, 'scale': False}, feats=[0,1,2], simple=True, verbose=True, linear=True, keep_fits=True))
-# print(fr.get_params())
+fr.fit(X, y)
 #%%
 print("Predicting with the forest")
 forest_preds = fr.predict(newdata = X)
 print(forest_preds)
 #%%
-print(forest_preds)
-# shadow_forestry = ShadowForestryTree(fr, X, y, X.columns.values, 'sepal length (cm)', 1)
-# # X.columns.values
-# # #%%
+fr.translate_tree_python(tree_id=5)
 
+#%%
+print(forest_preds)
+shadow_forestry = ShadowForestryTree(fr, X, y, X.columns.values, 'sepal length (cm)', 1)
+fr.translate_tree_python(tree_id=5)
+#%%
+viz = dtreeviz(shadow_forestry,
+                scale=3.0,
+                target_name='sepal length (cm)',
+                feature_names=X.columns.values)
+
+viz.view()
 
 #%%
 from sklearn.datasets import *
@@ -89,24 +80,3 @@ import platform
 
 # # print(shadow_forestry.get_score())
 
-
-# # Sklearn
-# #%%
-# regr = tree.DecisionTreeRegressor(max_depth=2)
-# regr.fit(X, y)
-
-# shadow_dtree = ShadowSKDTree(regr, X, y, X.columns.values, 'sepal length (cm)')
-
-# #%%
-# # print(shadow_dtree.get_children_left())
-# # print(shadow_dtree.get_children_right())
-# # print(shadow_dtree.get_features())
-# # dec_paths = regr.decision_path(X)
-# # print(dec_paths)
-
-
-sk_fr = RandomForestRegressor(n_estimators=500, max_depth=10, random_state=1729)
-sk_fr.fit(X, y)
-
-sk_fr.set_params(**{'n_estimators': 300, 'random_state': 1729})
-print(sk_fr.get_params())

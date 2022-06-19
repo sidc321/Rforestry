@@ -654,6 +654,8 @@ void RFNode::printSubtree(int indentSpace) {
               << getSplitCount()
               << ", # of average samples = "
               << getAverageCount()
+              << " Weight = "
+              << getPredictWeight()
               << std::endl;
 
 
@@ -674,7 +676,7 @@ void RFNode::printSubtree(int indentSpace) {
               << getNaLeftCount()
               << " "
               << getNaRightCount()
-              << "Weight = "
+              << " Weight = "
               << getPredictWeight()
               << std::endl;
 
@@ -705,17 +707,6 @@ void RFNode::write_node_info(
     treeInfo->right_child_id.push_back(-1);
     treeInfo->num_avg_samples.push_back(getAverageCount());
     treeInfo->values.push_back(getPredictWeight());
-
-
-    std::vector<size_t> idx_in_leaf_Ave = *getAveragingIndex();
-    for (size_t i = 0; i<idx_in_leaf_Ave.size(); i++) {
-      treeInfo->leafAveidx.push_back(idx_in_leaf_Ave[i] + 1);
-    }
-
-    std::vector<size_t> idx_in_leaf_Spl = *getSplittingIndex();
-    for (size_t i = 0; i<idx_in_leaf_Spl.size(); i++) {
-      treeInfo->leafSplidx.push_back(idx_in_leaf_Spl[i] + 1);
-    }
 
   } else {
     // If it is a usual node: remember split var and split value and recursively
