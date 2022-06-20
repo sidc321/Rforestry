@@ -1,4 +1,5 @@
 
+from hashlib import new
 import numpy as np
 import pandas as pd
 import warnings
@@ -17,9 +18,11 @@ from dtreeviz.models.sklearn_decision_trees import ShadowSKDTree
 from forestry_shadow import ShadowForestryTree
 
 from sklearn.ensemble import RandomForestRegressor
-#%%
+from sklearn.datasets import *
+from sklearn import tree
+from dtreeviz.trees import *
+import platform
 
-# Load in the training data
 
 data = load_iris()
 df = pd.DataFrame(data['data'], columns=data['feature_names'])
@@ -32,25 +35,18 @@ y = df['sepal length (cm)']
 fr = forestry(
         ntree = 500,
         maxDepth=2,
+        interactionDepth=2,
         verbose=False,
         scale=False,
         seed=1729
 )
 
-#%%
-fr.fit(X, y)
-#%%
-print("Predicting with the forest")
-forest_preds = fr.predict(newdata = X)
-print(forest_preds)
-#%%
-fr.translate_tree_python(tree_id=5)
 
-#%%
-print(forest_preds)
+fr.fit(X, y)
+
+fr.translate_tree_python(5)
 shadow_forestry = ShadowForestryTree(fr, X, y, X.columns.values, 'sepal length (cm)', 1)
-fr.translate_tree_python(tree_id=5)
-#%%
+
 viz = dtreeviz(shadow_forestry,
                 scale=3.0,
                 target_name='sepal length (cm)',
@@ -58,25 +54,14 @@ viz = dtreeviz(shadow_forestry,
 
 viz.view()
 
-#%%
-from sklearn.datasets import *
-from sklearn import tree
-from dtreeviz.trees import *
-import platform
 
+# Sklearn
 
-# # print(shadow_forestry.get_children_right())
-# # print(X.columns.values)
-# viz = dtreeviz(shadow_forestry,
-#                scale=3.0,
-#                target_name='sepal length (cm)',
-#                feature_names=X.columns.values)
+fr2 = RandomForestRegressor(
+        n_estimators=500,
+        max_depth=2,
+        random_state=1729,
+)
 
-# viz.view()
-# #%%
-# # print(shadow_forestry.get_node_samples())
-# # print(shadow_forestry.get_split_samples(3)) --- Still wrong
-# # print(shadow_forestry.get_node_nsamples(6))
-
-# # print(shadow_forestry.get_score())
+fr2.fit(X, y)
 

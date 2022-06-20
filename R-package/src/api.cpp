@@ -197,7 +197,6 @@ void* train_forest(
         bool doubleTree
 ){
     DataFrame* test_df = reinterpret_cast<DataFrame* >(data_ptr);
-
     forestry* forest ( new (std::nothrow) forestry(
             test_df,
             ntree,
@@ -383,96 +382,9 @@ int getTreeNodeCount(void* forest_ptr,
     return ((int) forest->getForest()->at(tree_idx)->getNodeCount());
 }
 
-std::vector<int>* get_children_left(void* forest_ptr,
-                                    void* dataframe_ptr,
-                                    int tree_idx) {
-    forestry* forest = reinterpret_cast<forestry *>(forest_ptr);
-    DataFrame* dta_frame = reinterpret_cast<DataFrame *>(dataframe_ptr);
-    forest->_trainingData = dta_frame;
-
-    std::unique_ptr<tree_info> info_holder;
-
-    info_holder = forest->getForest()->at(tree_idx)->getTreeInfo(forest->getTrainingData());
-
-    std::vector<int>* children_left(
-            new std::vector<int> (info_holder->left_child_id)
-    );
-    return children_left;
-}
-
-std::vector<int>* get_children_right(void* forest_ptr,
-                                     void* dataframe_ptr,
-                                     int tree_idx) {
-    forestry* forest = reinterpret_cast<forestry *>(forest_ptr);
-    DataFrame* dta_frame = reinterpret_cast<DataFrame *>(dataframe_ptr);
-    forest->_trainingData = dta_frame;
-
-    std::unique_ptr<tree_info> info_holder;
-
-    info_holder = forest->getForest()->at(tree_idx)->getTreeInfo(forest->getTrainingData());
-
-    std::vector<int>* children_right(
-            new std::vector<int> (info_holder->right_child_id)
-    );
-    return children_right;
-}
-
-std::vector<int>* get_feature(void* forest_ptr,
-                              void* dataframe_ptr,
-                              int tree_idx) {
-
-    forestry* forest = reinterpret_cast<forestry *>(forest_ptr);
-    DataFrame* dta_frame = reinterpret_cast<DataFrame *>(dataframe_ptr);
-    forest->_trainingData = dta_frame;
-
-    std::unique_ptr<tree_info> info_holder;
-
-    info_holder = forest->getForest()->at(tree_idx)->getTreeInfo(forest->getTrainingData());
-
-    std::vector<int>* feature(
-            new std::vector<int> (info_holder->var_id)
-    );
-    return feature;
-}
-
-std::vector<int>* get_num_samples(void* forest_ptr,
-                                  void* dataframe_ptr,
-                                  int tree_idx) {
-    forestry* forest = reinterpret_cast<forestry *>(forest_ptr);
-    DataFrame* dta_frame = reinterpret_cast<DataFrame *>(dataframe_ptr);
-    forest->_trainingData = dta_frame;
-
-    std::unique_ptr<tree_info> info_holder;
-
-    info_holder = forest->getForest()->at(tree_idx)->getTreeInfo(forest->getTrainingData());
-
-    std::vector<int>* num_samples(
-            new std::vector<int> (info_holder->num_avg_samples)
-    );
-    return num_samples;
-}
-
-std::vector<double>* get_threshold(void* forest_ptr,
-                                   void* dataframe_ptr,
-                                   int tree_idx) {
-    forestry* forest = reinterpret_cast<forestry *>(forest_ptr);
-    DataFrame* dta_frame = reinterpret_cast<DataFrame *>(dataframe_ptr);
-    forest->_trainingData = dta_frame;
-
-
-    std::unique_ptr<tree_info> info_holder;
-
-    info_holder = forest->getForest()->at(tree_idx)->getTreeInfo(forest->getTrainingData());
-
-    std::vector<double>* threshold(
-            new std::vector<double> (info_holder->split_val)
-    );
-    return threshold;
-}
-
-std::vector<double>* get_values(void* forest_ptr,
+std::vector<double>* get_tree_info(void* forest_ptr,
                                 void* dataframe_ptr,
-                                int tree_idx) {
+                                int tree_idx){
     forestry* forest = reinterpret_cast<forestry *>(forest_ptr);
     DataFrame* dta_frame = reinterpret_cast<DataFrame *>(dataframe_ptr);
     forest->_trainingData = dta_frame;
@@ -480,11 +392,24 @@ std::vector<double>* get_values(void* forest_ptr,
     std::unique_ptr<tree_info> info_holder;
 
     info_holder = forest->getForest()->at(tree_idx)->getTreeInfo(forest->getTrainingData());
-
-    std::vector<double>* values(
-            new std::vector<double> (info_holder->values)
+    int num_nodes = forest->getForest()->at(tree_idx)->getNodeCount();
+    
+    std::vector<double>* tree_info(
+            new std::vector<double>(num_nodes*6)
     );
-    return values;
+
+    for (int i = 0; i < num_nodes; i++) {
+        tree_info->at(i) = (double)info_holder->left_child_id.at(i);
+        tree_info->at(num_nodes+i) = (double)info_holder->right_child_id.at(i);
+        tree_info->at(num_nodes*2+i) = (double)info_holder->var_id.at(i);
+        tree_info->at(num_nodes*3+i) = (double)info_holder->num_avg_samples.at(i);
+        tree_info->at(num_nodes*4+i) = info_holder->split_val.at(i);
+        tree_info->at(num_nodes*5+i) = info_holder->values.at(i);
+    }
+
+    return tree_info;
+    
+
 }
 
 std::vector<size_t>* get_path(void* forest_ptr,

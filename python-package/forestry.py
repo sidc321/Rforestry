@@ -516,6 +516,7 @@ class forestry:
             seed
         ))
 
+
         self.forest = ctypes.c_void_p(lib.train_forest(
             self.dataframe,
             self.ntree,
@@ -544,7 +545,6 @@ class forestry:
             self.overfitPenalty,
             self.doubleTree
         ))
-        
         # Update the fields 
 
         self.processed_dta['processed_x'] = processed_x
@@ -1016,91 +1016,33 @@ class forestry:
     #   @param n_node_samples[i]:  the number of training samples reaching node i
     #
     def translate_tree_python(self, tree_id = 0):
-        #self.Py_forest = dict()
 
         numNodes = lib.getTreeNodeCount(
             self.forest,
             tree_id
         )
 
-        # Now pull the relevant data from the forest and give to
-        # the tree dictionary
-        forest_l_children = ctypes.c_void_p(lib.get_children_left(
+        tree_info = ctypes.c_void_p(lib.get_tree_info(
             self.forest,
             self.dataframe,
             tree_id
         ))
 
-        res = np.empty(numNodes, dtype=np.int64)
+        self.Py_forest['children_right'] = np.empty(numNodes, dtype=np.intc)
+        self.Py_forest['children_left'] = np.empty(numNodes, dtype=np.intc)
+        self.Py_forest['feature'] = np.empty(numNodes, dtype=np.intc)
+        self.Py_forest['n_node_samples'] = np.empty(numNodes, dtype=np.intc)
+        self.Py_forest['threshold'] = np.empty(numNodes, dtype=np.double)
+        self.Py_forest['values'] = np.empty(numNodes, dtype=np.double)
+
         for i in range(numNodes):
-            res[i] = int(lib.vector_get_int(forest_l_children, i))
+            self.Py_forest['children_right'][i] = int(lib.vector_get(tree_info, i))
+            self.Py_forest['children_left'][i] = int(lib.vector_get(tree_info, numNodes + i))
+            self.Py_forest['feature'][i] = int(lib.vector_get(tree_info, numNodes*2 + i))
+            self.Py_forest['n_node_samples'][i] = int(lib.vector_get(tree_info, numNodes*3 + i))
+            self.Py_forest['threshold'][i] = lib.vector_get(tree_info, numNodes*4 + i)
+            self.Py_forest['values'][i] = lib.vector_get(tree_info, numNodes*5 + i)
 
-        self.Py_forest["children_left"] = res
-
-        # Get right children
-        forest_r_children = ctypes.c_void_p(lib.get_children_right(
-            self.forest,
-            self.dataframe,
-            tree_id
-        ))
-
-        res = np.empty(numNodes, dtype=np.int64)
-        for i in range(numNodes):
-            res[i] = int(lib.vector_get_int(forest_r_children, i))
-
-        self.Py_forest["children_right"] = res
-
-        # Get feature
-        feats = ctypes.c_void_p(lib.get_feature(
-            self.forest,
-            self.dataframe,
-            tree_id
-        ))
-
-        res = np.empty(numNodes, dtype=np.int64)
-        for i in range(numNodes):
-            res[i] = int(lib.vector_get_int(feats, i))
-
-        self.Py_forest["feature"] = res
-
-        # Get num_samples
-        num_samps = ctypes.c_void_p(lib.get_num_samples(
-            self.forest,
-            self.dataframe,
-            tree_id
-        ))
-
-        res = np.empty(numNodes, dtype=np.int64)
-        for i in range(numNodes):
-            res[i] = int(lib.vector_get_int(num_samps, i))
-
-        self.Py_forest["n_node_samples"] = res
-
-        # Get thresholds
-        thresh = ctypes.c_void_p(lib.get_threshold(
-            self.forest,
-            self.dataframe,
-            tree_id
-        ))
-
-        res = np.empty(numNodes)
-        for i in range(numNodes):
-            res[i] = lib.vector_get(thresh, i)
-
-        self.Py_forest["threshold"] = res
-
-        # Get values
-        values = ctypes.c_void_p(lib.get_values(
-            self.forest,
-            self.dataframe,
-            tree_id
-        ))
-
-        res = np.empty(numNodes)
-        for i in range(numNodes):
-            res[i] = lib.vector_get(values, i)
-
-        self.Py_forest["values"] = res
         return
 
 
@@ -1200,7 +1142,7 @@ class forestry:
         if adaptive:
             pass #Adaptive not implemented
         else:
-            forestry_args = set(inspect.getargspec(forestry.__init__)[0])
+            forestry_args = set(self.get_params().keys())
         for param in params_forestry:
             if param not in forestry_args:
                 raise ValueError('Invalid parameter in params.forestry: ' + param)
@@ -1332,11 +1274,11 @@ class forestry:
                     if feats is None: 
                         data_pred = pd.DataFrame({'Y.hat': preds_initial})
                     else:
-                        pred_data = pd.DataFrame(newdata.iloc[:, feats])
-                        pred_data.columns = ['V' + str(x) for x in range(len(feats))]
-                        pred_data['Y.hat'] = preds_initial
+                        data_pred = pd.DataFrame(newdata.iloc[:, feats])
+                        data_pred.columns = ['V' + str(x) for x in range(len(feats))]
+                        data_pred['Y.hat'] = preds_initial
                     
-                    preds_adjusted = np.array(model.predict(sm.add_constant(pred_data)))
+                    preds_adjusted = np.array(model.predict(sm.add_constant(data_pred)))
 
             # Not simple
             else:
@@ -1427,12 +1369,38 @@ class forestry:
         return split_nums / np.sum(split_nums)
 
 
-
+    # Get parameters for this estimator.
+    # @return A dictionary mapping parameter names to their values.
     def get_params(self):
-        return self.__dict__
+
+        out = dict()
+        for key in self.__dict__:
+            if key not in {'forest', 'dataframe', 'processed_dta', 'Py_forest'}:
+                out[key] = self.__dict__[key]
+
+        return out
 
 
+    # Set parameters for this estimator.
+    # @param **params A dictionary mapping parameter names to their values.
+    # @return self
     def set_params(self, **params):
-        self.__init__(**params)
+
+        if not params:
+            return self
+
+        valid_params = self.get_params()
+        for key, value in params.items():
+            if key not in valid_params:
+                raise ValueError('Invalid parameter %s for forestry. '
+                                 'Check the list of available parameters '
+                                 'with `estimator.get_params().keys()`.' %
+                                 key)
+
+            valid_params[key] = value
+        
+        self.__init__(**valid_params)
+        return self
+
 
 # make linFeats same as symmetric...
