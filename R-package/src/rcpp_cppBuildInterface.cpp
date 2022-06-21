@@ -1131,7 +1131,6 @@ Rcpp::List rcpp_reconstructree(
   predictWeights->reserve(R_forest.size());
 
 
-  std::cout << "Going to do vectors now" <<std::endl;
   // Now actually populate the vectors
   for(int i=0; i!=R_forest.size(); i++){
     var_ids->push_back(
@@ -1288,7 +1287,6 @@ Rcpp::List rcpp_reconstructree(
     doubleTree
   );
 
-  std::cout << "Made it to the recursive reconstruction" << std::endl;
   testFullForest->reconstructTrees(categoricalFeatureColsRcpp_copy,
                                    tree_seeds,
                                    var_ids,

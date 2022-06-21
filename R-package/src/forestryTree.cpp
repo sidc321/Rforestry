@@ -1990,7 +1990,6 @@ forestryTree::reconstruct_tree(size_t mtry,
   std::unique_ptr< RFNode > root ( new RFNode() );
   this->_root = std::move(root);
 
-  std::cout << "Inside reconstruct tree" << std::endl;
     recursive_reconstruction(
             _root.get(),
             &var_ids,
