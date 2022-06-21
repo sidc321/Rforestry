@@ -2029,7 +2029,7 @@ void forestryTree::recursive_reconstruction(RFNode *currentNode,
   if(var_id < 0){
     // This is a terminal node
     int nAve = std::abs((int) var_id);
-    int nSpl = std::abs((int) (*var_ids)[0]);
+    int nSpl = std::abs((int) var_id);
     //(*var_ids).erase((*var_ids).begin());
 
     size_t node_id;
@@ -2071,7 +2071,7 @@ void forestryTree::recursive_reconstruction(RFNode *currentNode,
 
 
     (*currentNode).setSplitNode(
-        (size_t) var_id - 1,
+        (size_t) var_id,
         split_val,
         std::move(leftChild),
         std::move(rightChild),
