@@ -29,7 +29,7 @@ For example, one can run:
 ```
 mkdir build
 cd build
-cmake ..
+cmake .
 make
 
 ```
@@ -41,37 +41,52 @@ Then the python code can be called:
 ```python
 import numpy as np
 import pandas as pd
-import warnings
-import math
-import os
 from random import randrange
-import sys
 from forestry import forestry
-import Py_preprocessing
 from sklearn.datasets import load_iris
-
+from sklearn.model_selection import train_test_split
 
 data = load_iris()
 df = pd.DataFrame(data['data'], columns=data['feature_names'])
 df['target'] = data['target']
-X = df.loc[:, df.columns != 'target']
-y = df['target']
+X = df.loc[:, df.columns != 'sepal length (cm)']
+y = df['sepal length (cm)']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
 
 fr = forestry(ntree = 500)
 
 print("Fitting the forest")
-fr.fit(X, y)
+fr.fit(X_train, y_train)
 
 
 print("Predicting with the forest")
-forest_preds = fr.predict(aggregation='oob')
+forest_preds = fr.predict(X_test)
 
 ```
 
-## R Package Usage
+# Printing the forest
 
-```R
-library(Rforestry)
+For visualizing the trees, make sure to install the [dtreeviz](https://github.com/parrt/dtreeviz#readme) python library.
+
+```python
+from dtreeviz.trees import *
+from forestry_shadow import ShadowForestryTree
+
+
+shadow_forestry = ShadowForestryTree(fr, X, y, X.columns.values, 'sepal length (cm)', tree_id=0)
+
+viz = dtreeviz(shadow_forestry,
+                scale=3.0,
+                target_name='sepal length (cm)',
+                feature_names=X.columns.values)
+
+viz.view()
+
+```
+
+
+## R Package Usage
 
 
 

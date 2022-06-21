@@ -2,6 +2,7 @@
 #include <string>
 #include <iostream>
 #include <random>
+#include <armadillo>
 
 void print_vector(
     std::vector<unsigned int> v

@@ -39,41 +39,49 @@ def get_forest():
     forest.fit(X, y)
     return forest
 
-def test_translate_tree(get_forest):
+def test_translate_single_tree(get_forest):
     fr = get_forest
-
-    assert fr.Py_forest == {}
+    assert len(fr.Py_forest) == fr.ntree
 
     fr.translate_tree_python(0)
-
-    assert fr.Py_forest is not None #Py_forest will be filled after translation
+    assert fr.Py_forest[0] #Py_forest[0] will be filled after translation
+    assert all(fr.Py_forest[i] == dict() for i in range(1, fr.ntree))
     
-    numNodes = fr.Py_forest['children_right'].size
-    assert not any(fr.Py_forest[key].size != numNodes for key in fr.Py_forest.keys())
+    numNodes = fr.Py_forest[0]['children_right'].size
+    assert not any(fr.Py_forest[0][key].size != numNodes for key in fr.Py_forest[0].keys())
 
 
 def test_all_trees(get_forest):
     fr = get_forest
     X, y = get_data()
+    assert len(fr.Py_forest) == fr.ntree
 
-    assert fr.Py_forest == {}
+    fr.translate_tree_python(0)
+    assert fr.Py_forest[0]
+
+    # Translating more trees
+    fr.translate_tree_python([0,1,2])
+    assert fr.Py_forest[0]
+    assert fr.Py_forest[1]
+    assert fr.Py_forest[2]
+
+    fr.translate_tree_python()
 
     for i in range(fr.ntree):
-        fr.translate_tree_python(i)
-        assert fr.Py_forest is not None
+        assert fr.Py_forest[i]
 
-        numNodes = fr.Py_forest['children_right'].size
-        assert not any(fr.Py_forest[key].size != numNodes for key in fr.Py_forest.keys())
+        numNodes = fr.Py_forest[i]['children_right'].size
+        assert not any(fr.Py_forest[i][key].size != numNodes for key in fr.Py_forest[i].keys())
 
-        assert np.amax(fr.Py_forest['children_right']) <= numNodes - 1
-        assert np.amin(fr.Py_forest['children_right']) < 0
-        assert 0 not in fr.Py_forest['children_right']
+        assert np.amax(fr.Py_forest[i]['children_right']) <= numNodes - 1
+        assert np.amin(fr.Py_forest[i]['children_right']) < 0
+        assert 0 not in fr.Py_forest[i]['children_right']
 
-        assert np.amax(fr.Py_forest['children_left']) <= numNodes - 1
-        assert np.amin(fr.Py_forest['children_left']) < 0
-        assert 0 not in fr.Py_forest['children_left']
+        assert np.amax(fr.Py_forest[i]['children_left']) <= numNodes - 1
+        assert np.amin(fr.Py_forest[i]['children_left']) < 0
+        assert 0 not in fr.Py_forest[i]['children_left']
 
-        assert np.amax(fr.Py_forest['feature']) <= X.shape[1] - 1
+        assert np.amax(fr.Py_forest[i]['feature']) <= X.shape[1] - 1
 
 
 

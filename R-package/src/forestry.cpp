@@ -505,7 +505,6 @@ void forestry::addTrees(size_t ntree) {
   for (size_t j=0; j<numObservations; j++) {
     prediction.push_back(0);
   }
-
   // If we want to return the ridge coefficients, initialize a matrix
   if (coefficients) {
     // Create coefficient vector of vectors of zeros
@@ -527,6 +526,7 @@ void forestry::addTrees(size_t ntree) {
   std::vector<size_t> tree_seeds;
   std::vector<size_t> tree_total_nodes;
 
+
   #if DOPARELLEL
   size_t nthreadToUse = nthread;
 
@@ -534,6 +534,7 @@ void forestry::addTrees(size_t ntree) {
     // Use all threads
     nthreadToUse = std::thread::hardware_concurrency();
   }
+
 
   if (isVerbose()) {
     std::cout << "Prediction parallel using " << nthreadToUse << " threads"

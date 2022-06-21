@@ -344,7 +344,7 @@ void RFNode::predict(
                      lambda);
 
       } else {
-
+        
         double predictedMean;
         // Calculate the mean of current node
         if (getAverageCount() == 0 && !getTrinary()) {
@@ -356,7 +356,6 @@ void RFNode::predict(
         } else {
           predictedMean = (*trainingData).partitionMean(getAveragingIndex());
         }
-
 
         // Give all updateIndex the mean of the node as prediction values
         for (
@@ -386,10 +385,11 @@ void RFNode::predict(
           }
         }
     }
-
+    
     if (weightMatrix){
+
       // If weightMatrix is not a NULL pointer, then we want to update it,
-      // because we have choosen aggregation = "weightmatrix".
+      // because we have choosen aggregation = "weightmatrix". 
       std::vector<size_t> idx_in_leaf =
         (*trainingData).get_all_row_idx(getAveragingIndex());
       // The following will lock the access to weightMatrix

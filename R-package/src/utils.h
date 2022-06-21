@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <armadillo>
 
 void print_vector(
   std::vector<size_t> v
@@ -139,6 +140,26 @@ struct symmetric_info {
   // 1 positive feature 2 negative, 2 = 01 is feature 1 negative feature 2 positive,
   // and 3 = 11 is feature 1 and 2 positive.
   std::vector<double> pseudooutcomes;
+
+};
+
+// Conatins information about the predictions
+struct predict_info{
+
+  // A vector of the final predictions
+  std::vector<double>* predictions;
+
+  // A matrix of the weights given to each training observation when making each
+  // prediction.
+  arma::Mat<double>* weightMatrix;
+
+  // A matrix where the ith entry of the jth column is the index of the 
+  // leaf node to which the ith observation is assigned in the jth tree. 
+  arma::Mat<int>* terminalNodes;
+
+  // The linear coefficients for each linear feature which were used in the  
+  // leaf node regression of each predicted point.
+  arma::Mat<double>* coefficients;
 
 };
 

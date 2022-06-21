@@ -300,7 +300,7 @@ class forestry:
                 'numColumns': None,
                 'featNames': None
             }
-            Py_forest = dict()  # for printing
+            Py_forest = [dict() for _ in range(ntree)]  # for printing
 
             #Data Fields
             self.forest = cppForest
@@ -755,10 +755,10 @@ class forestry:
                 seed,
                 nthread,
                 exact,
+                weightMatrix,
                 use_weights,
                 lib_setup.get_array_pointer(tree_weights, dtype=np.ulonglong),
-                len(processed_x.index),
-                self.verbose
+                len(processed_x.index)
             ))
 
 
@@ -1015,33 +1015,47 @@ class forestry:
     #   @param threshold[i]: threshold value at node i
     #   @param n_node_samples[i]:  the number of training samples reaching node i
     #
-    def translate_tree_python(self, tree_id = 0):
+    def translate_tree_python(self, tree_id = None):
 
-        numNodes = lib.getTreeNodeCount(
-            self.forest,
-            tree_id
-        )
+        if tree_id is None:
+            idx = np.arange(self.ntree)
+        
+        else:
+            if isinstance(tree_id, (int, np.integer)):
+                idx = np.array([tree_id])
+            else:
+                idx = np.array(tree_id)
 
-        tree_info = ctypes.c_void_p(lib.get_tree_info(
-            self.forest,
-            self.dataframe,
-            tree_id
-        ))
+        for cur_id in idx:
 
-        self.Py_forest['children_right'] = np.empty(numNodes, dtype=np.intc)
-        self.Py_forest['children_left'] = np.empty(numNodes, dtype=np.intc)
-        self.Py_forest['feature'] = np.empty(numNodes, dtype=np.intc)
-        self.Py_forest['n_node_samples'] = np.empty(numNodes, dtype=np.intc)
-        self.Py_forest['threshold'] = np.empty(numNodes, dtype=np.double)
-        self.Py_forest['values'] = np.empty(numNodes, dtype=np.double)
+            if self.Py_forest[cur_id]:
+                continue
 
-        for i in range(numNodes):
-            self.Py_forest['children_right'][i] = int(lib.vector_get(tree_info, i))
-            self.Py_forest['children_left'][i] = int(lib.vector_get(tree_info, numNodes + i))
-            self.Py_forest['feature'][i] = int(lib.vector_get(tree_info, numNodes*2 + i))
-            self.Py_forest['n_node_samples'][i] = int(lib.vector_get(tree_info, numNodes*3 + i))
-            self.Py_forest['threshold'][i] = lib.vector_get(tree_info, numNodes*4 + i)
-            self.Py_forest['values'][i] = lib.vector_get(tree_info, numNodes*5 + i)
+            numNodes = lib.getTreeNodeCount(
+                self.forest,
+                cur_id
+            )
+
+            tree_info = ctypes.c_void_p(lib.get_tree_info(
+                self.forest,
+                self.dataframe,
+                cur_id
+            ))
+
+            self.Py_forest[cur_id]['children_right'] = np.empty(numNodes, dtype=np.intc)
+            self.Py_forest[cur_id]['children_left'] = np.empty(numNodes, dtype=np.intc)
+            self.Py_forest[cur_id]['feature'] = np.empty(numNodes, dtype=np.intc)
+            self.Py_forest[cur_id]['n_node_samples'] = np.empty(numNodes, dtype=np.intc)
+            self.Py_forest[cur_id]['threshold'] = np.empty(numNodes, dtype=np.double)
+            self.Py_forest[cur_id]['values'] = np.empty(numNodes, dtype=np.double)
+
+            for i in range(numNodes):
+                self.Py_forest[cur_id]['children_right'][i] = int(lib.vector_get(tree_info, i))
+                self.Py_forest[cur_id]['children_left'][i] = int(lib.vector_get(tree_info, numNodes + i))
+                self.Py_forest[cur_id]['feature'][i] = int(lib.vector_get(tree_info, numNodes*2 + i))
+                self.Py_forest[cur_id]['n_node_samples'][i] = int(lib.vector_get(tree_info, numNodes*3 + i))
+                self.Py_forest[cur_id]['threshold'][i] = lib.vector_get(tree_info, numNodes*4 + i)
+                self.Py_forest[cur_id]['values'][i] = lib.vector_get(tree_info, numNodes*5 + i)
 
         return
 
@@ -1359,10 +1373,9 @@ class forestry:
         
         split_nums = np.zeros(self.processed_dta['numColumns'])
 
+        self.translate_tree_python()
         for i in range(self.ntree):
-            self.translate_tree_python(i)
-
-            for feat in self.Py_forest['feature']:
+            for feat in self.Py_forest[i]['feature']:
                 if feat >= 0:
                     split_nums[feat] += 1
 

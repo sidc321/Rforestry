@@ -67,9 +67,9 @@ def setup_lib(lib):
                                         ctypes.c_size_t,
                                         ctypes.c_bool,
                                         ctypes.c_bool,
+                                        ctypes.c_bool,
                                         ctypes.c_void_p,
-                                        ctypes.c_int, 
-                                        ctypes.c_bool]
+                                        ctypes.c_int]
     lib.predict_forest.restype =  ctypes.c_void_p
 
     # set up the predictOOB_forest function
@@ -93,6 +93,12 @@ def setup_lib(lib):
     # Size_t get function
     lib.vector_get_size_t.argtypes = [ctypes.c_void_p, ctypes.c_int]
     lib.vector_get_size_t.restype = ctypes.c_size_t
+
+    lib.get_prediction.argtypes = [ctypes.c_void_p, ctypes.c_int]
+    lib.get_prediction.restype = ctypes.c_double
+
+    lib.get_weightMatrix.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_size_t]
+    lib.get_prediction.restype = ctypes.c_double
 
     lib.getVI.argtypes = [ctypes.c_void_p]
     lib.getVI.restype = ctypes.c_void_p

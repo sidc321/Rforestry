@@ -14,11 +14,12 @@ class ShadowForestryTree(ShadowDecTree):
                  y_data,
                  feature_names: List[str] = None,
                  target_name: str = None,
-                 tree_id = 1,
+                 tree_id = 0,
                  class_names: (List[str], Mapping[int, str]) = None):
 
         self.node_to_samples = None
         self.tree_id = tree_id
+        tree_model.translate_tree_python(tree_id)
         super().__init__(tree_model, x_data, y_data, feature_names, target_name, class_names)
 
     def is_fit(self):
@@ -34,10 +35,10 @@ class ShadowForestryTree(ShadowDecTree):
             return compute_class_weight(self.tree_model.class_weight, classes=unique_target_values, y=self.y_data)
 
     def get_thresholds(self):
-        return self.tree_model.Py_forest["threshold"]
+        return self.tree_model.Py_forest[self.tree_id]["threshold"]
 
     def get_features(self):
-        return self.tree_model.Py_forest["feature"]
+        return self.tree_model.Py_forest[self.tree_id]["feature"]
 
     def criterion(self):
         return 'SQUARED_ERROR'
@@ -87,30 +88,30 @@ class ShadowForestryTree(ShadowDecTree):
         return len(self.get_node_samples()[id])
 
     def get_children_left(self):
-        return self.tree_model.Py_forest["children_left"]
+        return self.tree_model.Py_forest[self.tree_id]["children_left"]
 
     def get_children_right(self):
-        return self.tree_model.Py_forest["children_right"]
+        return self.tree_model.Py_forest[self.tree_id]["children_right"]
 
     def get_node_split(self, id) -> (int, float):
-        return self.tree_model.Py_forest["threshold"][id]
+        return self.tree_model.Py_forest[self.tree_id]["threshold"][id]
 
     def get_node_feature(self, id) -> int:
-        return self.tree_model.Py_forest["feature"][id]
+        return self.tree_model.Py_forest[self.tree_id]["feature"][id]
 
     def get_node_nsamples_by_class(self, id):
         if self.is_classifier():
-            return self.tree_model.Py_forest["value"][id][0]
+            return self.tree_model.Py_forest[self.tree_id]["value"][id][0]
 
     def get_prediction(self, id):
         if self.is_classifier():
-            counts = self.tree_model.Py_forest["value"][id][0]
+            counts = self.tree_model.Py_forest[self.tree_id]["value"][id][0]
             return np.argmax(counts)
         else:
-            return self.tree_model.Py_forest["value"][id]
+            return self.tree_model.Py_forest[self.tree_id]["value"][id]
 
     def nnodes(self):
-        return len(self.tree_model.Py_forest["feature"])
+        return len(self.tree_model.Py_forest[self.tree_id]["feature"])
 
     def get_node_criterion(self, id):
         return self.tree_model.tree_.impurity[id]

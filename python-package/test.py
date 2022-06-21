@@ -33,7 +33,7 @@ y = df['sepal length (cm)']
 
 
 fr = forestry(
-        ntree = 500,
+        ntree = 1,
         maxDepth=2,
         interactionDepth=2,
         verbose=False,
@@ -41,27 +41,6 @@ fr = forestry(
         seed=1729
 )
 
-
 fr.fit(X, y)
 
-fr.translate_tree_python(5)
-shadow_forestry = ShadowForestryTree(fr, X, y, X.columns.values, 'sepal length (cm)', 1)
-
-viz = dtreeviz(shadow_forestry,
-                scale=3.0,
-                target_name='sepal length (cm)',
-                feature_names=X.columns.values)
-
-viz.view()
-
-
-# Sklearn
-
-fr2 = RandomForestRegressor(
-        n_estimators=500,
-        max_depth=2,
-        random_state=1729,
-)
-
-fr2.fit(X, y)
-
+print(fr.predict(X, nthread=1, weightMatrix=True))

@@ -233,21 +233,18 @@ void* train_forest(
     return forest;
 }
 
-std::vector<double>* predict_forest(
+void* predict_forest(
         void* forest_pt,
         void* dataframe_pt,
         double* test_data,
         unsigned int seed,
         size_t nthread,
         bool exact,
+        bool returnWeightMatrix,
         bool use_weights,
         size_t* tree_weights,
-        int num_test_rows,
-        bool verbose
+        int num_test_rows
 ){
-    if (verbose)
-        std::cout << forest_pt << std::endl;
-
 
     forestry* forest = reinterpret_cast<forestry *>(forest_pt);
     DataFrame* dta_frame = reinterpret_cast<DataFrame *>(dataframe_pt);
@@ -275,6 +272,11 @@ std::vector<double>* predict_forest(
     }
 
 
+    // Initialize the weightMatrix, terminalNodes, coefficients
+    arma::Mat<double> weightMatrix;
+    arma::Mat<int> terminalNodes;
+    arma::Mat<double> coefficients;
+
     // tree_weights vector
     std::vector<size_t>* weights (
             new std::vector<size_t>(forest->getNtree())
@@ -286,19 +288,51 @@ std::vector<double>* predict_forest(
     }
 
 
-    std::vector<double>* testForestPrediction = forest->predict(
-            predi_data,
-            nullptr,
-            nullptr,
-            nullptr,
-            seed,
-            nthread,
-            exact,
-            use_weights,
-            weights
-    );
+    // Initialize the final predictions
+    std::vector<double>* testForestPrediction;
 
-    return testForestPrediction;
+    
+    if (returnWeightMatrix) {
+        size_t nrow = num_test_rows;
+        size_t ncol = forest->getNtrain();
+        weightMatrix.zeros(nrow, ncol);
+        testForestPrediction = forest->predict(
+                predi_data,
+                &weightMatrix,
+                nullptr,
+                nullptr,
+                seed,
+                nthread,
+                exact,
+                false,
+                nullptr
+        );
+    }
+
+    else {
+        testForestPrediction = forest->predict(
+                predi_data,
+                nullptr,
+                nullptr,
+                nullptr,
+                seed,
+                nthread,
+                exact,
+                use_weights,
+                weights
+        );
+
+        return (void*)testForestPrediction;
+    }
+
+
+    predict_info* predictionResults = new predict_info;
+    predictionResults->predictions = testForestPrediction;
+    predictionResults->weightMatrix = &weightMatrix;
+    predictionResults->terminalNodes = &terminalNodes;
+    predictionResults->coefficients = &coefficients;
+
+    return (void*)predictionResults;
 }
 
 
@@ -360,7 +394,6 @@ std::vector<double>* predictOOB_forest(
 
     return preds;
 }
-
 
 std::vector<double>* getVI(void* forest_pt){
     forestry* forest = reinterpret_cast<forestry *>(forest_pt);
@@ -438,5 +471,15 @@ std::vector<size_t>* get_path(void* forest_ptr,
 
 }
 
+double get_prediction(void* prediction_ptr, int i){
+    predict_info* predictionResults = reinterpret_cast<predict_info* >(prediction_ptr);
+    return predictionResults->predictions->at(i);
+}
+
+double get_weightMatrix(void* prediction_ptr, size_t i, size_t j){
+    predict_info* predictionResults = reinterpret_cast<predict_info* >(prediction_ptr);
+    return predictionResults->weightMatrix->at(i, j);
+}
+    
 
 }
