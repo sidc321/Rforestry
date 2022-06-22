@@ -1155,54 +1155,104 @@ void forestry::fillinTreeInfo(
   return ;
 };
 
-void forestry::reconstructTrees(
-    std::unique_ptr< std::vector<size_t> > & categoricalFeatureCols,
-    std::unique_ptr< std::vector<unsigned int> > & tree_seeds,
-    std::unique_ptr< std::vector< std::vector<int> >  > & var_ids,
-    std::unique_ptr< std::vector< std::vector<double> >  > & split_vals,
-    std::unique_ptr< std::vector< std::vector<int> >  > & naLeftCounts,
-    std::unique_ptr< std::vector< std::vector<int> >  > & naRightCounts,
-    std::unique_ptr< std::vector< std::vector<size_t> >  > & leafAveidxs,
-    std::unique_ptr< std::vector< std::vector<size_t> >  > & leafSplidxs,
-    std::unique_ptr< std::vector< std::vector<size_t> >  > &
-      averagingSampleIndex,
-    std::unique_ptr< std::vector< std::vector<size_t> >  > &
-      splittingSampleIndex){
+void forestry::reconstructTrees(std::unique_ptr<std::vector<size_t> > &categoricalFeatureCols,
+                                std::unique_ptr<std::vector<unsigned int> > &tree_seeds,
+                                std::unique_ptr<std::vector<std::vector<int> > > &var_ids,
+                                std::unique_ptr<std::vector<std::vector<double> > > &split_vals,
+                                std::unique_ptr<std::vector<std::vector<int> > > &naLeftCounts,
+                                std::unique_ptr<std::vector<std::vector<int> > > &naRightCounts,
+                                std::unique_ptr<std::vector<std::vector<size_t> > > &averagingSampleIndex,
+                                std::unique_ptr<std::vector<std::vector<size_t> > > &splittingSampleIndex,
+                                std::unique_ptr<std::vector<std::vector<double> > > &weights) {
 
-    for (size_t i=0; i<split_vals->size(); i++) {
+    #if DOPARELLEL
+        size_t nthreadToUse = this->getNthread();
+
+        if (nthreadToUse == 0) {
+            // Use all threads
+            nthreadToUse = std::thread::hardware_concurrency();
+        }
+
+        if (isVerbose()) {
+            std::cout << "Reconstructing in parallel using " << nthreadToUse << " threads"
+                              << std::endl;
+        }
+
+        std::vector<std::thread> allThreads(nthreadToUse);
+        std::mutex threadLock;
+
+        // For each thread, assign a sequence of tree numbers that the thread
+        // is responsible for handling
+        for (size_t t = 0; t < nthreadToUse; t++) {
+            auto dummyThread = std::bind(
+                    [&](const int iStart, const int iEnd, const int t_) {
+
+            // loop over al assigned trees, iStart is the starting tree number
+            // and iEnd is the ending tree number
+            for (int i=iStart; i < iEnd; i++) {
+    #else
+        // For non-parallel version, just simply iterate all trees serially
+        for(int i=0; i<(split_vals->size()); i++ ) {
+    #endif
+
       try{
         forestryTree *oneTree = new forestryTree();
 
-        oneTree->reconstruct_tree(
-                getMtry(),
-                getMinNodeSizeSpt(),
-                getMinNodeSizeAvg(),
-                getMinNodeSizeToSplitSpt(),
-                getMinNodeSizeToSplitAvg(),
-                getMinSplitGain(),
-                getMaxDepth(),
-                getInteractionDepth(),
-                gethasNas(),
-                getlinear(),
-                getOverfitPenalty(),
-                (*tree_seeds)[i],
-                (*categoricalFeatureCols),
-                (*var_ids)[i],
-                (*split_vals)[i],
-                (*naLeftCounts)[i],
-                (*naRightCounts)[i],
-                (*leafAveidxs)[i],
-                (*leafSplidxs)[i],
-                (*averagingSampleIndex)[i],
-                (*splittingSampleIndex)[i]);
+          oneTree->reconstruct_tree(
+                  getMtry(),
+                  getMinNodeSizeSpt(),
+                  getMinNodeSizeAvg(),
+                  getMinNodeSizeToSplitSpt(),
+                  getMinNodeSizeToSplitAvg(),
+                  getMinSplitGain(),
+                  getMaxDepth(),
+                  getInteractionDepth(),
+                  gethasNas(),
+                  getlinear(),
+                  getOverfitPenalty(),
+                  (*tree_seeds)[i],
+                  (*categoricalFeatureCols),
+                  (*var_ids)[i],
+                  (*split_vals)[i],
+                  (*naLeftCounts)[i],
+                  (*naRightCounts)[i],
+                  (*averagingSampleIndex)[i],
+                  (*splittingSampleIndex)[i],
+                  (*weights)[i]);
+
+        #if DOPARELLEL
+          std::lock_guard<std::mutex> lock(threadLock);
+        #endif
 
         (*getForest()).emplace_back(oneTree);
         _ntree = _ntree + 1;
       } catch (std::runtime_error &err) {
         std::cerr << err.what() << std::endl;
       }
+    }
+        #if DOPARELLEL
+        },
+            t * split_vals->size() / nthreadToUse,
+            (t + 1) == nthreadToUse ?
+            split_vals->size() :
+            (t + 1) * split_vals->size() / nthreadToUse,
+            t);
+            allThreads[t] = std::thread(dummyThread);
+            }
 
-  }
+        std::for_each(
+                allThreads.begin(),
+                allThreads.end(),
+        [](std::thread& x) { x.join(); }
+        );
+        #endif
+
+    // Try sorting the forest by seed, this way we should do predict in the same order
+    std::vector< std::unique_ptr< forestryTree > >* curr_forest;
+    curr_forest = this->getForest();
+    std::sort(curr_forest->begin(), curr_forest->end(), [](const std::unique_ptr< forestryTree >& a, const std::unique_ptr< forestryTree >& b) {
+        return a.get()->getSeed() > b.get()->getSeed();
+    });
 
   return;
 }

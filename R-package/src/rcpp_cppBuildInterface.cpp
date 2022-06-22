@@ -846,34 +846,20 @@ Rcpp::List rcpp_CppToR_translator(
       // std::cout << "var_id\n";
       // std::cout.flush();
 
-      Rcpp::NumericVector split_val = Rcpp::wrap(((*forest_dta)[i]).split_val);
+      Rcpp::NumericVector split_val =
+              Rcpp::wrap(((*forest_dta)[i]).split_val);
 
       // std::cout << "split_val\n";
       // std::cout.flush();
 
-
-      Rcpp::IntegerVector leafAveidx = Rcpp::wrap(((*forest_dta)[i]).leafAveidx);
-
-      // std::cout << "leafAveidx\n";
-      // std::cout.flush();
-
-      Rcpp::IntegerVector leafSplidx =
-        Rcpp::wrap(((*forest_dta)[i]).leafSplidx);
-
-      // std::cout << "leafSplidx\n";
-      // std::cout.flush();
+      Rcpp::IntegerVector splittingSampleIndex =
+            Rcpp::wrap(((*forest_dta)[i]).splittingSampleIndex);
 
       Rcpp::IntegerVector averagingSampleIndex =
-	      Rcpp::wrap(((*forest_dta)[i]).averagingSampleIndex);
+            Rcpp::wrap(((*forest_dta)[i]).averagingSampleIndex);
 
-      // std::cout << "averagingSampleIndex\n";
-      // std::cout.flush();
-
-      Rcpp::IntegerVector splittingSampleIndex =
-	      Rcpp::wrap(((*forest_dta)[i]).splittingSampleIndex);
-
-      // std::cout << "splittingSampleIndex\n";
-      // std::cout.flush();
+      Rcpp::NumericVector predictWeights =
+              Rcpp::wrap(((*forest_dta)[i]).values);
 
       Rcpp::IntegerVector naLeftCounts =
         Rcpp::wrap(((*forest_dta)[i]).naLeftCount);
@@ -886,13 +872,12 @@ Rcpp::List rcpp_CppToR_translator(
         Rcpp::List::create(
 			   Rcpp::Named("var_id") = var_id,
 			   Rcpp::Named("split_val") = split_val,
-			   Rcpp::Named("leafAveidx") = leafAveidx,
-			   Rcpp::Named("leafSplidx") = leafSplidx,
-			   Rcpp::Named("averagingSampleIndex") = averagingSampleIndex,
-			   Rcpp::Named("splittingSampleIndex") = splittingSampleIndex,
-			   Rcpp::Named("naLeftCounts") = naLeftCounts,
+               Rcpp::Named("splittingSampleIndex") = splittingSampleIndex,
+               Rcpp::Named("averagingSampleIndex") = averagingSampleIndex,
+ 			   Rcpp::Named("naLeftCounts") = naLeftCounts,
 			   Rcpp::Named("naRightCounts") = naRightCounts,
-			   Rcpp::Named("seed") = (*forest_dta)[i].seed // Add the seeds to the list we return
+			   Rcpp::Named("seed") = (*forest_dta)[i].seed, // Add the seeds to the list we return
+               Rcpp::Named("weights") = predictWeights
         );
 
       // std::cout << "finished list\n";
@@ -1000,11 +985,11 @@ Rcpp::List rcpp_multilayer_CppToR_translator(
         // std::cout << "split_val\n";
         // std::cout.flush();
 
-        Rcpp::IntegerVector leafAveidx = Rcpp::wrap((*(forest_dta[j]))[i].leafAveidx);
+        Rcpp::IntegerVector leafAveidx = Rcpp::wrap((*(forest_dta[j]))[i].var_id);
         // std::cout << "leafAveidx\n";
         // std::cout.flush();
 
-        Rcpp::IntegerVector leafSplidx = Rcpp::wrap((*(forest_dta[j]))[i].leafSplidx);
+        Rcpp::IntegerVector leafSplidx = Rcpp::wrap((*(forest_dta[j]))[i].var_id);
         // std::cout << "leafSplidx\n";
         // std::cout.flush();
 
@@ -1122,12 +1107,6 @@ Rcpp::List rcpp_reconstructree(
   std::unique_ptr< std::vector< std::vector<int> > > naRightCounts(
       new std::vector< std::vector<int> >
   );
-  std::unique_ptr< std::vector< std::vector<size_t> > > leafAveidxs(
-      new  std::vector< std::vector<size_t> >
-  );
-  std::unique_ptr< std::vector< std::vector<size_t> > > leafSplidxs(
-      new  std::vector< std::vector<size_t> >
-  );
   std::unique_ptr< std::vector< std::vector<size_t> > > averagingSampleIndex(
       new  std::vector< std::vector<size_t> >
   );
@@ -1137,17 +1116,19 @@ Rcpp::List rcpp_reconstructree(
   std::unique_ptr< std::vector<unsigned int> > tree_seeds(
       new std::vector<unsigned int>
   );
+  std::unique_ptr< std::vector< std::vector<double> > > predictWeights(
+          new  std::vector< std::vector<double> >
+  );
 
   // Reserve space for each of the vectors equal to R_forest.size()
   var_ids->reserve(R_forest.size());
   split_vals->reserve(R_forest.size());
-  leafAveidxs->reserve(R_forest.size());
-  leafSplidxs->reserve(R_forest.size());
   averagingSampleIndex->reserve(R_forest.size());
   splittingSampleIndex->reserve(R_forest.size());
   naLeftCounts->reserve(R_forest.size());
   naRightCounts->reserve(R_forest.size());
   tree_seeds->reserve(R_forest.size());
+  predictWeights->reserve(R_forest.size());
 
 
   // Now actually populate the vectors
@@ -1158,26 +1139,23 @@ Rcpp::List rcpp_reconstructree(
     split_vals->push_back(
         Rcpp::as< std::vector<double> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[1])
       );
-    leafAveidxs->push_back(
+    averagingSampleIndex->push_back(
         Rcpp::as< std::vector<size_t> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[2])
       );
-    leafSplidxs->push_back(
-        Rcpp::as< std::vector<size_t> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[3])
-    );
-    averagingSampleIndex->push_back(
-        Rcpp::as< std::vector<size_t> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[4])
-      );
     splittingSampleIndex->push_back(
-        Rcpp::as< std::vector<size_t> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[5])
+        Rcpp::as< std::vector<size_t> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[3])
       );
     naLeftCounts->push_back(
-        Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[6])
+        Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[4])
     );
     naRightCounts->push_back(
-        Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[7])
+        Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[5])
     );
     tree_seeds->push_back(
-        Rcpp::as< unsigned int > ((Rcpp::as<Rcpp::List>(R_forest[i]))[8])
+        Rcpp::as< unsigned int > ((Rcpp::as<Rcpp::List>(R_forest[i]))[6])
+    );
+    predictWeights->push_back(
+        Rcpp::as< std::vector<double> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[7])
     );
   }
 
@@ -1315,10 +1293,9 @@ Rcpp::List rcpp_reconstructree(
                                    split_vals,
                                    naLeftCounts,
                                    naRightCounts,
-                                   leafAveidxs,
-                                   leafSplidxs,
                                    averagingSampleIndex,
-                                   splittingSampleIndex
+                                   splittingSampleIndex,
+                                   predictWeights
                                    );
 
   // delete(testFullForest);
@@ -1628,10 +1605,10 @@ Rcpp::List rcpp_reconstruct_forests(
                                      split_vals[j],
                                      naLeftCounts[j],
                                      naRightCounts[j],
-                                     leafAveidxs[j],
-                                     leafSplidxs[j],
                                      averagingSampleIndex[j],
-                                     splittingSampleIndex[j]);
+                                     splittingSampleIndex[j],
+                                     split_vals[j]
+                                     );
 
     // Push back the jth forest to the vector of forests
     multilayerForests.push_back(testFullForest);

@@ -71,38 +71,17 @@ public:
       DataFrame* trainingData
   );
 
-  void reconstruct_tree(
-      size_t mtry,
-      size_t minNodeSizeSpt,
-      size_t minNodeSizeAvg,
-      size_t minNodeSizeToSplitSpt,
-      size_t minNodeSizeToSplitAvg,
-      double minSplitGain,
-      size_t maxDepth,
-      size_t interactionDepth,
-      bool hasNas,
-      bool linear,
-      double overfitPenalty,
-      unsigned int seed,
-      std::vector<size_t> categoricalFeatureColsRcpp,
-      std::vector<int> var_ids,
-      std::vector<double> split_vals,
-      std::vector<int> naLeftCounts,
-      std::vector<int> naRightCounts,
-      std::vector<size_t> leafAveidxs,
-      std::vector<size_t> leafSplidxs,
-      std::vector<size_t> averagingSampleIndex,
-      std::vector<size_t> splittingSampleIndex);
+  void reconstruct_tree(size_t mtry, size_t minNodeSizeSpt, size_t minNodeSizeAvg, size_t minNodeSizeToSplitSpt,
+                        size_t minNodeSizeToSplitAvg, double minSplitGain, size_t maxDepth,
+                        size_t interactionDepth, bool hasNas, bool linear, double overfitPenalty,
+                        unsigned int seed, std::vector<size_t> categoricalFeatureCols, std::vector<int> var_ids,
+                        std::vector<double> split_vals, std::vector<int> naLeftCounts,
+                        std::vector<int> naRightCounts, std::vector<size_t> averagingSampleIndex,
+                        std::vector<size_t> splittingSampleIndex, std::vector<double> predictWeights);
 
-  void recursive_reconstruction(
-      RFNode* currentNode,
-      std::vector<int> * var_ids,
-      std::vector<double> * split_vals,
-      std::vector<size_t> * leafAveidxs,
-      std::vector<size_t> * leafSplidxs,
-      std::vector<int> * naLeftCounts,
-      std::vector<int> * naRightCounts
-  );
+  void recursive_reconstruction(RFNode *currentNode, std::vector<int> *var_ids, std::vector<double> *split_vals,
+                                std::vector<int> *naLeftCounts, std::vector<int> *naRightCounts,
+                                std::vector<double> *weights);
 
   void recursivePartition(
     RFNode* rootNode,
