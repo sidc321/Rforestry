@@ -1,7 +1,7 @@
-Double Out of Bag Aggregation
-==============================
+Confidence Intervals
+=====================
 
-This is an example of finding confidence intervals for the predictions.
+This is an example how to get confidence intervals.
 
 .. code-block:: Python
 
@@ -16,11 +16,8 @@ This is an example of finding confidence intervals for the predictions.
 
     # Create a forestry object
     fr = forestry(OOBhonest=True, doubleBootstrap=True, scale=False)
-
-    print('Traingng the forest')
     fr.fit(X, y)
 
-    print('Making doubleOOB predictions')
-    preds = fr.predict(aggregation='doubleOOB')
-    print(preds)
+    conf_intervals = fr.getCI(newdata=X, method='OOB-conformal', level=.99)
+    print(conf_intervals)
 

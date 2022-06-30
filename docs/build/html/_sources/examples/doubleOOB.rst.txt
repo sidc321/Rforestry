@@ -1,7 +1,7 @@
 Double Out of Bag Aggregation
 ==============================
 
-This is an example of using double out-of-bag aggregation.
+This is an example of finding confidence intervals for the predictions.
 
 .. code-block:: Python
 
@@ -12,7 +12,7 @@ This is an example of using double out-of-bag aggregation.
     # Getting the dataset
     data = load_iris()
     X = pd.DataFrame(data['data'], columns=data['feature_names'])
-    y = df['target']
+    y = data['target']
 
     # Create a forestry object
     fr = forestry(OOBhonest=True, doubleBootstrap=True, scale=False)

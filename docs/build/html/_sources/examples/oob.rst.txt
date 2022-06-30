@@ -12,7 +12,7 @@ This is an example of using out-of-bag aggregation.
     # Getting the dataset
     data = load_iris()
     X = pd.DataFrame(data['data'], columns=data['feature_names'])
-    y = df['target']
+    y = data['target']
 
     # Create a forestry object
     fr = forestry(OOBhonest=True, scale=False)
@@ -22,4 +22,4 @@ This is an example of using out-of-bag aggregation.
 
     print('Making out-of-bag predictions')
     preds = fr.predict(aggregation='oob')
-    print(preds)
+    print('OOB ERROR: ' + str(fr.getOOB()))

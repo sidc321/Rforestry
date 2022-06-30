@@ -26,6 +26,6 @@ predictions.
     print('Making predictions')
     preds = fr.predict(X_test)
 
-    print('The coefficient of determination is' + 
+    print('The coefficient of determination is ' + 
             str(fr.score(X_test, y_test)))
 

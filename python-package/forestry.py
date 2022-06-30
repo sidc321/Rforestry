@@ -1188,6 +1188,9 @@ class forestry:
         :rtype: numpy.array
         """
 
+        # To avoid false pd warnings
+        pd.options.mode.chained_assignment = None
+
         # Check allowed settings for the bias correction
         if (not linear) and nrounds < 1:
             raise ValueError('We must do at least one round of bias corrections, with either linear = True or nrounds > 0.')

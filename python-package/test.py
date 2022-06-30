@@ -71,24 +71,47 @@ import platform
 # print('The coefficient of determination is' + 
 #         str(fr.score(X_test, y_test)))
 
-from sklearn.datasets import fetch_california_housing
-from sklearn.model_selection import train_test_split
+
+#SKLEARN IS MUCH FASTER?????
+# from sklearn.datasets import fetch_california_housing
+# from sklearn.model_selection import train_test_split
+# import numpy as np
+# from sklearn.ensemble import RandomForestRegressor
+
+# # Getting the dataset
+# X, y = fetch_california_housing(return_X_y=True)
+
+# # Splitting the data into testing and training datasets
+# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
+
+# # Create a forestry object
+# fr = RandomForestRegressor()
+# # fr = forestry(scale=False, ntree=100)
+
+# print('Traingng the forest')
+# fr.fit(X_train, y_train)
+
+# print('Making predictions')
+# preds = fr.predict(X_test)
+
+# print('The coefficient of determination is ' +
+#         str(fr.score(X_test, y_test)))
+from sklearn.datasets import load_iris
 import numpy as np
 
 # Getting the dataset
-X, y = fetch_california_housing(return_X_y=True)
+data = load_iris()
+X = pd.DataFrame(data['data'], columns=data['feature_names'])
+y = data['target']
 
-# Splitting the data into testing and training datasets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
+# Create a forestry object and train
+fr = forestry(scale=False, maxDepth=50)
+fr.fit(X, y)
 
-# Create a forestry object
-fr = forestry(scale=False)
+# Translate the first tree in the forest
+fr.translate_tree_python(0)
+print(fr.Py_forest[0])
 
-print('Traingng the forest')
-fr.fit(X_train, y_train)
-
-print('Making predictions')
-preds = fr.predict(X_test)
-
-print('The coefficient of determination is' +
-        str(fr.score(X_test, y_test)))
+# Calculate the proportion of splits for each feature_names
+split_prop = fr.getSplitProps()
+print(split_prop)
