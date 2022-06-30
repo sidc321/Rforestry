@@ -1,6 +1,6 @@
 """
-LIBRARIES NEEDED
-----------------------
+Forestry Regressor (the name should be changed)
+-----------------------------------------------
 """
 
 from posixpath import isabs
@@ -23,7 +23,6 @@ import lib_setup
 import Py_preprocessing
 
 
-
 # --- Loading the dynamic library -----------------
 if platform.system() == "Linux":
   lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "libforestryCpp.so")))
@@ -31,154 +30,125 @@ elif platform.system() == "Darwin":
   lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "libforestryCpp.dylib")))
 lib_setup.setup_lib(lib)
 
-# -- Random Forest Constructor -------------------------------------------------
 
-"""
-@title forestry
-@param ntree The number of trees to grow in the forest. The default value is
-  500.
-@param replace An indicator of whether sampling of training data is with
-  replacement. The default value is TRUE.
-@param sampsize The size of total samples to draw for the training data. If
-  sampling with replacement, the default value is the length of the training
-  data. If sampling without replacement, the default value is two-thirds of
-  the length of the training data.
-@param sample_fraction If this is given, then sampsize is ignored and set to
-  be round(length(y) * sample_fraction). It must be a real number between 0 and 1
-@param mtry The number of variables randomly selected at each split point.
-  The default value is set to be one-third of the total number of features of the training data.
-@param nodesizeSpl Minimum observations contained in terminal nodes.
-  The default value is 5.
-@param nodesizeAvg Minimum size of terminal nodes for averaging dataset.
-  The default value is 5.
-@param nodesizeStrictSpl Minimum observations to follow strictly in terminal nodes.
-  The default value is 1.
-@param nodesizeStrictAvg The minimum size of terminal nodes for averaging data set to follow when predicting.
-  No splits are allowed that result in nodes with observations less than this parameter.
-  This parameter enforces overlap of the averaging data set with the splitting set when training.
-  When using honesty, splits that leave less than nodesizeStrictAvg averaging
-  observations in either child node will be rejected, ensuring every leaf node
-  also has at least nodesizeStrictAvg averaging observations. The default value is 1.
-@param minSplitGain Minimum loss reduction to split a node further in a tree.
-@param maxDepth Maximum depth of a tree. The default value is 99.
-@param interactionDepth All splits at or above interaction depth must be on
-  variables that are not weighting variables (as provided by the interactionVariables argument).
-@param interactionVariables Indices of weighting variables.
-@param featureWeights (optional) vector of sampling probabilities/weights for each
-  feature used when subsampling mtry features at each node above or at interactionDepth.
-  The default is to use uniform probabilities.
-@param deepFeatureWeights Used in place of featureWeights for splits below interactionDepth.
-@param observationWeights Denotes the weights for each training observation
-  that determine how likely the observation is to be selected in each bootstrap sample.
-  This option is not allowed when sampling is done without replacement.
-@param splitratio Proportion of the training data used as the splitting dataset.
-  It is a ratio between 0 and 1. If the ratio is 1 (the default), then the splitting
-  set uses the entire data, as does the averaging set---i.e., the standard Breiman RF setup.
-  If the ratio is 0, then the splitting data set is empty, and the entire dataset is used
-  for the averaging set (This is not a good usage, however, since there will be no data available for splitting).
-@param OOBhonest In this version of honesty, the out-of-bag observations for each tree
-  are used as the honest (averaging) set. This setting also changes how predictions
-  are constructed. When predicting for observations that are out-of-sample
-  (using predict(..., aggregation = "average")), all the trees in the forest
-  are used to construct predictions. When predicting for an observation that was in-sample (using
-  predict(..., aggregation = "oob")), only the trees for which that observation
-  was not in the averaging set are used to construct the prediction for that observation.
-  aggregation="oob" (out-of-bag) ensures that the outcome value for an observation
-  is never used to construct predictions for a given observation even when it is in sample.
-  This property does not hold in standard honesty, which relies on an asymptotic
-  subsampling argument. By default, when OOBhonest = TRUE, the out-of-bag observations
-  for each tree are resamples with replacement to be used for the honest (averaging)
-  set. This results in a third set of observations that are left out of both
-  the splitting and averaging set, we call these the double out-of-bag (doubleOOB)
-  observations. In order to get the predictions of only the trees in which each
-  observation fell into this doubleOOB set, one can run predict(... , aggregation = "doubleOOB").
-  In order to not do this second bootstrap sample, the doubleBootstrap flag can
-  be set to FALSE.
-@param doubleBootstrap The doubleBootstrap flag provides the option to resample
-  with replacement from the out-of-bag observations set for each tree to construct
-  the averaging set when using OOBhonest. If this is FALSE, the out-of-bag observations
-  are used as the averaging set. By default this option is TRUE when running OOBhonest = TRUE.
-  This option increases diversity across trees.
-@param seed random seed
-@param verbose Indicator to train the forest in verbose mode
-@param nthread Number of threads to train and predict the forest. The default
-  number is 0 which represents using all cores.
-@param splitrule Only variance is implemented at this point and it
-  specifies the loss function according to which the splits of random forest
-  should be made.
-@param middleSplit Indicator of whether the split value is takes the average of two feature
-  values. If FALSE, it will take a point based on a uniform distribution
-  between two feature values. (Default = FALSE)
-@param doubleTree if the number of tree is doubled as averaging and splitting
-  data can be exchanged to create decorrelated trees. (Default = FALSE)
-@param reuseforestry Pass in an `forestry` object which will recycle the
-  dataframe the old object created. It will save some space working on the
-  same data set.
-@param maxObs The max number of observations to split on.
-@param savable If TRUE, then RF is created in such a way that it can be
-  saved and loaded using save(...) and load(...). However, setting it to TRUE
-  (default) will take longer and use more memory. When
-  training many RF, it makes sense to set this to FALSE to save time and memory.
-@param saveable deprecated. Do not use.
-@param linear Indicator that enables Ridge penalized splits and linear aggregation
-  functions in the leaf nodes. This is recommended for data with linear outcomes.
-  For implementation details, see: https://arxiv.org/abs/1906.06463. Default is FALSE.
-@param symmetric Used for the experimental feature which imposes strict symmetric
-  marginal structure on the predictions of the forest through only selecting
-  symmetric splits with symmetric aggregation functions. Should be a vector of size ncol(x) with a single
-  1 entry denoting the feature to enforce symmetry on. Defaults to all zeroes.
-  For version >= 0.9.0.83, we experimentally allow more than one feature to
-  enforce symmetry at a time. This should only be used for a small number of
-  features as it has a runtime that is exponential in the number of symmetric
-  features (O(N 2^|S|) where S is the set of symmetric features).
-@param linFeats A vector containing the indices of which features to split
-  linearly on when using linear penalized splits (defaults to use all numerical features).
-@param monotonicConstraints Specifies monotonic relationships between the continuous
-  features and the outcome. Supplied as a vector of length p with entries in
-  1,0,-1 which 1 indicating an increasing monotonic relationship, -1 indicating
-  a decreasing monotonic relationship, and 0 indicating no constraint.
-  Constraints supplied for categorical variable will be ignored.
-@param groups A vector of factors specifying the group membership of each training observation.
-  these groups are used in the aggregation when doing out of bag predictions in
-  order to predict with only trees where the entire group was not used for aggregation.
-  This allows the user to specify custom subgroups which will be used to create
-  predictions which do not use any data from a common group to make predictions for
-  any observation in the group. This can be used to create general custom
-  resampling schemes, and provide predictions consistent with the Out-of-Group set.
-@param minTreesPerGroup The number of trees which we make sure have been created leaving
-  out each group. This is 0 by default, so we will not give any special treatment to
-  the groups when sampling, however if this is set to a positive integer, we
-  modify the bootstrap sampling scheme to ensure that exactly that many trees
-  have the group left out. We do this by, for each group, creating minTreesPerGroup
-  trees which are built on observations sampled from the set of training observations
-  which are not in the current group. This means we create at least # groups * minTreesPerGroup
-  trees for the forest. If ntree > # groups * minTreesPerGroup, we create
-  max(# groups * minTreesPerGroup,ntree) total trees, in which at least minTreesPerGroup
-  are created leaving out each group. For debugging purposes, these group sampling
-  trees are stored at the end of the R forest, in blocks based on the left out group.
-@param monotoneAvg This is a boolean flag that indicates whether or not monotonic
-  constraints should be enforced on the averaging set in addition to the splitting set.
-  This flag is meaningless unless both honesty and monotonic constraints are in use.
-  The default is FALSE.
-@param overfitPenalty Value to determine how much to penalize the magnitude
-  of coefficients in ridge regression when using linear splits.
-@param scale A parameter which indicates whether or not we want to scale and center
-  the covariates and outcome before doing the regression. This can help with
-  stability, so by default is TRUE.
-@return A `forestry` object.
-@examples
--------
-
-In version 0.9.0.34, we have modified the handling of missing data. Instead of
-the greedy approach used in previous iterations, we now test any potential
-split by putting all NA's to the right, and all NA's to the left, and taking
-the choice which gives the best MSE for the split. Under this version of handling
-the potential splits, we will still respect monotonic constraints. So if we put all
-NA's to either side, and the resulting leaf nodes have means which violate
-the monotone constraints, the split will be rejected.
-@export
-"""
 class forestry:
+    """
+    The Random Forestry Regressor
+
+    :param ntree: The number of trees to grow in the forest.
+    :type ntree: *int, optional, default=500*
+    :param replace: An indicator of whether sampling of the training data is done with replacement.
+    :type replace: *bool, optional, default=True*
+    :param sampsize: The size of total samples to draw for the training data. If sampling with replacement, the default
+     value is the length of the training data. If sampling without replacement, the default value is two-thirds of the 
+     length of the training data.
+    :type sampsize: *int, optional*
+    :param sample_fraction: If this is given, then sampsize is ignored and set to
+     be ``round(len(y) * sample_fraction)``. It must be a real number between 0 and 1.
+    :type sample_fraction: *float, optional*
+    :param mtry: The number of variables randomly selected at each split point. The default value is set to be
+     one-third of the total number of features of the training data.
+    :type mtry: *int, optional*
+    :param nodesizeSpl: Minimum observations contained in terminal nodes.
+    :type nodesizeSpl: *int, optional, default=5*
+    :param nodesizeAvg: Minimum size of terminal nodes for averaging dataset.
+    :type nodesizeAvg: *int, optional, default=5*
+    :param nodesizeStrictSpl: Minimum observations to follow strictly in terminal nodes.
+    :type nodesizeStrictSpl: *int, optional, default=1*
+    :param nodesizeStrictAvg: The minimum size of terminal nodes for averaging data set to follow when predicting.
+     No splits are allowed that result in nodes with observations less than this parameter.
+     This parameter enforces overlap of the averaging data set with the splitting set when training.
+     When using honesty, splits that leave less than nodesizeStrictAvg averaging
+     observations in either child node will be rejected, ensuring every leaf node
+     also has at least nodesizeStrictAvg averaging observations.
+    :type nodesizeStrictAvg: *int, optional, default=1*
+    :param minSplitGain: Minimum loss reduction to split a node further in a tree.
+    :type minSplitGain: *float, optional, default=0*
+    :param maxDepth: Maximum depth of a tree.
+    :type maxDepth: *int, optional, default=99*
+    :param interactionDepth: All splits at or above interaction depth must be on variables
+     that are not weighting variables (as provided by the interactionVariables argument in fit).
+    :type interactionDepth: *int, optional, default=maxDepth*
+    :param splitratio: Proportion of the training data used as the splitting dataset.
+     It is a ratio between 0 and 1. If the ratio is 1 (the default), then the splitting
+     set uses the entire data, as does the averaging set---i.e., the standard Breiman RF setup.
+     If the ratio is 0, then the splitting data set is empty, and the entire dataset is used
+     for the averaging set (This is not a good usage, however, since there will be no data available for splitting).
+    :type splitratio: *double, optional, default=1*
+    :param OOBhonest: In this version of honesty, the out-of-bag observations for each tree
+     are used as the honest (averaging) set. This setting also changes how predictions
+     are constructed. When predicting for observations that are out-of-sample
+     ``(predict(..., aggregation = "average"))``, all the trees in the forest
+     are used to construct predictions. When predicting for an observation that was in-sample
+     ``(predict(..., aggregation = "oob"))``, only the trees for which that observation
+     was not in the averaging set are used to construct the prediction for that observation.
+     *aggregation="oob"* (out-of-bag) ensures that the outcome value for an observation
+     is never used to construct predictions for a given observation even when it is in sample.
+     This property does not hold in standard honesty, which relies on an asymptotic
+     subsampling argument. By default, when *OOBhonest=True*, the out-of-bag observations
+     for each tree are resamples with replacement to be used for the honest (averaging)
+     set. This results in a third set of observations that are left out of both
+     the splitting and averaging set, we call these the double out-of-bag (doubleOOB)
+     observations. In order to get the predictions of only the trees in which each
+     observation fell into this doubleOOB set, one can run ``predict(... , aggregation = "doubleOOB")``.
+     In order to not do this second bootstrap sample, the doubleBootstrap flag can
+     be set to *False*.
+    :type OOBhonest: *bool, optional, default=False*
+    :param doubleBootstrap: The doubleBootstrap flag provides the option to resample
+     with replacement from the out-of-bag observations set for each tree to construct
+     the averaging set when using OOBhonest. If this is *False*, the out-of-bag observations
+     are used as the averaging set. By default this option is *True* when running *OOBhonest=True*.
+     This option increases diversity across trees.
+    :type doubleBootstrap: *bool, optional, default=OOBhonest*
+    :param seed: Random number generator seed. The default value is a random integer.
+    :type seed: *int, optional*
+    :param verbose: Indicator to train the forest in verbose mode.
+    :type verbose: *bool, optional, default=False*
+    :param nthread: Number of threads to train and predict the forest. The default
+     number is 0 which represents using all cores.
+    :type nthread: *int, optional, default=0*
+    :param splitrule: Only variance is implemented at this point and, it
+     specifies the loss function according to which the splits of random forest
+     should be made.
+    :type splitrule: *str, optional, default='variance'*
+    :param middleSplit: Indicator of whether the split value is takes the average of two feature
+     values. If *False*, it will take a point based on a uniform distribution
+     between two feature values.
+    :type middleSplit: *bool, optional, default=False*
+    :param maxObs: The max number of observations to split on. The default is the number of observations.
+    :type maxObs: *int, optional*
+    :param linear: Indicator that enables Ridge penalized splits and linear aggregation
+     functions in the leaf nodes. This is recommended for data with linear outcomes.
+     For implementation details, see: https://arxiv.org/abs/1906.06463.
+    :type linear: *bool, optional, default=False*
+    :param minTreesPerGroup: The number of trees which we make sure have been created leaving
+     out each group. This is 0 by default, so we will not give any special treatment to
+     the groups when sampling, however if this is set to a positive integer, we
+     modify the bootstrap sampling scheme to ensure that exactly that many trees
+     have the group left out. We do this by, for each group, creating *minTreesPerGroup*
+     trees which are built on observations sampled from the set of training observations
+     which are not in the current group. This means we create at least ``len(groups)*minTreesPerGroup``
+     trees for the forest. If ``ntree>len(groups)*minTreesPerGroup``, we create
+     ``max(len(groups)*minTreesPerGroup,ntree)`` total trees, in which at least *minTreesPerGroup*
+     are created leaving out each group. For debugging purposes, these group sampling
+     trees are stored at the end of the Python forest, in blocks based on the left out group.
+    :type minTreesPerGroup: *int, optional, default=0*
+    :param monotoneAvg: This is a flag that indicates whether or not monotonic
+     constraints should be enforced on the averaging set in addition to the splitting set.
+     This flag is meaningless unless both honesty and monotonic constraints are in use.
+    :type monotoneAvg: *bool, optional, default=False*
+    :param overfitPenalty: Value to determine how much to penalize the magnitude
+     of coefficients in ridge regression when using linear splits.
+    :type overfitPenalty: *float, optional, default=1*
+    :param scale: A parameter which indicates whether or not we want to scale and center
+     the covariates and outcome before doing the regression. This can help with
+     stability, so the default is *True*.
+    :type scale: *bool, optional, default=True*
+    :param doubleTree: Indicator of whether the number of trees is doubled as averaging and splitting
+     data can be exchanged to create decorrelated trees.
+    :type doubleTree: *bool, optional, default=False*
+
+    """
     def __init__(
         self,
         ntree = 500,
@@ -209,10 +179,9 @@ class forestry:
         scale = True,
         doubleTree = False,
         reuseforestry = None,
-        savable = True,
+        savable = True,    ### TODO: REMOVE THIS
         saveable = True
     ):
-
 
         if doubleBootstrap is None:
             doubleBootstrap = OOBhonest
@@ -354,6 +323,59 @@ class forestry:
         groups = None,
         seed = None,
     ):
+        """
+        Trains all the trees in the forest.
+
+        :param x: The feature matrix.
+        :type x: *pandas.DataFrame, pandas.Series, numpy.ndarray, 2d list of shape [nrows, ncols]*
+        :param y: The target values.
+        :type y: *array_like of shape [nrows,]*
+        :param interactionVariables: Indices of weighting variables.
+        :type interactionVariables: *array_like, optional, default=[]*
+        :param featureWeights: a list of sampling probabilities/weights for each
+         feature used when subsampling *mtry* features at each node above or at *interactionDepth*.
+         The default is to use uniform probabilities.
+        :type featureWeights: *array_like of shape [ncols,], optional*
+        :param deepFeatureWeights: Used in place of *featureWeights* for splits below *interactionDepth*.
+         The default is to use uniform probabilities.
+        :type deepFeatureWeights: *array_like of shape [ncols,], optional*
+        :param observationWeights: Denotes the weights for each training observation
+         that determine how likely the observation is to be selected in each bootstrap sample.
+         The default is to use uniform probabilities. This option is not allowed when sampling is
+         done without replacement.
+        :type observationWeights: *array_like of shape [nrows,], optional*
+        :param symmetric: Used for the experimental feature which imposes strict symmetric
+         marginal structure on the predictions of the forest through only selecting
+         symmetric splits with symmetric aggregation functions. Should be a list of size *ncols* with a single
+         1 entry denoting the feature to enforce symmetry on. Defaults to all zeroes.
+         For version >= 0.9.0.83, we experimentally allow more than one feature to
+         enforce symmetry at a time. This should only be used for a small number of
+         features as it has a runtime that is exponential in the number of symmetric
+         features - ``O(N*2^|S|)`` - where S is the set of symmetric features).
+        :type symmetric: *array_like of shape [ncols,], optional*
+        :param linFeats: A list containing the indices of which features to split
+         linearly on when using linear penalized splits (defaults to use all numerical features).
+        :type linFeats: *array_like, optional*
+        :param monotonicConstraints: Specifies monotonic relationships between the continuous
+         features and the outcome. Supplied as a list of length p with entries in
+         1, 0, -1, in which 1 indicating an increasing monotonic relationship, -1 indicating
+         a decreasing monotonic relationship, and 0 indicating no constraint.
+         Constraints supplied for categorical variable will be ignored. Defaults to all 0-s (no constraints).
+        :type monotonicConstraints: *array_like of shape [ncols,], optional*
+        :param groups: A pandas categorical Seires specifying the group membership of each training observation.
+         These groups are used in the aggregation when doing out of bag predictions in
+         order to predict with only trees where the entire group was not used for aggregation.
+         This allows the user to specify custom subgroups which will be used to create
+         predictions which do not use any data from a common group to make predictions for
+         any observation in the group. This can be used to create general custom
+         resampling schemes, and provide predictions consistent with the Out-of-Group set.
+        :type groups: *pandas.Categorical(...), pandas.Series(..., dtype="category"),
+         or other pandas categorical dtypes, optional, default=None*
+        :param seed: Random number generator seed. The default value is the forestry seed.
+        :type seed: *int, optional*
+        :rtype: None
+        
+        """
         
          # Make sure that all the parameters exist when passed to forestry
 
@@ -456,8 +478,8 @@ class forestry:
             groupVector = pd.to_numeric(groups)
 
             # Print warning if the group number and minTreesPerGroup results in a large forest
-            if object.minTreesPerGroup > 0 and len(groups.cat.categories) * object.minTreesPerGroup > 2000:
-                warnings.warn('Using ' + str(len(groups.cat.categories)) + ' groups with ' + str(object.minTreesPerGroup) + ' trees per group will train ' + str(len(groups.cat.categories) * object.minTreesPerGroup) + ' trees in the forest')
+            if self.minTreesPerGroup > 0 and len(groups.cat.categories) * self.minTreesPerGroup > 2000:
+                warnings.warn('Using ' + str(len(groups.cat.categories)) + ' groups with ' + str(self.minTreesPerGroup) + ' trees per group will train ' + str(len(groups.cat.categories) * self.minTreesPerGroup) + ' trees in the forest')
         
         else:
             groupVector = np.repeat(0, nrow)
@@ -569,75 +591,81 @@ class forestry:
         self.processed_dta['featNames'] = featNames
 
 
+    def predict(self, newdata=None, aggregation = 'average', seed = None, nthread = None, exact = None, trees = None, weightMatrix = False):
+        """
+        Return the prediction from the forest.
 
-    # -- Predict Method ------------------------------------------------------------
-    #' predict-forestry
-    #' @name predict-forestry
-    #' @rdname predict-forestry
-    #' @description Return the prediction from the forest.
-    #' @param object A `forestry` object.
-    #' @param newdata A data frame of testing predictors.
-    #' @param aggregation How the individual tree predictions are aggregated:
-    #'   `average` returns the mean of all trees in the forest; `terminalNodes` also returns
-    #'   the weightMatrix, as well as "terminalNodes", a matrix where
-    #'   the ith entry of the jth column is the index of the leaf node to which the
-    #'   ith observation is assigned in the jth tree; and "sparse", a matrix
-    #'   where the ith entry in the jth column is 1 if the ith observation in
-    #'   newdata is assigned to the jth leaf and 0 otherwise. In each tree the
-    #'   leaves are indexed using a depth first ordering, and, in the "sparse"
-    #'   representation, the first leaf in the second tree has column index one more than
-    #'   the number of leaves in the first tree and so on. So, for example, if the
-    #'   first tree has 5 leaves, the sixth column of the "sparse" matrix corresponds
-    #'   to the first leaf in the second tree.
-    #'   `oob` returns the out-of-bag predictions for the forest. We assume
-    #'   that the ordering of the observations in newdata have not changed from
-    #'   training. If the ordering has changed, we will get the wrong OOB indices.
-    #'   `doubleOOB` is an experimental flag, which can only be used when OOBhonest = TRUE
-    #'   and doubleBootstrap = TRUE. When both of these settings are on, the
-    #'   splitting set is selected as a bootstrap sample of observations and the
-    #'   averaging set is selected as a bootstrap sample of the observations which
-    #'   were left out of bag during the splitting set selection. This leaves a third
-    #'   set which is the observations which were not selected in either bootstrap sample.
-    #'   This predict flag gives the predictions using- for each observation- only the trees
-    #'   in which the observation fell into this third set (so was neither a splitting
-    #'   nor averaging example).
-    #'   `coefs` is an aggregation option which works only when linear aggregation
-    #'   functions have been used. This returns the linear coefficients for each
-    #'   linear feature which were used in the leaf node regression of each predicted
-    #'   point.
-    #' @param seed random seed
-    #' @param nthread The number of threads with which to run the predictions with.
-    #'   This will default to the number of threads with which the forest was trained
-    #'   with.
-    #' @param exact This specifies whether the forest predictions should be aggregated
-    #'   in a reproducible ordering. Due to the non-associativity of floating point
-    #'   addition, when we predict in parallel, predictions will be aggregated in
-    #'   varied orders as different threads finish at different times.
-    #'   By default, exact is TRUE unless N > 100,000 or a custom aggregation
-    #'   function is used.
-    #' @param trees A vector of indices in the range 1:ntree which tells
-    #'   predict which trees in the forest to use for the prediction. Predict will by
-    #'   default take the average of all trees in the forest, although this flag
-    #'   can be used to get single tree predictions, or averages of diffferent trees
-    #'   with different weightings. Duplicate entries are allowed, so if trees = c(1,2,2)
-    #'   this will predict the weighted average prediction of only trees 1 and 2 weighted by:
-    #'   predict(..., trees = c(1,2,2)) = (predict(..., trees = c(1)) +
-    #'                                      2*predict(..., trees = c(2))) / 3.
-    #'   note we must have exact = TRUE, and aggregation = "average" to use tree indices.
-    #' @param weightMatrix An indicator of whether or not we should also return a
-    #'   matrix of the weights given to each training observation when making each
-    #'   prediction. When getting the weight matrix, aggregation must be one of
-    #'   `average`, `oob`, and `doubleOOB`.
-    #' @param ... additional arguments.
-    #' @return A vector of predicted responses.
-    #' @export  
+        :param newdata: Testing predictors.
+        :type newdata: *pandas.DataFrame, pandas.Series, numpy.ndarray, 2d list of shape [nsamples, ncols], deffault=None*
+        :param aggregation: How the individual tree predictions are aggregated:
+         'average' returns the mean of all trees in the forest; 'terminalNodes' also returns
+         the weightMatrix, as well as "terminalNodes" - a matrix where
+         the i-th entry of the j-th column is the index of the leaf node to which the
+         i-th observation is assigned in the j-th tree; and "sparse" - a matrix
+         where the ioth entry in the j-th column is 1 if the ith observation in
+         newdata is assigned to the j-th leaf and 0 otherwise. In each tree the
+         leaves are indexed using a depth first ordering, and, in the "sparse"
+         representation, the first leaf in the second tree has column index one more than
+         the number of leaves in the first tree and so on. So, for example, if the
+         first tree has 5 leaves, the sixth column of the "sparse" matrix corresponds
+         to the first leaf in the second tree.
+         'oob' returns the out-of-bag predictions for the forest. We assume
+         that the ordering of the observations in newdata have not changed from
+         training. If the ordering has changed, we will get the wrong OOB indices.
+         'doubleOOB' is an experimental flag, which can only be used when *OOBhonest=True*
+         and *doubleBootstrap=True*. When both of these settings are on, the
+         splitting set is selected as a bootstrap sample of observations and the
+         averaging set is selected as a bootstrap sample of the observations which
+         were left out of bag during the splitting set selection. This leaves a third
+         set which is the observations which were not selected in either bootstrap sample.
+         For each observation, this predict flag gives the predictions using only the trees
+         in which the observation fell into this third set (so was neither a splitting
+         nor averaging example).
+         'coefs' is an aggregation option which works only when linear aggregation
+         functions have been used. This returns the linear coefficients for each
+         linear feature which were used in the leaf node regression of each predicted point.
+        :type aggregation: *str, optional, default='average'*
+        :param seed: Random number generator seed. The default value is the forestry seed.
+        :type seed: *int, optional*
+        :param nthread: The number of threads with which to run the predictions with.
+         This will default to the number of threads with which the forest was trained 
+         with.
+        :type nthread: *int, optional*
+        :param exact: This specifies whether the forest predictions should be aggregated
+         in a reproducible ordering. Due to the non-associativity of floating point
+         addition, when we predict in parallel, predictions will be aggregated in
+         varied orders as different threads finish at different times.
+         By default, exact is *True* unless ``N>100,000`` or a custom aggregation
+         function is used.
+        :type exact: *bool, optional*
+        :param trees: A list of indices in the range *[0, ntree)*, which tells
+         predict which trees in the forest to use for the prediction. Predict will by
+         default take the average of all trees in the forest, although this flag
+         can be used to get single tree predictions, or averages of diffferent trees
+         with different weightings. Duplicate entries are allowed, so if ``trees = [0,1,1]``
+         this will predict the weighted average prediction of only trees 0 and 1 weighted by::
 
-    def predict(self, newdata=None, aggregation = 'average', seed = None, nthread = 0, exact = None, trees = None, weightMatrix = False):
+            predict(..., trees = [0,1,1]) = (predict(..., trees = [0]) + 
+                                            2*predict(..., trees = [1])) / 3
+
+         note we must have ``exact = True``, and ``aggregation = "average"`` to use tree indices. Defaults to using
+         all trees equally weighted. 
+        :type trees: *array_like, optional*
+        :param weightMatrix: An indicator of whether or not we should also return a
+         matrix of the weights given to each training observation when making each
+         prediction. When getting the weight matrix, aggregation must be one of
+         'average', 'oob', and 'doubleOOB'. his is a normal text paragraph.
+        :type weightMatrix: *bool, optional, default=False*
+        :return: An array of predicted responses.
+        :rtype: numpy.array
+
+        """
+
         if (newdata is None) and not (aggregation == 'oob' or aggregation == 'doubleOOB'):
             raise ValueError('When using an aggregation that is not oob or doubleOOB, one must supply newdata')
 
         if (not self.linear) and aggregation == 'coefs':
-            raise ValueError('Aggregation can only be linear with setting the parameter linear = TRUE.')
+            raise ValueError('Aggregation can only be linear with setting the parameter linear = True.')
 
         if seed is None:
             seed = self.seed
@@ -645,6 +673,8 @@ class forestry:
             if (not isinstance(seed, int)) or seed < 0:
                 raise ValueError('seed must be a nonnegative integer.')
 
+        if nthread is None:
+            nthread = self.nthread
 
         # Preprocess the data. We only run the data checker if ridge is turned on,
         # because even in the case where there were no NAs in train, we still want to predict.
@@ -669,7 +699,7 @@ class forestry:
             else:
                 exact = True
     
-        # We can only use tree aggregations if exact = TRUE and aggregation = "average"
+        # We can only use tree aggregations if exact = True and aggregation = "average"
         if trees is not None:
           if (not exact) or (aggregation != 'average'):
               raise ValueError('When using tree indices, we must have exact = True and aggregation = \'average\' ')
@@ -722,7 +752,7 @@ class forestry:
                 raise ValueError('Attempting to do OOB predictions on a dataset which doesn\'t match the training data!')
 
             if not self.doubleBootstrap:
-                raise ValueError('Attempting to do double OOB predictions with a forest that was not trained with doubleBootstrap = TRUE')
+                raise ValueError('Attempting to do double OOB predictions with a forest that was not trained with doubleBootstrap = True')
 
             if newdata is None:
                 forest_preds = ctypes.c_void_p(lib.predictOOB_forest(
@@ -769,18 +799,18 @@ class forestry:
         return res
 
 
-    # -- Calculate OOB Error -------------------------------------------------------
-    #' getOOB-forestry
-    #' @name getOOB-forestry
-    #' @rdname getOOB-forestry
-    #' @description Calculate the out-of-bag error of a given forest. This is done
-    #' by using the out-of-bag predictions for each observation, and calculating the
-    #' MSE over the entire forest.
-    #' @param object A `forestry` object.
-    #' @param noWarning flag to not display warnings
-    #' @aliases getOOB,forestry-method
-    #' @return The OOB error of the forest.
-    def getOOB(self, noWarning=False):
+    def getOOB(self, noWarning = False):
+        """
+        Calculate the out-of-bag error of a given forest. This is done
+        by using the out-of-bag predictions for each observation, and calculating the
+        MSE over the entire forest.
+
+        :param noWarning: A flag to not display warnings.
+        :type noWarning: *bool, optional, default=False*
+        :return: The OOB error of the forest.
+        :rtype: float
+
+        """
 
         Py_preprocessing.forest_checker(self)
         if (not self.replace) and (self.ntree*(self.processed_dta['nObservations'] - self.sampsize)) < 10:
@@ -801,19 +831,18 @@ class forestry:
         return np.mean((y_true - preds)**2)
 
 
-    # -- Calculate Variable Importance ---------------------------------------------
-    #' getVI-forestry
-    #' @rdname getVI-forestry
-    #' @description Calculate the percentage increase in OOB error of the forest
-    #'  when each feature is shuffled.
-    #' @param object A `forestry` object.
-    #' @param noWarning flag to not display warnings
-    #' @note No seed is passed to this function so it is
-    #'   not possible in the current implementation to replicate the vector
-    #'   permutations used when measuring feature importance.
-    #' @return The variable importance of the forest.
-    #' @export
     def getVI(self, noWarning=False):
+        """
+        Calculate the percentage increase in OOB error of the forest
+        when each feature is shuffled.
+
+        :param noWarning: A flag to not display warnings.
+        :type noWarning: *bool, optional, default=False*
+        :return: The variable importance of the forest.
+        :rtype: numpy.array
+
+        """
+
         Py_preprocessing.forest_checker(self)
         if (not self.replace) and (self.ntree*(self.processed_dta['nObservations'] - self.sampsize)) < 10:
             if not noWarning:
@@ -829,51 +858,54 @@ class forestry:
         return res
 
 
-
-    # -- Calculate Confidence Interval estimates for a new feature -----------------
-    #' getCI-forestry
-    #' @rdname getCI-forestry
-    #' @description For a new set of features, calculate the confidence intervals
-    #'  for each new observation.
-    #' @param object A `forestry` object.
-    #' @param newdata A set of new observations for which we want to predict the
-    #'  outcomes and use confidence intervals.
-    #' @param level The confidence level at which we want to make our intervals. Default
-    #'  is to use .95 which corresponds to 95 percentile confidence intervals.
-    #' @param B Number of bootstrap draws to use when using method = "OOB-bootstrap"
-    #' @param method A flag for the different ways to create the confidence intervals.
-    #'  Right now we have two ways of doing this. One is the `OOB-bootstrap` flag which
-    #'  uses many bootstrap pulls from the set of OOB trees then with these different
-    #'  pulls, we use the set of trees to predict for the new feature and give the
-    #'  confidence set over the many bootstrap draws. The other method- `OOB-conformal`-
-    #'  creates intervals by taking the set of doubleOOB trees for each observation, and
-    #'  using the predictions of these trees to give conformal intervals. So for an
-    #'  observation obs_i, let S_i be the set of trees for which obs_i was in neither
-    #'  the splitting set nor the averaging set (or the set of trees for which obs_i
-    #'  was "doubleOOB"), we then predict for obs_i with only the trees in S_i.
-    #'  doubleOOB_tree_preds <- predict(S_i, obs_i):
-    #'  Then CI(obs_i, alpha = .95) = quantile(doubleOOB_tree_preds - y_i, probs = .95).
-    #'  The `local-conformal` option takes the residuals of each training point (using)
-    #'  OOB predictions, and then uses the weights of the random forest to determine
-    #'  the quantiles of the residuals in the local neighborhood of the predicted point.
-    #'  Default is `OOB-conformal`.
-    #' @param noWarning flag to not display warnings
-    #' @return The confidence intervals for each observation in newdata.
-    #' @export
-
     def getCI(self, newdata, level=.95, B=100, method='OOB-conformal', noWarning=False):
+
+        """
+        For a new set of features, calculate the confidence intervals for each new observation.
+
+        :param newdata: A set of new observations for which we want to predict the
+         outcomes and use confidence intervals.
+        :type newdata: *pandas.DataFrame, pandas.Series, numpy.ndarray, 2d list of shape [nsamples, ncols]*
+        :param level: The confidence level at which we want to make our intervals.
+        :type level: *double, optional, default=.95*
+        :param B: Number of bootstrap draws to use when using ``method = "OOB-bootstrap"``
+        :type B: *int, optional, default=100*
+        :param method: A flag for the different ways to create the confidence intervals.
+         Right now we have two ways of doing this. One is the 'OOB-bootstrap' flag which
+         uses many bootstrap pulls from the set of OOB trees then with these different
+         pulls, we use the set of trees to predict for the new feature and give the
+         confidence set over the many bootstrap draws. The other method - 'OOB-conformal' - 
+         creates intervals by taking the set of doubleOOB trees for each observation, and
+         using the predictions of these trees to give conformal intervals. So for an
+         observation obs_i, let S_i be the set of trees for which obs_i was in neither
+         the splitting set nor the averaging set (or the set of trees for which obs_i
+         was "doubleOOB"), we then predict for obs_i with only the trees in S_i::
+
+            doubleOOB_tree_preds = S_i.predict(obs_i)
+            CI(obs_i, level = .95) = quantile(doubleOOB_tree_preds - y_i, [0.025, 0.975])
+
+         The 'local-conformal' option takes the residuals of each training point (using)
+         OOB predictions, and then uses the weights of the random forest to determine
+         the quantiles of the residuals in the local neighborhood of the predicted point.
+        :type method: *str, optional, default='OOB-conformal'*
+        :param noWarning: A flag to not display warnings.
+        :type noWarning: *bool, optional, default=False*
+        :return: The confidence intervals for each observation in newdata.
+        :rtype: dict
+
+        """
         
         if method not in ['OOB-conformal', 'OOB-bootstrap', 'local-conformal']:
             raise ValueError('Method must be one of OOB-conformal, OOB-bootstrap, or local-conformal')
 
         if method == 'OOB-conformal' and not (self.OOBhonest and self.doubleBootstrap):
-            raise ValueError('We cannot do OOB-conformal intervals unless both OOBhonest and doubleBootstrap are TRUE')
+            raise ValueError('We cannot do OOB-conformal intervals unless both OOBhonest and doubleBootstrap are True')
 
         if method == 'OOB-bootstrap' and not self.OOBhonest:
-            raise ValueError('We cannot do OOB-bootstrap intervals unless OOBhonest is TRUE')
+            raise ValueError('We cannot do OOB-bootstrap intervals unless OOBhonest is True')
 
         if method == 'local-conformal' and not self.OOBhonest:
-            raise ValueError('We cannot do local-conformal intervals unless OOBhonest is TRUE')
+            raise ValueError('We cannot do local-conformal intervals unless OOBhonest is True')
 
         #Check the forestry object
         Py_preprocessing.forest_checker(self)
@@ -943,26 +975,28 @@ class forestry:
             pass ### weightmatrix not implemented yet!!!!
 
 
-    # -- Get the observations used for prediction ----------------------------------
-    #' predictInfo-forestry
-    #' @rdname predictInfo-forestry
-    #' @description Get the observations which are used to predict for a set of new
-    #'  observations using either all trees (for out of sample observations), or
-    #'  tree for which the observation is out of averaging set or out of sample entirely.
-    #' @param object A `forestry` object.
-    #' @param newdata Data on which we want to do predictions. Must be the same length
-    #'  as the training set if we are doing `oob` or `doubleOOB` aggregation.
-    #' @param aggregation Specifies which aggregation version is used to predict for the
-    #' observation, must be one of `average`,`oob`, and `doubleOOB`.
-    #' @return A list with four entries. `weightMatrix` is a matrix specifying the
-    #'  weight given to training observatio i when prediction on observation j.
-    #'  `avgIndices` gives the indices which are in the averaging set for each new
-    #'  observation. `avgWeights` gives the weights corresponding to each averaging
-    #'  observation returned in `avgIndices`. `obsInfo` gives the full observation vectors
-    #'  which were used to predict for an observation, as well as the weight given
-    #'  each observation.
-    #' @export
     def predictInfo(self, newdata, aggregation='oob'):
+        """
+        Get the observations which are used to predict for a set of new
+        observations using either all trees (for out of sample observations), or
+        tree for which the observation is out of averaging set or out of sample entirely.
+
+        :param newdata: Data on which we want to do predictions. Must be the same length
+         as the training set if we are doing 'oob' or 'doubleOOB' aggregation.
+        :type newdata: *pandas.DataFrame, pandas.Series, numpy.ndarray, 2d list of shape [nsamples, ncols]*
+        :param aggregation: Specifies which aggregation version is used to predict for the
+         observation, must be one of 'average', 'oob', and 'doubleOOB'.
+        :type aggregation: *str, optional, default='oob'*
+        :return: A dictionary with four entries. 'weightMatrix' is a matrix specifying the
+         weight given to training observation i when prediction on observation j.
+         'avgIndices' gives the indices which are in the averaging set for each new
+         observation. 'avgWeights' gives the weights corresponding to each averaging
+         observation returned in 'avgIndices'. 'obsInfo' gives the full observation vectors
+         which were used to predict for an observation, as well as the weight given
+         each observation.
+        :rtype: dict
+
+        """
 
         if aggregation not in ['average', 'oob', 'doubleOOB']:
             raise ValueError('Aggregation must be one of average, oob, or doubleOOB')
@@ -970,9 +1004,19 @@ class forestry:
         pass ### weightmatrix not implemented yet!!!!
 
 
-    # Given a trained forest and the index of a tree, returns the decision path
-    # of each observation in the tree.
-    def decision_path(self, X, tree_idx):
+    def decision_path(self, X, tree_idx=0):
+        """
+        Gets the decision path in the forest.
+
+        :param X: Testing samples. For each observation in X, we will get its decision path.
+        :type X: *pandas.DataFrame, pandas.Series, numpy.ndarray, 2d list of shape [nsamples, ncols]*
+        :param tree_idx: The index of the tree in the forest where the path will be found.
+        :type tree_idx: *int, optional, default=0*
+        :return: A node indicator matrix, where each entry denotes the id of the corresponding
+         node.
+        :rtype: numpy.ndarray
+
+        """
 
         X = pd.DataFrame(X)
         
@@ -995,36 +1039,47 @@ class forestry:
 
         return res
         
-    # Retirns the ocefficient of determination of the prediction.
+    
     def score(self, X, y, sample_weight=None):
+        """
+        Gets the coefficient of determination (R\ :sup:`2`).
+
+        :param X: Testing samples.
+        :type X: *pandas.DataFrame, pandas.Series, numpy.ndarray, 2d list of shape [nsamples, ncols]*
+        :param y: True outcome values of X. 
+        :type y: *array_like of shape [nsamples,]*
+        :param sample_weight: Sample weights. Uses equal weights by default. 
+        :type sample_weight: *array_like of shape [nsamples,], optional, default=None*
+        :return: The value of R\ :sup:`2`.
+        :rtype: float
+
+        """
+        from sklearn.metrics import r2_score
+
         y_pred = self.predict(newdata=X, aggregation='average')
-        y = np.array(y)
-
-        u = np.sum((y_pred - y)**2)
-        v = np.sum((y - np.mean(y))**2)
-
-        return 1 - u/v
+        
+        return r2_score(y, y_pred, sample_weight=sample_weight)
 
 
-    # Given a trained forest, translate the selected tree to an SKlearn like
-    # form so that we can visualize the tree. Should have the following
-    # parameters:
-    #   @param children_left[i]: id of the left child of node i or -1 if leaf node
-    #   @param children_right[i]: id of the right child of node i or -1 if leaf node
-    #   @param feature[i]: feature used for splitting node i
-    #   @param threshold[i]: threshold value at node i
-    #   @param n_node_samples[i]:  the number of training samples reaching node i
-    #
-    def translate_tree_python(self, tree_id = None):
+    def translate_tree_python(self, tree_ids = None):
+        """
+        Given a trained forest, translates the selected trees to an Sklearn like object. After translating
+        tree *i*, it will be stored as a dictionary and can be accessed by *[foretsry object].Py_forest[i]*. 
 
-        if tree_id is None:
+        :param tree_ids: The indices of the trees to be translated. By default, all the trees in the forest
+         are translated.
+        :type tree_ids: *int/array_like, optional*
+        :rtype: None
+        """
+
+        if tree_ids is None:
             idx = np.arange(self.ntree)
         
         else:
-            if isinstance(tree_id, (int, np.integer)):
-                idx = np.array([tree_id])
+            if isinstance(tree_ids, (int, np.integer)):
+                idx = np.array([tree_ids])
             else:
-                idx = np.array(tree_id)
+                idx = np.array(tree_ids)
 
         for cur_id in idx:
 
@@ -1060,70 +1115,6 @@ class forestry:
         return
 
 
-    # -- Perform bias corrected predictions ----------------------------------------
-    #' correctedPredict-forestry
-    #' @rdname correctedPredict-forestry
-    #' @description Perform predictions given the forest using a bias correction based on
-    #'   the out of bag predictions on the training set. By default we use a final linear
-    #'   correction based on the leave-one-out hat matrix after doing `nrounds` nonlinear
-    #'   corrections.
-    #' @param object A `forestry` object.
-    #' @param newdata Dataframe on which to predict. If this is left NULL, we
-    #'   predict on the in sample data.
-    #' @param feats A vector of feature indices which should be included in the bias
-    #'   correction. By default only the outcome and predicted outcomes are used.
-    #' @param nrounds The number of nonlinear bias correction steps which should be
-    #'   taken. By default this is zero, so just a single linear correction is used.
-    #' @param linear A flag indicating whether or not we want to do a final linear
-    #'   bias correction after doing the nonlinear corrections. Default is TRUE.
-    #' @param double A flag indicating if one should use aggregation = "doubleOOB" for
-    #'   the initial predictions rather than aggregation = "oob." Default is FALSE.
-    #' @param simple flag indicating whether we should do a simple linear adjustment
-    #'  or do different adjustments by quantiles. Default is TRUE.
-    #' @param verbose flag which displays the bias of each qunatile.
-    #' @param use_residuals flag indicating if we should use the residuals to fit the
-    #'  bias correction steps. Defualt is FALSE which means that we will use Y
-    #'  rather than Y-Y.hat as the regression outcome in the bias correction steps.
-    #' @param adaptive flag to indicate whether we use adaptiveForestry or not in the
-    #'  regression step. Default is FALSE.
-    #' @param monotone flag to indicate whether or not we should use monotonicity
-    #'  in the regression of Y on Y hat (when doing forest correction steps).
-    #'  If TRUE, will constrain the corrected prediction for Y to be monotone in the
-    #'  original prediction of Y. Default is FALSE.
-    #' @param num_quants Number of quantiles to use when doing quantile specific bias
-    #'  correction. Will only be used if simple = FALSE. Default is 5.
-    #' @param params.forestry A list of parameters to pass to the subsequent forestry
-    #'  calls. Note that these forests will be trained on features of dimension
-    #'  length(feats) + 1 as the correction forests are trained on Y ~ cbind(newdata[,feats], Y.hat).
-    #'  so monotonic constraints etc given to this list should be of size length(feats) + 1.
-    #'  Defaults to the standard forestry parameters for any parameters that are
-    #'  not included in the list.
-    #' @param keep_fits A flag that indicates if we should save the intermediate
-    #'  forests used for the bias correction. If this is TRUE, we return a list of
-    #'  the forestry objects for each iteration in the bias correction.
-    #' @return A vector of the bias corrected predictions
-    #' @examples
-    #'  library(Rforestry)
-    #'  set.seed(121235312)
-    #'  n <- 50
-    #'  p <- 10
-    #'  x <- matrix(rnorm(n * p), ncol = p)
-    #'  beta <- runif(p,min = 0, max = 1)
-    #'  y <- as.matrix(x) %*% beta + rnorm(50)
-    #'  x <- data.frame(x)
-    #'
-    #'  forest <- forestry(x =x,
-    #'                     y = y[,1],
-    #'                     OOBhonest = TRUE,
-    #'                     doubleBootstrap = TRUE)
-    #'  p <- predict(forest, x)
-    #'
-    #'  # Corrected predictions
-    #'  pred.bc <- correctedPredict(forest,
-    #'                              newdata = x,
-    #'                              simple = TRUE,
-    #'                              nrounds = 0)
-    #'
     def correctedPredict(
         self,
         newdata = None,
@@ -1140,10 +1131,66 @@ class forestry:
         params_forestry = dict(),
         keep_fits = False
     ):
+        """
+        Perform predictions given the forest using a bias correction based on 
+        the out of bag predictions on the training set. By default, we use a final linear 
+        correction based on the leave-one-out hat matrix after doing 'nrounds' nonlinear 
+        corrections.
+
+        :param newdata: Dataframe on which to predict. If this is left *None*, we
+         predict on the in sample data.
+        :type newdata: *pandas.DataFrame, pandas.Series, numpy.ndarray, 2d list of shape [nsamples, ncols],
+         optional, default=None*
+        :param feats: A list of feature indices which should be included in the bias
+         correction. By default only the outcome and predicted outcomes are used.
+        :type feats: *array_like, optional, default=None*
+        :param nrounds: The number of nonlinear bias correction steps which should be
+         taken. By default, just a single linear correction is used.
+        :type nrounds: *int, optional, default=0*
+        :param linear: A flag indicating whether or not we want to do a final linear
+         bias correction after doing the nonlinear corrections.
+        :type linear: *bool, optional, default=True*
+        :param double: A flag indicating if one should use ``aggregation = "doubleOOB"`` for
+         the initial predictions rather than ``aggregation = "oob"``.
+        :type double: *bool, optional, default=False*
+        :param simple: flag indicating whether we should do a simple linear adjustment
+         or do different adjustments by quantiles.
+        :type simple: *bool, optional, default=True*
+        :param verbose: A flag which displays the bias of each qunatile.
+        :type verbose: *bool, optional, default=False*
+        :param use_residuals: A flag indicating if we should use the residuals to fit the
+         bias correction steps. Defualt is *False*, which means that we will use *Y*
+         rather than *Y-Y_hat* as the regression outcome in the bias correction steps.
+        :type use_residuals: *bool, optional, default=False*
+        :param adaptive: A flag to indicate whether we use *adaptiveForestry* or not in the
+         regression step. *adaptiveForestry* is not implemented yet, so the default is *False*.
+        :type adaptive: *bool, optional, default=False*
+        :param monotone: A flag to indicate whether or not we should use monotonicity
+         in the regression of *Y* on *Y_hat* (when doing forest correction steps).
+         If *True*, will constrain the corrected prediction for *Y* to be monotone in the
+         original prediction of *Y*.
+        :type monotone: *bool, optional, default=False*
+        :param num_quants: Number of quantiles to use when doing quantile specific bias
+         correction. Will only be used if ``simple = False``.
+        :type num_quants: *int, optional, default=5*
+        :param params_forestry: A dictionary of parameters to pass to the subsequent forestry
+         calls. Note that these forests will be trained on features of dimension
+         ``len(feats) + 1`` as the correction forests are trained using the additional feature *Y_hat*,
+         so monotonic constraints etc given to this list should be of size ``len(feats) + 1``.
+         Defaults to the standard forestry parameters for any parameters that are 
+         not included in the dictionary.
+        :type params_forestry: *dict, optional*
+        :param keep_fits: A flag that indicates if we should save the intermediate
+         forests used for the bias correction. If this is *True*, we return a list of
+         the forestry objects for each iteration in the bias correction.
+        :type keep_fits: *bool, optional, default=False*
+        :return: An array of the bias corrected predictions
+        :rtype: numpy.array
+        """
 
         # Check allowed settings for the bias correction
         if (not linear) and nrounds < 1:
-            raise ValueError('We must do at least one round of bias corrections, with either linear = TRUE or nrounds > 0.')
+            raise ValueError('We must do at least one round of bias corrections, with either linear = True or nrounds > 0.')
 
         if (not isinstance(nrounds, int)) or nrounds < 0:
             raise ValueError('nrounds must be a non negative integer.')
@@ -1357,19 +1404,15 @@ class forestry:
                 return {'predictions': np.array(adjust_data.iloc[:, -1]), 'fits': rf_fits}
 
         
-
-    # -- Calculate Splitting Proportions -------------------------------------------
-    #' getSplitProps-forestry
-    #' @name getSplitProps-forestry
-    #' @rdname getSplitProps-forestry
-    #' @description Retrieves the proportion of splits for each feature in the given
-    #'  forestry object. These proportions are calculated as the number of splits
-    #'  on feature i in the entire forest over total the number of splits in the
-    #'  forest.
-    #' @param object A trained model object of class "forestry".
-    #' @return A vector of length equal to the number of columns
-    #' @seealso \code{\link{forestry}}
     def getSplitProps(self):
+        """
+        Retrieves the proportion of splits for each feature in the given
+        forestry object. These proportions are calculated as the number of splits
+        on feature *i* in the entire forest over total the number of splits in the forest.
+
+        :return: An array of length equal to the number of columns
+        :rtype: numpy.array
+        """
         
         split_nums = np.zeros(self.processed_dta['numColumns'])
 
@@ -1382,9 +1425,13 @@ class forestry:
         return split_nums / np.sum(split_nums)
 
 
-    # Get parameters for this estimator.
-    # @return A dictionary mapping parameter names to their values.
     def get_params(self):
+        """
+        Get the forestry parameters.
+
+        :return: A dictionary mapping parameter names of the forestry to their values.
+        :rtype: dict
+        """
 
         out = dict()
         for key in self.__dict__:
@@ -1394,10 +1441,16 @@ class forestry:
         return out
 
 
-    # Set parameters for this estimator.
-    # @param **params A dictionary mapping parameter names to their values.
-    # @return self
     def set_params(self, **params):
+        """
+        Set the parameters of the forestry.
+
+        :param \**params: Forestry parameters.
+        :type \**params: *dict*
+        :return: A new forestry object with the given parameters. Note: this reinitializes the forestry object,
+         so fit must be called on the new estimator.
+        :rtype: forestry -- MIGHT CHANGE THE NAME
+        """
 
         if not params:
             return self
@@ -1417,3 +1470,11 @@ class forestry:
 
 
 # make linFeats same as symmetric...
+"""
+IMPROVEMENTS TODO:
+    ADD DEFAULT VALUES
+    ADD OPTIONAL SIGN
+    ADD NOTE FOR EXPERIMENTAL
+    NEGATIVE INDICES
+    ADD CODE BLOCKS
+"""

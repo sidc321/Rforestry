@@ -1,0 +1,31 @@
+Training and Testing
+=====================
+
+Here is an example of how to use train a forestry estimator and use it to make 
+predictions. 
+
+.. code-block:: Python
+
+    from Rforestry.forestry import forestry ### Should be changed!!!!
+    from sklearn.datasets import fetch_california_housing
+    from sklearn.model_selection import train_test_split
+    import numpy as np
+
+    # Getting the dataset
+    X, y = fetch_california_housing(return_X_y=True)
+
+    # Splitting the data into testing and training datasets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
+
+    # Create a forestry object
+    fr = forestry(scale=False)
+
+    print('Traingng the forest')
+    fr.fit(X_train, y_train)
+
+    print('Making predictions')
+    preds = fr.predict(X_test)
+
+    print('The coefficient of determination is ' + 
+            str(fr.score(X_test, y_test)))
+

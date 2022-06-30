@@ -235,8 +235,13 @@ def training_data_checker(
     y = np.array(y)
     nrows, nfeatures = x.shape
 
+    #make np arrays
+    monotonicConstraints = np.array(monotonicConstraints)
+    symmetric = np.array(symmetric)
+    observationWeights = np.array(observationWeights)
+
     # Check if the input dimension of x matches y
-    if nrows != len(y):
+    if nrows != y.size:
         raise ValueError('The dimension of input dataset x doesn\'t match the output y.')
 
     if object.linear and hasNas:
@@ -254,7 +259,7 @@ def training_data_checker(
     if object.mtry > nfeatures:
         raise ValueError('mtry cannot exceed total amount of features in x.')
 
-    if len(monotonicConstraints) != nfeatures:
+    if monotonicConstraints.size != nfeatures:
         raise ValueError('monotonicConstraints must be the size of x')
     
     if any(i != 0 and i != 1 and i != -1 for i in monotonicConstraints):
@@ -266,13 +271,13 @@ def training_data_checker(
     if not object.replace:
         observationWeights = np.repeat(0, nrows)
 
-    if len(observationWeights) != nrows:
+    if observationWeights.size != nrows:
         raise ValueError('observationWeights must have length len(x)')
 
     if any(i < 0 for i in observationWeights):
         raise ValueError('The entries in observationWeights must be non negative')
 
-    if sum(observationWeights) == 0:
+    if np.sum(observationWeights) == 0:
         raise ValueError('There must be at least one non-zero weight in observationWeights')
 
     if any(i != 0 for i in symmetric):
@@ -296,8 +301,6 @@ def training_data_checker(
         if sum(j > 0 for j in symmetric) > 10:
             warnings.warn('Running symmetric splits in more than 10 features is very slow')
 
-    
-    observationWeights = np.array(observationWeights)
     observationWeights = observationWeights / np.sum(observationWeights)
 
     # if the splitratio is 1, then we use adaptive rf and avgSampleSize is
@@ -336,10 +339,6 @@ def training_data_checker(
             raise ValueError('groups must have more than 1 level to be left out from sampling.')
         groups = pd.Series(groups, dtype='category')
 
-
-    #make an np arrays
-    monotonicConstraints = np.array(monotonicConstraints)
-    symmetric = np.array(symmetric)
 
     return (
         x,

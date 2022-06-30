@@ -1,0 +1,35 @@
+﻿forestry.forestry
+=================
+
+.. currentmodule:: forestry
+
+.. autoclass:: forestry
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~forestry.__init__
+      ~forestry.correctedPredict
+      ~forestry.decision_path
+      ~forestry.fit
+      ~forestry.getCI
+      ~forestry.getOOB
+      ~forestry.getSplitProps
+      ~forestry.getVI
+      ~forestry.get_params
+      ~forestry.predict
+      ~forestry.predictInfo
+      ~forestry.score
+      ~forestry.set_params
+      ~forestry.translate_tree_python
+   
+   
+
+   
+   
+   

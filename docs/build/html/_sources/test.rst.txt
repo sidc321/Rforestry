@@ -1,0 +1,9 @@
+Test
+====
+
+Here, you can find the Python API reference of *forestry* class.
+
+.. autosummary::
+   :toctree: generated
+
+   forestry.forestry
