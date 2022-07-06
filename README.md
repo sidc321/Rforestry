@@ -65,7 +65,7 @@ forest_preds = fr.predict(X_test)
 
 ```
 
-### Printing the forest
+### Plotting the forest
 
 For visualizing the trees, make sure to install the [dtreeviz](https://github.com/parrt/dtreeviz#readme) python library.
 

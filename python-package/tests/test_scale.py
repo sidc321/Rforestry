@@ -3,7 +3,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sklearn.datasets import load_iris
-from forestry import forestry
+from forestry import RandomForest
 
 import numpy as np
 import pandas as pd
@@ -18,11 +18,11 @@ df['target'] = data['target']
 X = df.loc[:, df.columns != 'target']
 y = df['target']
 
-forest = forestry(ntree=1, maxDepth = 2, seed=1)
+forest = RandomForest(ntree=1, maxDepth = 2, seed=1)
 forest.fit(X, y)
 pred = forest.predict(X)
 
-forest_scaled = forestry(ntree=1, maxDepth = 2, scale=True, seed=1)
+forest_scaled = RandomForest(ntree=1, maxDepth = 2, scale=True, seed=1)
 forest_scaled.fit(X, y)
 pred_scaled = forest_scaled.predict(X)
 

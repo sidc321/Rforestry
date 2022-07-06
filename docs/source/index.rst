@@ -21,4 +21,5 @@ Contents
 
    introduction
    api
-   examples/index
+   usage
+

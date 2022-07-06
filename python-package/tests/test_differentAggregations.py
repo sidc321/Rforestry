@@ -5,7 +5,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sklearn.datasets import load_iris
-from forestry import forestry
+from forestry import RandomForest
 
 import numpy as np
 import pandas as pd
@@ -20,7 +20,7 @@ def test_predict_error():
     X = df.loc[:, df.columns != 'target']
     y = df['target']
 
-    rf = forestry(OOBhonest=True)
+    rf = RandomForest(OOBhonest=True)
     rf.fit(X, y)
 
     with pytest.raises(ValueError):

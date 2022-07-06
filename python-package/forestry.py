@@ -1,10 +1,3 @@
-"""
-Forestry Regressor (the name should be changed)
------------------------------------------------
-"""
-
-from posixpath import isabs
-from xml.etree.ElementInclude import include
 import numpy as np
 import pandas as pd
 import warnings
@@ -12,7 +5,6 @@ import math
 import os
 import sys
 import platform
-import inspect
 from random import randrange
 import ctypes
 from sklearn.model_selection import LeaveOneOut
@@ -31,9 +23,9 @@ elif platform.system() == "Darwin":
 lib_setup.setup_lib(lib)
 
 
-class forestry:
+class RandomForest:
     """
-    The Random Forestry Regressor
+    The Random Forest Regressor class.
 
     :param ntree: The number of trees to grow in the forest.
     :type ntree: *int, optional, default=500*
@@ -148,6 +140,101 @@ class forestry:
      data can be exchanged to create decorrelated trees.
     :type doubleTree: *bool, optional, default=False*
 
+    :ivar processed_dta: A dictionary containing information about the data after it has been preprocessed. 
+     *processed_dta* has the following entries:
+
+     * processed_x (*pandas.DataFrame*) - The processed feature matrix.
+
+     * y (*numpy.array of shape[nrows,]*) - The processed target values.
+
+     * categoricalFeatureCols (*numpy.array*) - An array of the indices of the categorical features in the feature matrix.
+
+      .. note::
+        In order for the program to recognize a feature as categorical, it **must** be converted into a
+        `Pandas categorical data type <https://pandas.pydata.org/docs/user_guide/categorical.html#>`_. The 
+        simplest way to do it is to use::
+
+            df['categorical'] = df['categorical'].astype('category')
+
+        Check out the :ref:`Handling Categorical Data <categorical>` section for an example of how to use categorical features.
+ 
+     * categoricalFeatureMapping (*list[dict]*) - For each categorical feature, the data is encoded into numeric represetation. Those encodings are saved in *categoricalFeatureMapping*. *categoricalFeatureMapping[i]* has the following entries:
+      
+        * categoricalFeatureCol (*int*) - The index of the current categorical feature column.
+
+        * uniqueFeatureValues (*list*) - The categories of the current categorical feature.
+
+        * numericFeatureValues (*numpy.array*) - The categories of the current categorical feature encoded into numeric represetation.
+
+     * featureWeights (*numpy.array of shape[ncols]*) - an array of sampling probabilities/weights for each feature used when subsampling *mtry* features at each node. Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
+
+     * featureWeightsVariables (*numpy.array*) - Indices of the features which weight more than ``max(featureWeights)*0.001``.
+
+     * deepFeatureWeights (*numpy.array of shape[ncols]*) - Used in place of *featureWeights* for splits below *interactionDepth*. Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
+
+     * deepFeatureWeightsVariables (*numpy.array*) - Indices of the features which weight more than ``max(deepFeatureWeights)*0.001``.
+
+     * observationWeights (*numpy.array of shape[nrows]*) - Denotes the weights for each training observation that determine how likely the observation is to be selected in each bootstrap sample. Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
+
+     * symmetric (*numpy.array  of shape[ncols]*) - Used for the experimental feature which imposes strict symmetric marginal structure on the predictions of the forest through only selecting symmetric splits with symmetric aggregation functions. It's a numpy array of size *ncols* consisting of 0-s and 1-s, with 1 denoting the features to enforce symmetry on. Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
+
+     * monotonicConstraints (*numpy.array of shape[ncols]*) - An array of size *ncol* specifying monotonic relationships between the continuous features and the outcome. Its entries are in -1, 0, 1, in which 1 indicates an increasing monotonic relationship, -1 indicates a decreasing monotonic relationship, and 0 indicates no constraint. Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
+
+     * linearFeatureCols (*numpy.array*) - An array containing the indices of which features to split linearly on when using linear penalized splits. Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
+
+     * groupsMapping (*dict*) - Contains informtion about the groups of the training observations. Has the following entries:
+     
+        * groupValue (*pandas.Index*) - The categories of the groups.
+
+        * groupNumericValue (*numpy.array*) - The categories of the groups encoded into numeric represetation
+
+     * groups (*pandas.Series(..., dtype='category')*) - Specifies the group membership of each training observation. Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
+
+     * colMeans (*numpy.array of shape[ncols]*) - The mean value of each column.
+
+     * colSd (*numpy.array of shape[ncols]*) - The standard deviation of each column.
+
+     * hasNas (*bool*) - Specifies whether the feature matrix contains missing observations or not.
+
+     * nObservations (*int*) - The number of observations in the training data.
+
+     * numColumns (*int*) - The number of features in the training data.
+
+     * featNames (*numpy.array of shape[ncols]*) - The names of the features used for training.
+
+     Note that **all** of the entries in processed_dta are set to ``None`` during initialization. They are only assigned a value after :meth:`fit() <forestry.RandomForest.fit>` is called.
+
+    :vartype processed_dta: dict
+    
+
+    .. _translate-label:
+
+    :ivar Py_forest: For any tree *i* in the forest, *Py_forest[i]* is a dictionary which gives access to the underlying structrure of that tree. *Py_forest[i]* has the following entries:
+
+     * children_right (*numpy.array of shape[number of nodes in the tree,]*) - For a node with a given *id*, *children_right[id]* gives the id of the right child of that node. If leaf node, *children_right[id]* is *-1*.
+
+     * children_left (*numpy.array of shape[number of nodes in the tree,]*) - For a node with a given *id*, *children_left[id]* gives the id of the left child of that node. If leaf node, *children_left[id]* is *-1*.
+
+     * feature (*numpy.array of shape[number of nodes in the tree,]*) - For a node with a given *id*, *feature[id]* gives the index of the splitting feature in that node. If leaf node, *feature[id]* is the negative number of observations in the averaging set of that node.
+
+     * n_node_samples (*numpy.array of shape[number of nodes in the tree,]*) - For a node with a given *id*, *feature[id]* gives the number of observations in the averaging set of that node.
+
+     * threshold (*numpy.array of shape[number of nodes in the tree,]*) - For a node with a given *id*, *threshold[id]* gives the splitting point (threshold) of the split in that node. If leaf node, *threshold[id]* is *0.0*.
+
+     * values (*numpy.array of shape[number of nodes in the tree,]*) - For a node with a given *id*, if that node is a leaf node, *values[id]* gives the prediction made by that node. Otherwise, *values[id]* is *0.0*.
+
+     .. note::
+        When a *RandomForest* is initialized, *Py_forest* is set to a list of *ntree* empty dictionaries. 
+        In order to populate those dictionaries, one must use the :meth:`translate_tree_python() <forestry.RandomForest.translate_tree_python>` method.
+
+    :vartype Py_forest: list[dict] 
+    :ivar forest: A ctypes pointer to the *forestry* object in C++. It is initially set to *None* and updated only 
+     after :meth:`fit() <forestry.RandomForest.fit>` is called.
+    :vartype forest: ctypes.c_void_p
+    :ivar dataframe: A ctypes pointer to the *DataFrame* object in C++. It is initially set to *None* and updated only 
+     after :meth:`fit() <forestry.RandomForest.fit>` is called.
+    :vartype dataframe: ctypes.c_void_p
+
     """
     def __init__(
         self,
@@ -176,11 +263,8 @@ class forestry:
         minTreesPerGroup = 0,
         monotoneAvg = False,
         overfitPenalty = 1,
-        scale = True,
-        doubleTree = False,
-        reuseforestry = None,
-        savable = True,    ### TODO: REMOVE THIS
-        saveable = True
+        scale = False,
+        doubleTree = False
     ):
 
         if doubleBootstrap is None:
@@ -242,72 +326,66 @@ class forestry:
             overfitPenalty,
             scale,
             doubleTree)
-
-        if reuseforestry is None:
             
-            cppDataFrame = None  #Cpp pointer
-            cppForest = None  #Cpp pointer
-            processed_dta = {
-                'processed_x': None,
-                'y': None,
-                'categoricalFeatureCols_cpp': None,
-                'categoricalFeatureMapping': None,
-                'featureWeights': None,
-                'featureWeightsVariables': None,
-                'deepFeatureWeights': None,
-                'deepFeatureWeightsVariables': None,
-                'observationWeights': None,
-                'symmetric': None,
-                'monotonicConstraints': None,
-                'linearFeatureCols_cpp': None,
-                'groupsMapping': None,
-                'groups': None,
-                'colMeans': None,
-                'colSd': None,
-                'hasNas': None,
-                'nObservations': None,
-                'numColumns': None,
-                'featNames': None
-            }
-            Py_forest = [dict() for _ in range(ntree)]  # for printing
+        cppDataFrame = None  #Cpp pointer
+        cppForest = None  #Cpp 
+        
+        processed_dta = {
+            'processed_x': None,
+            'y': None,
+            'categoricalFeatureCols': None,
+            'categoricalFeatureMapping': None,
+            'featureWeights': None,
+            'featureWeightsVariables': None,
+            'deepFeatureWeights': None,
+            'deepFeatureWeightsVariables': None,
+            'observationWeights': None,
+            'symmetric': None,
+            'monotonicConstraints': None,
+            'linearFeatureCols': None,
+            'groupsMapping': None,
+            'groups': None,
+            'colMeans': None,
+            'colSd': None,
+            'hasNas': None,
+            'nObservations': None,
+            'numColumns': None,
+            'featNames': None
+        }
 
-            #Data Fields
-            self.forest = cppForest
-            self.dataframe = cppDataFrame
-            self.processed_dta = processed_dta
-            self.Py_forest = Py_forest
-            self.ntree = ntree
-            self.replace = replace
-            self.sampsize = sampsize
-            self.sample_fraction = sample_fraction
-            self.mtry = mtry
-            self.nodesizeSpl = nodesizeSpl
-            self.nodesizeAvg = nodesizeAvg
-            self.nodesizeStrictSpl = nodesizeStrictSpl
-            self.nodesizeStrictAvg = nodesizeStrictAvg
-            self.minSplitGain = minSplitGain
-            self.maxDepth = maxDepth
-            self.interactionDepth = interactionDepth
-            self.splitratio = splitratio
-            self.OOBhonest = OOBhonest
-            self.doubleBootstrap = doubleBootstrap
-            self.seed = seed
-            self.verbose = verbose
-            self.nthread = nthread
-            self.middleSplit = middleSplit
-            self.maxObs = maxObs
-            self.linear = linear
-            self.monotoneAvg = monotoneAvg
-            self.overfitPenalty = overfitPenalty
-            self.doubleTree = doubleTree
-            self.scale = scale
-            self.minTreesPerGroup = minTreesPerGroup
+        Py_forest = [dict() for _ in range(ntree)]  # for accessing the tree structure
 
-        # reuseforestry Forestry is not None
-        else:
-            pass
-            #NEED TO FINISH THIS
-
+        #Data Fields
+        self.forest = cppForest
+        self.dataframe = cppDataFrame
+        self.processed_dta = processed_dta
+        self.Py_forest = Py_forest
+        self.ntree = ntree
+        self.replace = replace
+        self.sampsize = sampsize
+        self.sample_fraction = sample_fraction
+        self.mtry = mtry
+        self.nodesizeSpl = nodesizeSpl
+        self.nodesizeAvg = nodesizeAvg
+        self.nodesizeStrictSpl = nodesizeStrictSpl
+        self.nodesizeStrictAvg = nodesizeStrictAvg
+        self.minSplitGain = minSplitGain
+        self.maxDepth = maxDepth
+        self.interactionDepth = interactionDepth
+        self.splitratio = splitratio
+        self.OOBhonest = OOBhonest
+        self.doubleBootstrap = doubleBootstrap
+        self.seed = seed
+        self.verbose = verbose
+        self.nthread = nthread
+        self.middleSplit = middleSplit
+        self.maxObs = maxObs
+        self.linear = linear
+        self.monotoneAvg = monotoneAvg
+        self.overfitPenalty = overfitPenalty
+        self.doubleTree = doubleTree
+        self.scale = scale
+        self.minTreesPerGroup = minTreesPerGroup
 
     def fit(
         self,
@@ -357,8 +435,8 @@ class forestry:
          linearly on when using linear penalized splits (defaults to use all numerical features).
         :type linFeats: *array_like, optional*
         :param monotonicConstraints: Specifies monotonic relationships between the continuous
-         features and the outcome. Supplied as a list of length p with entries in
-         1, 0, -1, in which 1 indicating an increasing monotonic relationship, -1 indicating
+         features and the outcome. Supplied as a list of length *ncol* with entries in
+         1, 0, -1, with 1 indicating an increasing monotonic relationship, -1 indicating
          a decreasing monotonic relationship, and 0 indicating no constraint.
          Constraints supplied for categorical variable will be ignored. Defaults to all 0-s (no constraints).
         :type monotonicConstraints: *array_like of shape [ncols,], optional*
@@ -371,13 +449,13 @@ class forestry:
          resampling schemes, and provide predictions consistent with the Out-of-Group set.
         :type groups: *pandas.Categorical(...), pandas.Series(..., dtype="category"),
          or other pandas categorical dtypes, optional, default=None*
-        :param seed: Random number generator seed. The default value is the forestry seed.
+        :param seed: Random number generator seed. The default value is the *RandomForest* seed.
         :type seed: *int, optional*
         :rtype: None
         
         """
         
-         # Make sure that all the parameters exist when passed to forestry
+         # Make sure that all the parameters exist when passed to RandomForest
 
         if isinstance(x, pd.DataFrame):
             featNames = x.columns.values
@@ -485,22 +563,20 @@ class forestry:
             groupVector = np.repeat(0, nrow)
 
 
-        #IGNORING reuseforestry FOR NOW
-
-        (processed_x, categoricalFeatureCols_cpp, categoricalFeatureMapping) =  Py_preprocessing.preprocess_training(x, y)
+        (processed_x, categoricalFeatureCols, categoricalFeatureMapping) =  Py_preprocessing.preprocess_training(x, y)
         
-        if categoricalFeatureCols_cpp.size != 0:
-            monotonicConstraints[categoricalFeatureCols_cpp] = 0
+        if categoricalFeatureCols.size != 0:
+            monotonicConstraints[categoricalFeatureCols] = 0
         
 
         if self.scale:
             for col_idx in range(ncol):
-                if col_idx not in categoricalFeatureCols_cpp:
+                if col_idx not in categoricalFeatureCols:
                     colMeans[col_idx] = np.nanmean(processed_x.iloc[:, col_idx])
                     colSd[col_idx] = np.nanstd(processed_x.iloc[:, col_idx])
 
             # Scale columns of X
-            processed_x = Py_preprocessing.scale_center(processed_x, categoricalFeatureCols_cpp, colMeans, colSd)
+            processed_x = Py_preprocessing.scale_center(processed_x, categoricalFeatureCols, colMeans, colSd)
                 
             # Center and scale Y
             colMeans[ncol] = np.nanmean(y)
@@ -525,7 +601,7 @@ class forestry:
 
         self.dataframe = ctypes.c_void_p(lib.get_data(
             lib_setup.get_data_pointer(X),
-            lib_setup.get_array_pointer(categoricalFeatureCols_cpp, dtype=np.ulonglong), categoricalFeatureCols_cpp.size,
+            lib_setup.get_array_pointer(categoricalFeatureCols, dtype=np.ulonglong), categoricalFeatureCols.size,
             lib_setup.get_array_pointer(linFeats, dtype=np.ulonglong), linFeats.size,
             lib_setup.get_array_pointer(featureWeights, dtype=np.double),
             lib_setup.get_array_pointer(featureWeightsVariables, dtype=np.ulonglong), featureWeightsVariables.size,
@@ -571,7 +647,7 @@ class forestry:
 
         self.processed_dta['processed_x'] = processed_x
         self.processed_dta['y'] = y
-        self.processed_dta['categoricalFeatureCols_cpp'] = categoricalFeatureCols_cpp
+        self.processed_dta['categoricalFeatureCols'] = categoricalFeatureCols
         self.processed_dta['categoricalFeatureMapping'] = categoricalFeatureMapping
         self.processed_dta['featureWeights'] = featureWeights
         self.processed_dta['featureWeightsVariables'] = featureWeightsVariables
@@ -580,7 +656,7 @@ class forestry:
         self.processed_dta['observationWeights'] = observationWeights
         self.processed_dta['symmetric'] = symmetric
         self.processed_dta['monotonicConstraints'] = monotonicConstraints
-        self.processed_dta['linearFeatureCols_cpp'] = linFeats
+        self.processed_dta['linearFeatureCols'] = linFeats
         self.processed_dta['groupsMapping'] = groupsMapping
         self.processed_dta['groups'] = groups
         self.processed_dta['colMeans'] = colMeans
@@ -625,7 +701,7 @@ class forestry:
          functions have been used. This returns the linear coefficients for each
          linear feature which were used in the leaf node regression of each predicted point.
         :type aggregation: *str, optional, default='average'*
-        :param seed: Random number generator seed. The default value is the forestry seed.
+        :param seed: Random number generator seed. The default value is the *RandomForest* seed.
         :type seed: *int, optional*
         :param nthread: The number of threads with which to run the predictions with.
          This will default to the number of threads with which the forest was trained 
@@ -689,7 +765,7 @@ class forestry:
             newdata.reset_index(drop=True, inplace=True)
             newdata = Py_preprocessing.testing_data_checker(self, newdata, self.processed_dta['hasNas'])
             
-            processed_x = Py_preprocessing.preprocess_testing(newdata, self.processed_dta['categoricalFeatureCols_cpp'], self.processed_dta['categoricalFeatureMapping'])
+            processed_x = Py_preprocessing.preprocess_testing(newdata, self.processed_dta['categoricalFeatureCols'], self.processed_dta['categoricalFeatureMapping'])
 
 
         # Set exact aggregation method if nobs < 100,000 and average aggregation
@@ -799,7 +875,7 @@ class forestry:
         return res
 
 
-    def getOOB(self, noWarning = False):
+    def get_oob(self, noWarning = False):
         """
         Calculate the out-of-bag error of a given forest. This is done
         by using the out-of-bag predictions for each observation, and calculating the
@@ -831,7 +907,7 @@ class forestry:
         return np.mean((y_true - preds)**2)
 
 
-    def getVI(self, noWarning=False):
+    def get_vi(self, noWarning=False):
         """
         Calculate the percentage increase in OOB error of the forest
         when each feature is shuffled.
@@ -858,7 +934,7 @@ class forestry:
         return res
 
 
-    def getCI(self, newdata, level=.95, B=100, method='OOB-conformal', noWarning=False):
+    def get_ci(self, newdata, level=.95, B=100, method='OOB-conformal', noWarning=False):
 
         """
         For a new set of features, calculate the confidence intervals for each new observation.
@@ -907,13 +983,13 @@ class forestry:
         if method == 'local-conformal' and not self.OOBhonest:
             raise ValueError('We cannot do local-conformal intervals unless OOBhonest is True')
 
-        #Check the forestry object
+        #Check the RandomForest object
         Py_preprocessing.forest_checker(self)
 
         #Check the newdata
         newdata = Py_preprocessing.testing_data_checker(self, newdata, self.processed_dta['hasNas'])
         newdata = pd.DataFrame(newdata)
-        processed_x = Py_preprocessing.preprocess_testing(newdata, self.processed_dta['categoricalFeatureCols_cpp'], self.processed_dta['categoricalFeatureMapping'])
+        processed_x = Py_preprocessing.preprocess_testing(newdata, self.processed_dta['categoricalFeatureCols'], self.processed_dta['categoricalFeatureMapping'])
 
         
         if method == 'OOB-bootstrap':
@@ -975,7 +1051,7 @@ class forestry:
             pass ### weightmatrix not implemented yet!!!!
 
 
-    def predictInfo(self, newdata, aggregation='oob'):
+    def predict_info(self, newdata, aggregation='oob'):
         """
         Get the observations which are used to predict for a set of new
         observations using either all trees (for out of sample observations), or
@@ -1063,8 +1139,10 @@ class forestry:
 
     def translate_tree_python(self, tree_ids = None):
         """
-        Given a trained forest, translates the selected trees to an Sklearn like object. After translating
-        tree *i*, it will be stored as a dictionary and can be accessed by *[foretsry object].Py_forest[i]*. 
+        Given a trained forest, translates the selected trees by allowing access to its undelying structure. 
+        After translating tree *i*, its structure will be stored as a dictionary in :ref:`Py_forest <translate-label>` and can be accessed 
+        by ``[RandomForest object].Py_forest[i]``. Check out the :ref:`Py_forest <translate-label>` attribute for more
+        details about its structure.
 
         :param tree_ids: The indices of the trees to be translated. By default, all the trees in the forest
          are translated.
@@ -1115,7 +1193,7 @@ class forestry:
         return
 
 
-    def correctedPredict(
+    def corrected_predict(
         self,
         newdata = None,
         feats = None,
@@ -1173,16 +1251,16 @@ class forestry:
         :param num_quants: Number of quantiles to use when doing quantile specific bias
          correction. Will only be used if ``simple = False``.
         :type num_quants: *int, optional, default=5*
-        :param params_forestry: A dictionary of parameters to pass to the subsequent forestry
+        :param params_forestry: A dictionary of parameters to pass to the subsequent *RandomForest*
          calls. Note that these forests will be trained on features of dimension
          ``len(feats) + 1`` as the correction forests are trained using the additional feature *Y_hat*,
          so monotonic constraints etc given to this list should be of size ``len(feats) + 1``.
-         Defaults to the standard forestry parameters for any parameters that are 
+         Defaults to the standard *RandomForest* parameters for any parameters that are 
          not included in the dictionary.
         :type params_forestry: *dict, optional*
         :param keep_fits: A flag that indicates if we should save the intermediate
          forests used for the bias correction. If this is *True*, we return a list of
-         the forestry objects for each iteration in the bias correction.
+         the *RandomForest* objects for each iteration in the bias correction.
         :type keep_fits: *bool, optional, default=False*
         :return: An array of the bias corrected predictions
         :rtype: numpy.array
@@ -1202,7 +1280,7 @@ class forestry:
             if any(not isinstance(x, (int, np.integer)) or x < -self.processed_dta['numColumns'] or x >= self.processed_dta['numColumns'] for x in feats):
                 raise ValueError('feats must be  a integer between -ncol and ncol(x)-1')
 
-        # Check the parameters match parameters for forestry or adaptiveForestry
+        # Check the parameters match parameters for RandomForest or adaptiveForestry
         if adaptive:
             pass #Adaptive not implemented
         else:
@@ -1249,17 +1327,17 @@ class forestry:
                     monotone_constraits = np.zeros(len(adjust_data.columns) - 1)
                     monotone_constraits[-1] = 1
 
-                    forest_i = forestry(**params_forestry_i)
+                    forest_i = RandomForest(**params_forestry_i)
                     forest_i.fit(x = adjust_data.loc[:, adjust_data.columns != 'Y'],
                                  y = y_reg,
                                  monotonicConstraints = monotone_constraits)
 
                 else:
-                    # Set default forestry params
+                    # Set default RandomForest params
                     params_forestry_i = params_forestry.copy()
                     params_forestry_i['OOBhonest'] = True
 
-                    forest_i = forestry(**params_forestry_i)
+                    forest_i = RandomForest(**params_forestry_i)
                     forest_i.fit(x = adjust_data.loc[:, adjust_data.columns != 'Y'],
                                  y = y_reg)
 
@@ -1407,10 +1485,10 @@ class forestry:
                 return {'predictions': np.array(adjust_data.iloc[:, -1]), 'fits': rf_fits}
 
         
-    def getSplitProps(self):
+    def get_split_props(self):
         """
         Retrieves the proportion of splits for each feature in the given
-        forestry object. These proportions are calculated as the number of splits
+        *RandomForest* object. These proportions are calculated as the number of splits
         on feature *i* in the entire forest over total the number of splits in the forest.
 
         :return: An array of length equal to the number of columns
@@ -1430,9 +1508,9 @@ class forestry:
 
     def get_params(self):
         """
-        Get the forestry parameters.
+        Get the parameters of *RandomForest*.
 
-        :return: A dictionary mapping parameter names of the forestry to their values.
+        :return: A dictionary mapping parameter names of the *RandomForest* to their values.
         :rtype: dict
         """
 
@@ -1446,13 +1524,13 @@ class forestry:
 
     def set_params(self, **params):
         """
-        Set the parameters of the forestry.
+        Set the parameters of the *RandomForest*.
 
         :param \**params: Forestry parameters.
         :type \**params: *dict*
-        :return: A new forestry object with the given parameters. Note: this reinitializes the forestry object,
+        :return: A new *RandomForest* object with the given parameters. Note: this reinitializes the *RandomForest* object,
          so fit must be called on the new estimator.
-        :rtype: forestry -- MIGHT CHANGE THE NAME
+        :rtype: *RandomForest* -- MIGHT CHANGE THE NAME
         """
 
         if not params:
@@ -1461,7 +1539,7 @@ class forestry:
         valid_params = self.get_params()
         for key, value in params.items():
             if key not in valid_params:
-                raise ValueError('Invalid parameter %s for forestry. '
+                raise ValueError('Invalid parameter %s for RandomForest. '
                                  'Check the list of available parameters '
                                  'with `estimator.get_params().keys()`.' %
                                  key)
@@ -1473,11 +1551,5 @@ class forestry:
 
 
 # make linFeats same as symmetric...
-"""
-IMPROVEMENTS TODO:
-    ADD DEFAULT VALUES
-    ADD OPTIONAL SIGN
-    ADD NOTE FOR EXPERIMENTAL
-    NEGATIVE INDICES
-    ADD CODE BLOCKS
-"""
+
+# ????????????? min nodes strict or not in plotting - get_min_samples_leaf - https://github.com/parrt/dtreeviz/blob/master/dtreeviz/models/shadow_decision_tree.py

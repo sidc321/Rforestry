@@ -19,8 +19,8 @@ sys.path.insert(0, os.path.join(pathlib.Path(__file__).parents[2].resolve().as_p
 # -- Project information -----------------------------------------------------
 
 project = 'Rforestry'
-copyright = '2022, Sam Theo'
-author = 'Sam Theo'
+copyright = '2022, Sam Antonyan, Theo Saarinen'
+author = 'Sam Antonyan, Theo Saarinen'
 
 # The full version, including alpha/beta/rc tags
 release = '0.9.1.1'

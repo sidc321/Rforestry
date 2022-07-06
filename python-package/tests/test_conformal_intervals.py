@@ -5,7 +5,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sklearn.datasets import load_iris
-from forestry import forestry
+from forestry import RandomForest
 
 import numpy as np
 import pandas as pd
@@ -24,8 +24,8 @@ def test_conformal_intervals():
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 
-    fr = forestry(OOBhonest=True, seed=3242)
+    fr = RandomForest(OOBhonest=True, seed=3242)
     fr.fit(X_train, y_train)
 
-    preds = fr.getCI(newdata=X_test, level=0.95, method='OOB-conformal')
+    preds = fr.get_ci(newdata=X_test, level=0.95, method='OOB-conformal')
     assert np.sum((y_test < preds['CI.upper']) & (y_test > preds['CI.lower'])) > 0

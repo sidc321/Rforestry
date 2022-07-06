@@ -1,117 +1,44 @@
+#%%
 
-from hashlib import new
-import numpy as np
-import pandas as pd
-import warnings
-import math
-import os
-from random import randrange
-import sys
-from forestry import forestry
-import Py_preprocessing
-
-from sklearn.datasets import *
-from sklearn import tree
+from forestry import RandomForest
 from dtreeviz.trees import *
-import platform
-from dtreeviz.models.sklearn_decision_trees import ShadowSKDTree
 from forestry_shadow import ShadowForestryTree
 
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.datasets import *
-from sklearn import tree
-from dtreeviz.trees import *
-import platform
-
-
-# data = load_iris()
-# df = pd.DataFrame(data['data'], columns=data['feature_names'])
-# df['target'] = data['target']
-# X = df.loc[:, df.columns != 'target']
-# X = X.loc[:, X.columns != 'sepal length (cm)']
-# y = df['sepal length (cm)']
-
-
-# fr = forestry(
-#         ntree = 1,
-#         maxDepth=2,
-#         interactionDepth=2,
-#         verbose=False,
-#         scale=False,
-#         seed=1729
-# )
-
-# fr.fit(X, y)
-
-# print(fr.score(X, y))
-
-# from sklearn.datasets import fetch_california_housing
-# from sklearn.model_selection import train_test_split
-# import numpy as np
-
-# # Getting the dataset
-# X, y = fetch_california_housing(return_X_y=True)
-
-# # Splitting the data into testing and training datasets
-# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
-
-# # Create a forestry object
-# fr = forestry()
-
-# print('Traingng the forest')
-# fr.fit(X_train, y_train)
-
-# print('Making predictions')
-# preds = fr.predict(X_test)
-
-# from sklearn.metrics import r2_score
-# print(y_test, preds)
-# print(r2_score(y_test, preds))
-
-# print('The coefficient of determination is' + 
-#         str(fr.score(X_test, y_test)))
-
-
-#SKLEARN IS MUCH FASTER?????
-# from sklearn.datasets import fetch_california_housing
-# from sklearn.model_selection import train_test_split
-# import numpy as np
-# from sklearn.ensemble import RandomForestRegressor
-
-# # Getting the dataset
-# X, y = fetch_california_housing(return_X_y=True)
-
-# # Splitting the data into testing and training datasets
-# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
-
-# # Create a forestry object
-# fr = RandomForestRegressor()
-# # fr = forestry(scale=False, ntree=100)
-
-# print('Traingng the forest')
-# fr.fit(X_train, y_train)
-
-# print('Making predictions')
-# preds = fr.predict(X_test)
-
-# print('The coefficient of determination is ' +
-#         str(fr.score(X_test, y_test)))
 from sklearn.datasets import load_iris
 import numpy as np
+import pandas as pd
 
 # Getting the dataset
 data = load_iris()
 X = pd.DataFrame(data['data'], columns=data['feature_names'])
 y = data['target']
 
-# Create a forestry object and train
-fr = forestry(scale=False, maxDepth=50)
+# Create a RandomForest object and train
+fr = RandomForest(ntree=100, maxDepth=8)
 fr.fit(X, y)
 
-# Translate the first tree in the forest
-fr.translate_tree_python(0)
-print(fr.Py_forest[0])
+# Create a ShadowForestryTree object
+shadow_forestry = ShadowForestryTree(fr, X, y, tree_id=28, feature_names=X.columns.values, target_name='Species')
 
-# Calculate the proportion of splits for each feature_names
-split_prop = fr.getSplitProps()
-print(split_prop)
+# Plot the tree
+viz = dtreeviz(shadow_forestry,
+                scale=3.0,
+                target_name='Species',
+                feature_names=X.columns.values)
+
+viz.view()
+
+
+# Plot the prediction path of an observation
+obs = X.loc[np.random.randint(0, len(X)),:]  # random sample from training
+
+viz = dtreeviz(shadow_forestry, 
+               target_name='Species', 
+               orientation ='LR',  # left-right orientation
+               feature_names=X.columns.values,
+               X=obs)  # need to give single observation for prediction
+              
+viz.view()  
+
+# See the prediction path in plain english
+print(explain_prediction_path(shadow_forestry, x=obs, feature_names=X.columns.values, explanation_type='plain_english'))

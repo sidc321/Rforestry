@@ -5,7 +5,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sklearn.datasets import load_iris
-from forestry import forestry
+from forestry import RandomForest
 
 import numpy as np
 import pandas as pd
@@ -22,7 +22,7 @@ def get_data():
 
 @pytest.fixture
 def get_forest():
-    forest = forestry(
+    forest = RandomForest(
     ntree = 500,
     replace = True,
     sample_fraction=0.8,

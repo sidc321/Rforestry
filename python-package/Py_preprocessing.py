@@ -33,8 +33,8 @@ def find_match(A, B):
 """
 #-- Sanity Checker -------------------------------------------------------------
 #' @name forest_parameter_checker
-#' @description Check the input parameters to the forestry constructor
-#' @inheritParams forestry
+#' @description Check the input parameters to the RandomForest constructor
+#' @inheritParams RandomForest
 #' @return A tuple of parameters after checking the selected parameters are valid.
 """
 def forest_parameter_checker(
@@ -211,9 +211,9 @@ def forest_parameter_checker(
 #-- Sanity Checker -------------------------------------------------------------
 #' @name training_data_checker
 #' @title Training data check
-#' @rdname training_data_checker-forestry
-#' @description Check the input to forestry constructor
-#' @inheritParams forestry
+#' @rdname training_data_checker-RandomForest
+#' @description Check the input to RandomForest constructor
+#' @inheritParams RandomForest
 #' @param featureWeights weights used when subsampling features for nodes above or at interactionDepth.
 #' @param deepFeatureWeights weights used when subsampling features for nodes below interactionDepth.
 #' @param hasNas indicates if there is any missingness in x.
@@ -354,9 +354,9 @@ def training_data_checker(
 
 """
 @title Test data check
-@name testing_data_checker-forestry
+@name testing_data_checker-RandomForest
 @description Check the testing data to do prediction
-@param object A forestry object.
+@param object A RandomForest object.
 @param newdata A data frame of testing predictors.
 @param hasNas TRUE if the there were nan-s in the training data FALSE otherwise.
 @return A feature dataframe if it can be used for new predictions.
@@ -401,8 +401,8 @@ def sample_weights_checker(featureWeights, mtry, ncol):
     return (featureWeightsVariables, featureWeights)
 
 """
-Checks if forestry object has valid pointer for C++ object.
-@param object a forestry object
+Checks if RandomForest object has valid pointer for C++ object.
+@param object a RandomForest object
 @return A message if the forest does not have a valid C++ pointer.
 """
 def forest_checker(object):
@@ -417,7 +417,7 @@ def forest_checker(object):
 #' @description Perform preprocessing for the training data, including
 #'   converting data to dataframe, and encoding categorical data into numerical
 #'   representation.
-#' @inheritParams forestry
+#' @inheritParams RandomForest
 #' @return A list of two datasets along with necessary information that encodes
 #'   the preprocessing.
 
@@ -470,7 +470,7 @@ def preprocess_training(x, y):
 #'   data to dataframe, and testing if the columns are consistent with the
 #'   training data and encoding categorical data into numerical representation
 #'   in the same way as training data.
-#' @inheritParams forestry
+#' @inheritParams RandomForest
 #' @param categoricalFeatureCols A list of index for all categorical data. Used
 #'   for trees to detect categorical columns.
 #' @param categoricalFeatureMapping A list of encoding details for each
