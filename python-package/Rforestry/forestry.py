@@ -17,9 +17,9 @@ import Py_preprocessing
 
 # --- Loading the dynamic library -----------------
 if platform.system() == "Linux":
-  lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "libforestryCpp.so")))
+  lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "libforestryCpp.so")))
 elif platform.system() == "Darwin":
-  lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "libforestryCpp.dylib")))
+  lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "libforestryCpp.dylib")))
 lib_setup.setup_lib(lib)
 
 

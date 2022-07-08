@@ -10,7 +10,7 @@ from dtreeviz.models.shadow_decision_tree import ShadowDecTree
 
 class ShadowForestryTree(ShadowDecTree):
     """
-    The class implementing *ShadowDecTree* to enable easy plotting. Note that to plot a specific tree, one must
+    *ShadowForestryTree* implements *ShadowDecTree* to enable easy plotting. Note that to plot a specific tree, one must
     initialize an instance of this class and pass it *dtreeviz*. Check out the :ref:`Usage <plot>` section for an example
     of how to do this.
 

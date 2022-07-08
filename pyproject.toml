@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "Rforestry"
+version = "1.0.0"
+description = "Random forest estimator"
+readme = "README.md"
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "numpy >= 1.22.4",
+    "pandas >= 1.4.2",
+    "ctypes >= 1.1.0",
+    "sklearn >= 1.1.1",
+    "statsmodels >= 0.13.2",
+]
+requires-python = ">=3.9"
+
+[project.optional-dependencies]
+dev = ["bumpver", "pip-tools", "pytest", "dtreeviz >= 1.3.3"]
+
+[project.urls]
+Homepage = "https://github.com/forestry-labs/Rforestry#readme"
+
+
+
+[tool.bumpver]
+current_version = "1.0.0"
+version_pattern = "MAJOR.MINOR.PATCH"
+commit_message = "bump version {old_version} -> {new_version}"
+commit = true
+tag = true
+push = true
+
+[tool.bumpver.file_patterns]
+"pyproject.toml" = [
+    'current_version = "{version}"',
+]
+"README.md" = [
+    "{version}",
+    "{pep440_version}",
+]
+
