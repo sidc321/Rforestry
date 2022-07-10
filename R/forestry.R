@@ -1652,6 +1652,14 @@ multilayerForestry <- function(x,
 #'   functions have been used. This returns the linear coefficients for each
 #'   linear feature which were used in the leaf node regression of each predicted
 #'   point.
+#' @param predictIdx This is an optional argument, containing a vector of indices
+#'   from the training data set that should be not be allowed to influence the
+#'   predictions of the forest. When these are set, the predictions will be made
+#'   only with trees in the forest that do not contain any of these indices in
+#'   the splitting or averaging sets. When set, this supersedes all other
+#'   aggregation options. If `aggregation == weightMatrix`, this will return the
+#'   weightMatrix corresponding to the predictions made with trees respecting
+#'   predictIdx.
 #' @param seed random seed
 #' @param nthread The number of threads with which to run the predictions with.
 #'   This will default to the number of threads with which the forest was trained
@@ -1681,6 +1689,7 @@ multilayerForestry <- function(x,
 predict.forestry <- function(object,
                              newdata = NULL,
                              aggregation = "average",
+                             predictIdx = NULL,
                              seed = as.integer(runif(1) * 10000),
                              nthread = 0,
                              exact = NULL,
@@ -1694,6 +1703,24 @@ predict.forestry <- function(object,
 
   if ((!(object@linear)) && (aggregation == "coefs")) {
     stop("Aggregation can only be linear with setting the parameter linear = TRUE.")
+  }
+
+  if (!is.null(predictIdx) && !is.null(trees)) {
+    stop("Only one of predictIdx and trees must be set at one time")
+  }
+
+  if (!is.null(predictIdx) && (aggregation != "average")) {
+    stop("predictIdx can only be used when aggregation is average")
+  }
+
+  # Check that predictIdx entries are valid
+  if (!is.null(predictIdx)) {
+    # Check that indices are integers within the range of the training set indices
+    if (any(predictIdx %% 1 != 0) ||
+        (max(predictIdx) > nrow(object@processed_dta$processed_x)) ||
+        (min(predictIdx) < 1) ) {
+      stop("predictIdx must contain only integers in the range of the training set indices")
+    }
   }
 
   # Preprocess the data. We only run the data checker if ridge is turned on,
@@ -1767,33 +1794,20 @@ predict.forestry <- function(object,
       } else {
         processed_x <- object@processed_dta$processed_x
       }
-
-      rcppPrediction <- tryCatch({
-        rcpp_OBBPredictionsInterface(object@forest,
-                                     processed_x,  # If we don't provide a dataframe, provide the forest DF
-                                     TRUE, # Tell predict we don't have an existing dataframe
-                                     FALSE,
-                                     weightMatrix,
-                                     exact
-        )
-      }, error = function(err) {
-        print(err)
-        return(NULL)
-      })
-    } else {
-      rcppPrediction <- tryCatch({
-        rcpp_OBBPredictionsInterface(object@forest,
-                                     processed_x,
-                                     TRUE, # Give dataframe flag
-                                     FALSE,
-                                     weightMatrix,
-                                     exact
-        )
-      }, error = function(err) {
-        print(err)
-        return(NULL)
-      })
     }
+
+    rcppPrediction <- tryCatch({
+      rcpp_OBBPredictionsInterface(object@forest,
+                                   processed_x,  # If we don't provide a dataframe, provide the forest DF
+                                   TRUE, # Tell predict we don't have an existing dataframe
+                                   FALSE,
+                                   weightMatrix,
+                                   exact
+      )
+    }, error = function(err) {
+      print(err)
+      return(NULL)
+    })
 
   } else if (aggregation == "doubleOOB") {
 
@@ -1823,33 +1837,21 @@ predict.forestry <- function(object,
       } else {
         processed_x <- object@processed_dta$processed_x
       }
-
-      rcppPrediction <- tryCatch({
-        rcpp_OBBPredictionsInterface(object@forest,
-                                     processed_x,  # Give null for the dataframe
-                                     TRUE, # Tell predict we don't have an existing dataframe
-                                     TRUE,
-                                     weightMatrix,
-                                     exact
-        )
-      }, error = function(err) {
-        print(err)
-        return(NULL)
-      })
-    } else {
-      rcppPrediction <- tryCatch({
-        rcpp_OBBPredictionsInterface(object@forest,
-                                     processed_x,
-                                     TRUE, # Give dataframe flag
-                                     TRUE,
-                                     weightMatrix,
-                                     exact
-        )
-      }, error = function(err) {
-        print(err)
-        return(NULL)
-      })
     }
+
+    rcppPrediction <- tryCatch({
+      rcpp_OBBPredictionsInterface(object@forest,
+                                   processed_x,  # Give null for the dataframe
+                                   TRUE, # Tell predict we don't have an existing dataframe
+                                   TRUE,
+                                   weightMatrix,
+                                   exact
+      )
+    }, error = function(err) {
+      print(err)
+      return(NULL)
+    })
+
 
   } else {
     rcppPrediction <- tryCatch({
