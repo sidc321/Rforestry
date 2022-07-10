@@ -1775,7 +1775,36 @@ predict.forestry <- function(object,
 
 
   # If option set to terminalNodes, we need to make matrix of ID's
-  if (aggregation == "oob") {
+  if (!is.null(predictIdx)) {
+    if (is.null(newdata)) {
+      if (object@scale) {
+        processed_x <- scale_center(object@processed_dta$processed_x,
+                                    (unname(object@processed_dta$categoricalFeatureCols_cpp)+1),
+                                    object@colMeans,
+                                    object@colSd)
+      } else {
+        processed_x <- object@processed_dta$processed_x
+      }
+    }
+
+    rcppPrediction <- tryCatch({
+      rcpp_cppPredictInterface(object@forest,
+                               processed_x,
+                               aggregation,
+                               seed = seed,
+                               nthread = nthread,
+                               exact = exact,
+                               returnWeightMatrix = weightMatrix,
+                               use_weights = use_weights,
+                               use_predict_idx = TRUE,
+                               tree_weights = tree_weights,
+                               predict_idx = predictIdx)
+    }, error = function(err) {
+      print(err)
+      return(NULL)
+    })
+
+  } else if (aggregation == "oob") {
 
     if (!is.null(newdata) && (object@processed_dta$nObservations != nrow(newdata))) {
       warning(paste(
@@ -1863,7 +1892,9 @@ predict.forestry <- function(object,
                                exact = exact,
                                returnWeightMatrix = weightMatrix,
                                use_weights = use_weights,
-                               tree_weights = tree_weights)
+                               use_predict_idx = FALSE,
+                               tree_weights = tree_weights,
+                               predict_idx = c(-1))
     }, error = function(err) {
       print(err)
       return(NULL)
