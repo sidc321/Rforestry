@@ -496,11 +496,9 @@ std::unique_ptr< std::vector<double> > forestry::predict(
   bool use_weights,
   std::vector<size_t>* tree_weights
 ){
-  std::vector<double> prediction;
+
   size_t numObservations = (*xNew)[0].size();
-  for (size_t j=0; j<numObservations; j++) {
-    prediction.push_back(0);
-  }
+  std::vector<double> prediction(numObservations,0.0);
 
   // If we want to return the ridge coefficients, initialize a matrix
   if (coefficients) {
@@ -560,7 +558,10 @@ std::unique_ptr< std::vector<double> > forestry::predict(
             //If terminal nodes, pass option to tree predict
             forestryTree *currentTree = (*getForest())[i].get();
 
-            if (coefficients) {
+            if (use_weights && (tree_weights->at(i) == (size_t) 0)) {
+              // If weight for the tree is zero, don't predict with that tree
+              std::fill(currentTreePrediction.begin(), currentTreePrediction.end(), 0);
+            } else if (coefficients) {
               for (size_t l=0; l<numObservations; l++) {
                 currentTreeCoefficients[l] = std::vector<double>(coefficients->n_cols);
               }
@@ -712,7 +713,7 @@ std::unique_ptr< std::vector<double> > forestry::predict(
     size_t ncol = getNtrain();            // number of train data
     for ( size_t i = 0; i < nrow; i++) {
       for (size_t j = 0; j < ncol; j++) {
-        (*weightMatrix)(i,j) = (*weightMatrix)(i,j) / _ntree;
+        (*weightMatrix)(i,j) = (*weightMatrix)(i,j) / total_weights;
       }
     }
   }

@@ -528,7 +528,7 @@ Rcpp::List rcpp_cppPredictInterface(
       for (auto &tree : *(testFullForest->getForest())) {
         bool discard_tree = false;
         std::unordered_set<size_t> hold_out_set(predictIdxCpp.begin(), predictIdxCpp.end());
-        for (const auto averaging_index : *(tree->getAveragingIndex()) ) {
+        for (const auto &averaging_index : *(tree->getAveragingIndex()) ) {
           if (hold_out_set.count(averaging_index)) {
             discard_tree = true;
             break;
@@ -536,7 +536,7 @@ Rcpp::List rcpp_cppPredictInterface(
         }
         // if Still haven't found any of them, search splitting set
         if (!discard_tree) {
-          for (const auto& splitting_index : *(tree->getSplittingIndex()) ) {
+          for (const auto &splitting_index : *(tree->getSplittingIndex()) ) {
             if (hold_out_set.count(splitting_index)) {
               discard_tree = true;
               break;
@@ -544,9 +544,9 @@ Rcpp::List rcpp_cppPredictInterface(
           }
         }
         if (discard_tree) {
-          weights.push_back(1.0);
+          weights.push_back(1);
         } else {
-          weights.push_back(0.0);
+          weights.push_back(0);
         }
       } // End tree loop
     } else {
@@ -613,15 +613,24 @@ Rcpp::List rcpp_cppPredictInterface(
                                                        false,
                                                        NULL);
     } else {
-      testForestPrediction = (*testFullForest).predict(&featureData,
-                                                       returnWeightMatrix ? &weightMatrix : NULL,
-                                                       NULL,
-                                                       NULL,
-                                                       seed,
-                                                       threads_to_use,
-                                                       exact,
-                                                       use_weights,
-                                                       use_weights ? testForestTreeWeights : NULL);
+      // If the weights are zero, we just return NaN's
+      if (use_weights &&
+          (std::accumulate(testForestTreeWeights->begin(), testForestTreeWeights->end(), 0) == 0)) {
+
+        testForestPrediction = std::unique_ptr< std::vector<double> >(
+          new std::vector<double>(featureData[0].size(), std::numeric_limits<double>::quiet_NaN())
+        );
+      } else {
+        testForestPrediction = (*testFullForest).predict(&featureData,
+                                returnWeightMatrix ? &weightMatrix : NULL,
+                                NULL,
+                                NULL,
+                                seed,
+                                threads_to_use,
+                                exact,
+                                use_weights,
+                                use_weights ? testForestTreeWeights : NULL);
+      }
     }
 
     std::vector<double>* testForestPrediction_ =
