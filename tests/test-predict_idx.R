@@ -9,6 +9,7 @@ test_that("Tests predict index option", {
                  seed = 131,
                  OOBhonest = TRUE,
                  maxDepth = 2,
+                 verbose = TRUE,
                  scale = FALSE,
                  ntree = 1)
 
@@ -16,7 +17,8 @@ test_that("Tests predict index option", {
   insample_idx <- sort(union(rf@R_forest[[1]]$averagingSampleIndex,
                              rf@R_forest[[1]]$splittingSampleIndex))
 
-  p_out <- predict(rf, newdata = x, predictIdx = c(1), weightMatrix = TRUE)
+  p_out <- predict(rf, newdata = x, predictIdx = c(40), weightMatrix = TRUE)
+  p_std <- predict(rf, newdata = x, weightMatrix = TRUE)
   p_oob <- predict(rf, aggregation = "oob")
 
 })

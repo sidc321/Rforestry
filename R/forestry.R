@@ -1659,7 +1659,8 @@ multilayerForestry <- function(x,
 #'   the splitting or averaging sets. When set, this supersedes all other
 #'   aggregation options. If `aggregation == weightMatrix`, this will return the
 #'   weightMatrix corresponding to the predictions made with trees respecting
-#'   predictIdx.
+#'   predictIdx. If there are no trees that have held out all of the indices
+#'   in predictIdx, then the predictions will return NaN.
 #' @param seed random seed
 #' @param nthread The number of threads with which to run the predictions with.
 #'   This will default to the number of threads with which the forest was trained
@@ -1798,7 +1799,7 @@ predict.forestry <- function(object,
                                use_weights = use_weights,
                                use_predict_idx = TRUE,
                                tree_weights = tree_weights,
-                               predict_idx = predictIdx)
+                               predict_idx = (predictIdx-1)) # Change to 0 indexed for C++
     }, error = function(err) {
       print(err)
       return(NULL)

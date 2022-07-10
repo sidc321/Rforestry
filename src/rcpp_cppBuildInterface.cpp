@@ -549,10 +549,13 @@ Rcpp::List rcpp_cppPredictInterface(
           weights.push_back(0);
         }
       } // End tree loop
+      // Tell forest to use the weights
+      use_weights = true;
     } else {
       // If we have weights we want to initialize them.
       weights = Rcpp::as< std::vector<size_t> >(tree_weights);
     }
+
     // Make ptr to weights
     testForestTreeWeights =
       new std::vector<size_t> (weights);

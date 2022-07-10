@@ -532,6 +532,10 @@ std::unique_ptr< std::vector<double> > forestry::predict(
   if (isVerbose()) {
     RcppThread::Rcout << "Prediction parallel using " << nthreadToUse << " threads"
               << std::endl;
+    if (use_weights) {
+      RcppThread::Rcout << "Weights given by" << std::endl;
+      print_vector(*tree_weights);
+    }
   }
 
   std::vector<std::thread> allThreads(nthreadToUse);
