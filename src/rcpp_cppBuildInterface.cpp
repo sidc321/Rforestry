@@ -516,12 +516,44 @@ Rcpp::List rcpp_cppPredictInterface(
       weightMatrix.zeros(nrow, ncol);  // set it all to 0
     }
 
+
     // Have to keep track of tree_weights
     std::vector<size_t>* testForestTreeWeights;
     std::vector<size_t> weights;
 
-    // If we have weights we want to initialize them.
-    weights = Rcpp::as< std::vector<size_t> >(tree_weights);
+    // If using predict indices, set weights according to them
+    if (use_predict_idx) {
+      std::vector<size_t> predictIdxCpp = Rcpp::as< std::vector<size_t> >(predict_idx);
+
+      for (auto &tree : *(testFullForest->getForest())) {
+        bool discard_tree = false;
+        std::unordered_set<size_t> hold_out_set(predictIdxCpp.begin(), predictIdxCpp.end());
+        for (const auto averaging_index : *(tree->getAveragingIndex()) ) {
+          if (hold_out_set.count(averaging_index)) {
+            discard_tree = true;
+            break;
+          }
+        }
+        // if Still haven't found any of them, search splitting set
+        if (!discard_tree) {
+          for (const auto& splitting_index : *(tree->getSplittingIndex()) ) {
+            if (hold_out_set.count(splitting_index)) {
+              discard_tree = true;
+              break;
+            }
+          }
+        }
+        if (discard_tree) {
+          weights.push_back(1.0);
+        } else {
+          weights.push_back(0.0);
+        }
+      } // End tree loop
+    } else {
+      // If we have weights we want to initialize them.
+      weights = Rcpp::as< std::vector<size_t> >(tree_weights);
+    }
+    // Make ptr to weights
     testForestTreeWeights =
       new std::vector<size_t> (weights);
 
