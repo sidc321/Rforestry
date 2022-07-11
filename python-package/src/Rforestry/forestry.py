@@ -10,16 +10,17 @@ import ctypes
 from sklearn.model_selection import LeaveOneOut
 import statsmodels.api as sm
 
-import lib_setup
+from . import lib_setup
 
-import Py_preprocessing
+from . import Py_preprocessing
 
 
 # --- Loading the dynamic library -----------------
 if platform.system() == "Linux":
-  lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "libforestryCpp.so")))
-elif platform.system() == "Darwin":
-  lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "libforestryCpp.dylib")))
+  lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), "libforestryCpp.so")))
+# elif platform.system() == "Darwin":
+else:
+  lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), "libforestryCpp.dylib")))
 lib_setup.setup_lib(lib)
 
 

@@ -13,7 +13,7 @@
 import os
 import sys
 import pathlib
-sys.path.insert(0, os.path.join(pathlib.Path(__file__).parents[2].resolve().as_posix(), 'python-package', 'Rforestry'))
+sys.path.insert(0, os.path.join(pathlib.Path(__file__).parents[2].resolve().as_posix(), 'python-package',  'src', 'Rforestry'))
 
 
 # -- Project information -----------------------------------------------------

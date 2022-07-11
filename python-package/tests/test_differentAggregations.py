@@ -2,7 +2,7 @@ import os
 from re import T
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'Rforestry'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'src', 'Rforestry'))
 
 from sklearn.datasets import load_iris
 from forestry import RandomForest
