@@ -544,9 +544,9 @@ Rcpp::List rcpp_cppPredictInterface(
           }
         }
         if (discard_tree) {
-          weights.push_back(1);
-        } else {
           weights.push_back(0);
+        } else {
+          weights.push_back(1);
         }
       } // End tree loop
       // Tell forest to use the weights
