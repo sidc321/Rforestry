@@ -19,7 +19,7 @@ test_that("Tests predict index option", {
 
     p_all <- predict(rf, newdata = rf@processed_dta$processed_x[1,], predictIdx = c(outsample_idx,
                                                                                     insample_idx))
-    expect_gt(p_all, 1)
+    expect_equal(p_all, NaN)
   }
 
   test_forest_preds <- function(rf) {
@@ -28,13 +28,13 @@ test_that("Tests predict index option", {
     expect_equal(sum(pred_all$weightMatrix[1,]), 1)
 
     pred_holdout <- predict(rf, newdata = rf@processed_dta$processed_x[1,], weightMatrix = TRUE, predictIdx = c(1:4))
-    expect_equal(sum(pred_all$weightMatrix[1,1:4]), 0)
+    expect_equal(sum(pred_holdout$weightMatrix[1,1:4]), 0)
 
     # Now see if a prediction was able to be made
     if (is.nan(pred_holdout$predictions)) {
-      expect_equal(sum(pred_all$weightMatrix[1,]), 0)
+      expect_equal(sum(pred_holdout$weightMatrix[1,]), 0)
     } else {
-      expect_equal(sum(pred_all$weightMatrix[1,]), 1)
+      expect_equal(sum(pred_holdout$weightMatrix[1,]), 1)
     }
   }
 
