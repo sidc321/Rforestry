@@ -23,29 +23,42 @@ test_that("Tests using trainingIdx when doing OOB predictions on smaller data", 
   xtrain <- iris[,-c(1,5)]
   ytrain <- iris[,1]
 
+  # Check standard OOB honest forest
   forest <- forestry(x = xtrain,
                      y = ytrain,
                      OOBhonest = TRUE)
 
   check_oob_preds(forest)
 
+  # Check standard forest
   forest_other <- forestry(x = xtrain,
                            y = ytrain)
 
   check_oob_preds(forest_other)
 
+
+  # Check standard honest forest
   forest_std_honesty <- forestry(x = xtrain,
                                  y = ytrain,
                                  splitratio = .4)
 
   check_oob_preds(forest_std_honesty)
 
+  # Check OOBhonest = TRUE with no double Bootstrap forest
   forest_no_double_boot <- forestry(x = xtrain,
                                     y = ytrain,
                                     OOBhonest = TRUE,
                                     doubleBootstrap = FALSE)
 
   check_oob_preds(forest_no_double_boot)
+
+  # Test groups option forest
+  forest_groups <- forestry(x = xtrain,
+                            y = ytrain,
+                            OOBhonest = TRUE,
+                            groups = as.factor(iris$Species))
+
+  check_oob_preds(forest_groups)
 
   # Check error handling =======================================================
   expect_error(
