@@ -491,9 +491,9 @@ Rcpp::List rcpp_cppPredictInterface(
   bool exact,
   bool returnWeightMatrix,
   bool use_weights,
-  bool use_predict_idx,
+  bool use_hold_out_idx,
   Rcpp::NumericVector tree_weights,
-  Rcpp::IntegerVector predict_idx
+  Rcpp::IntegerVector hold_out_idx
 ){
   try {
 
@@ -522,12 +522,12 @@ Rcpp::List rcpp_cppPredictInterface(
     std::vector<size_t> weights;
 
     // If using predict indices, set weights according to them
-    if (use_predict_idx) {
-      std::vector<size_t> predictIdxCpp = Rcpp::as< std::vector<size_t> >(predict_idx);
+    if (use_hold_out_idx) {
+      std::vector<size_t> holdOutIdxCpp = Rcpp::as< std::vector<size_t> >(hold_out_idx);
 
       for (auto &tree : *(testFullForest->getForest())) {
         bool discard_tree = false;
-        std::unordered_set<size_t> hold_out_set(predictIdxCpp.begin(), predictIdxCpp.end());
+        std::unordered_set<size_t> hold_out_set(holdOutIdxCpp.begin(), holdOutIdxCpp.end());
         for (const auto &averaging_index : *(tree->getAveragingIndex()) ) {
           if (hold_out_set.count(averaging_index)) {
             discard_tree = true;

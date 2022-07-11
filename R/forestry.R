@@ -1652,15 +1652,16 @@ multilayerForestry <- function(x,
 #'   functions have been used. This returns the linear coefficients for each
 #'   linear feature which were used in the leaf node regression of each predicted
 #'   point.
-#' @param predictIdx This is an optional argument, containing a vector of indices
+#' @param holdOutIdx This is an optional argument, containing a vector of indices
 #'   from the training data set that should be not be allowed to influence the
-#'   predictions of the forest. When these are set, the predictions will be made
-#'   only with trees in the forest that do not contain any of these indices in
-#'   the splitting or averaging sets. When set, this supersedes all other
-#'   aggregation options. If `aggregation == weightMatrix`, this will return the
+#'   predictions of the forest. When a vector of indices of training observations are
+#'   given, the predictions will be made only with trees in the forest that
+#'   do not contain any of these indices in either the splitting or averaging sets.
+#'   This cannot be used at the same time as any other aggregation options.
+#'   If `weightMatrix = TRUE`, this will return the
 #'   weightMatrix corresponding to the predictions made with trees respecting
-#'   predictIdx. If there are no trees that have held out all of the indices
-#'   in predictIdx, then the predictions will return NaN.
+#'   holdOutIdx. If there are no trees that have held out all of the indices
+#'   in holdOutIdx, then the predictions will return NaN.
 #' @param seed random seed
 #' @param nthread The number of threads with which to run the predictions with.
 #'   This will default to the number of threads with which the forest was trained
@@ -1690,7 +1691,7 @@ multilayerForestry <- function(x,
 predict.forestry <- function(object,
                              newdata = NULL,
                              aggregation = "average",
-                             predictIdx = NULL,
+                             holdOutIdx = NULL,
                              seed = as.integer(runif(1) * 10000),
                              nthread = 0,
                              exact = NULL,
@@ -1706,21 +1707,21 @@ predict.forestry <- function(object,
     stop("Aggregation can only be linear with setting the parameter linear = TRUE.")
   }
 
-  if (!is.null(predictIdx) && !is.null(trees)) {
-    stop("Only one of predictIdx and trees must be set at one time")
+  if (!is.null(holdOutIdx) && !is.null(trees)) {
+    stop("Only one of holdOutIdx and trees must be set at one time")
   }
 
-  if (!is.null(predictIdx) && (aggregation != "average")) {
-    stop("predictIdx can only be used when aggregation is average")
+  if (!is.null(holdOutIdx) && (aggregation != "average")) {
+    stop("holdOutIdx can only be used when aggregation is average")
   }
 
-  # Check that predictIdx entries are valid
-  if (!is.null(predictIdx)) {
+  # Check that holdOutIdx entries are valid
+  if (!is.null(holdOutIdx)) {
     # Check that indices are integers within the range of the training set indices
-    if (any(predictIdx %% 1 != 0) ||
-        (max(predictIdx) > nrow(object@processed_dta$processed_x)) ||
-        (min(predictIdx) < 1) ) {
-      stop("predictIdx must contain only integers in the range of the training set indices")
+    if (any(holdOutIdx %% 1 != 0) ||
+        (max(holdOutIdx) > nrow(object@processed_dta$processed_x)) ||
+        (min(holdOutIdx) < 1) ) {
+      stop("holdOutIdx must contain only integers in the range of the training set indices")
     }
   }
 
@@ -1776,7 +1777,7 @@ predict.forestry <- function(object,
 
 
   # If option set to terminalNodes, we need to make matrix of ID's
-  if (!is.null(predictIdx)) {
+  if (!is.null(holdOutIdx)) {
     if (is.null(newdata)) {
       if (object@scale) {
         processed_x <- scale_center(object@processed_dta$processed_x,
@@ -1797,9 +1798,9 @@ predict.forestry <- function(object,
                                exact = exact,
                                returnWeightMatrix = weightMatrix,
                                use_weights = use_weights,
-                               use_predict_idx = TRUE,
+                               use_hold_out_idx = TRUE,
                                tree_weights = tree_weights,
-                               predict_idx = (predictIdx-1)) # Change to 0 indexed for C++
+                               hold_out_idx = (holdOutIdx-1)) # Change to 0 indexed for C++
     }, error = function(err) {
       print(err)
       return(NULL)
@@ -1893,9 +1894,9 @@ predict.forestry <- function(object,
                                exact = exact,
                                returnWeightMatrix = weightMatrix,
                                use_weights = use_weights,
-                               use_predict_idx = FALSE,
+                               use_hold_out_idx = FALSE,
                                tree_weights = tree_weights,
-                               predict_idx = c(-1))
+                               hold_out_idx = c(-1))
     }, error = function(err) {
       print(err)
       return(NULL)

@@ -9,7 +9,7 @@
   object,
   newdata = NULL,
   aggregation = "average",
-  predictIdx = NULL,
+  holdOutIdx = NULL,
   seed = as.integer(runif(1) * 10000),
   nthread = 0,
   exact = NULL,
@@ -52,15 +52,15 @@ functions have been used. This returns the linear coefficients for each
 linear feature which were used in the leaf node regression of each predicted
 point.}
 
-\item{predictIdx}{This is an optional argument, containing a vector of indices
+\item{holdOutIdx}{This is an optional argument, containing a vector of indices
 from the training data set that should be not be allowed to influence the
 predictions of the forest. When these are set, the predictions will be made
 only with trees in the forest that do not contain any of these indices in
 the splitting or averaging sets. When set, this supersedes all other
 aggregation options. If `aggregation == weightMatrix`, this will return the
 weightMatrix corresponding to the predictions made with trees respecting
-predictIdx. If there are no trees that have held out all of the indices
-in predictIdx, then the predictions will return NaN.}
+holdOutIdx. If there are no trees that have held out all of the indices
+in holdOutIdx, then the predictions will return NaN.}
 
 \item{seed}{random seed}
 
