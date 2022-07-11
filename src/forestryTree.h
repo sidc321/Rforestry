@@ -166,23 +166,23 @@ public:
 
   void getOOBindex(
     std::vector<size_t> &outputOOBIndex,
-    size_t nRows
+    std::vector<size_t> &allIndex
   );
 
   void getDoubleOOBIndex(
       std::vector<size_t> &outputOOBIndex,
-      size_t nRows
+      std::vector<size_t> &allIndex
   );
 
   void getOOBhonestIndex(
       std::vector<size_t> &outputOOBIndex,
-      size_t nRows
+      std::vector<size_t> &allIndex
   );
 
   void getOOGIndex(
       std::vector<size_t> &outputOOBIndex,
       std::vector<size_t> groupMemberships,
-      size_t nRows
+      std::vector<size_t> &allIndex
   );
 
   void getOOBPrediction(

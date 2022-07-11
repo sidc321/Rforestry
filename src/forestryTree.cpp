@@ -1518,8 +1518,10 @@ void forestryTree::printTree(){
 
 void forestryTree::getOOBindex(
     std::vector<size_t> &outputOOBIndex,
-    size_t nRows
+    std::vector<size_t> &allIndex
 ){
+
+  size_t nRows = allIndex.size();
 
   // Generate union of splitting and averaging dataset
   std::sort(
@@ -1545,16 +1547,6 @@ void forestryTree::getOOBindex(
 
   allSampledIndex.resize((unsigned long) (it - allSampledIndex.begin()));
 
-  // Generate a vector of all index based on nRows
-  struct IncGenerator {
-    size_t current_;
-    IncGenerator(size_t start): current_(start) {}
-    size_t operator()() { return current_++; }
-  };
-  std::vector<size_t> allIndex(nRows);
-  IncGenerator g(0);
-  std::generate(allIndex.begin(), allIndex.end(), g);
-
   // OOB index is the set difference between sampled index and all index
   std::vector<size_t> OOBIndex(nRows);
 
@@ -1579,9 +1571,10 @@ void forestryTree::getOOBindex(
 
 void forestryTree::getDoubleOOBIndex(
     std::vector<size_t> &outputOOBIndex,
-    size_t nRows
+    std::vector<size_t> &allIndex
 ){
 
+  size_t nRows = allIndex.size();
   // This function is intended to be used with OOB honesty
   // using a double bootstrap in order to get the observations which
   // were not selected in the first bootstrap (the splitting set),
@@ -1614,16 +1607,6 @@ void forestryTree::getDoubleOOBIndex(
 
   allSampledIndex.resize((unsigned long) (it - allSampledIndex.begin()));
 
-  // Generate a vector of all index based on nRows
-  struct IncGenerator {
-    size_t current_;
-    IncGenerator(size_t start): current_(start) {}
-    size_t operator()() { return current_++; }
-  };
-  std::vector<size_t> allIndex(nRows);
-  IncGenerator g(0);
-  std::generate(allIndex.begin(), allIndex.end(), g);
-
   // OOB index is the set difference between sampled index and all index
   std::vector<size_t> OOBIndex(nRows);
 
@@ -1647,8 +1630,10 @@ void forestryTree::getDoubleOOBIndex(
 
 void forestryTree::getOOBhonestIndex(
     std::vector<size_t> &outputOOBIndex,
-    size_t nRows
+    std::vector<size_t> &allIndex
 ){
+
+  size_t nRows = allIndex.size();
 
   // Generate union of splitting and averaging dataset
   std::sort(
@@ -1656,14 +1641,6 @@ void forestryTree::getOOBhonestIndex(
     getAveragingIndex()->end()
   );
 
-  struct IncGenerator {
-    size_t current_;
-    IncGenerator(size_t start): current_(start) {}
-    size_t operator()() { return current_++; }
-  };
-  std::vector<size_t> allIndex(nRows);
-  IncGenerator g(0);
-  std::generate(allIndex.begin(), allIndex.end(), g);
 
   // OOB index is the set difference between sampled index and all index
   std::vector<size_t> OOBIndex(nRows);
@@ -1689,8 +1666,9 @@ void forestryTree::getOOBhonestIndex(
 void forestryTree::getOOGIndex(
     std::vector<size_t> &outputOOBIndex,
     std::vector<size_t> groupMemberships,
-    size_t nRows
-) {
+    std::vector<size_t> &allIndex
+){
+    
   // For a given tree, we cycle through all averaging indices and get their
   // group memberships. Then we take the set of observations which are in groups
   // which haven't been seen by the current tree, and output this to outputOOBIndex
@@ -1698,15 +1676,6 @@ void forestryTree::getOOGIndex(
     getAveragingIndex()->begin(),
     getAveragingIndex()->end()
   );
-
-  struct IncGenerator {
-    size_t current_;
-    IncGenerator(size_t start): current_(start) {}
-    size_t operator()() { return current_++; }
-  };
-  std::vector<size_t> allIndex(nRows);
-  IncGenerator g(0);
-  std::generate(allIndex.begin(), allIndex.end(), g);
 
   // Add all in sample groups to a set
   std::set<size_t> in_sample_groups;
@@ -1745,21 +1714,24 @@ void forestryTree::getOOBPrediction(
   // OOB with and without using the OOB set as the averaging set requires
   // different sets of trees to be used (we want the set of trees)
   // without the averaging set
+  std::vector<size_t> allIndex(trainingData->getNumRows());
+  std::iota(allIndex.begin(), allIndex.end(), 0);
+
   if (trainingData->getGroups()->at(0) != 0) {
     std::vector<size_t> group_membership_vector = *(trainingData->getGroups());
-    getOOGIndex(OOBIndex, group_membership_vector, trainingData->getNumRows());
+    getOOGIndex(OOBIndex, group_membership_vector, allIndex);
   } else {
     if (OOBhonest) {
       if (doubleOOB) {
         // Get setDiff(1:nrow(x), union(splittingIndices, averagingIndices))
-        getDoubleOOBIndex(OOBIndex, trainingData->getNumRows());
+        getDoubleOOBIndex(OOBIndex, allIndex);
       } else {
         // Get setDiff(1:nrow(x), averagingIndices)
-        getOOBhonestIndex(OOBIndex, trainingData->getNumRows());
+        getOOBhonestIndex(OOBIndex, allIndex);
       }
     } else {
       // Standard OOB indices in the non honest case
-      getOOBindex(OOBIndex, trainingData->getNumRows());
+      getOOBindex(OOBIndex, allIndex);
     }
   }
 
@@ -1841,8 +1813,11 @@ void forestryTree::getShuffledOOBPrediction(
   // Gives OOB prediction with shuffleFeature premuted randomly
   // For use in determining variable importance
 
+  std::vector<size_t> allIndex(trainingData->getNumRows());
+  std::iota(allIndex.begin(), allIndex.end(), 0);
+
   std::vector<size_t> OOBIndex;
-  getOOBindex(OOBIndex, trainingData->getNumRows());
+  getOOBindex(OOBIndex, allIndex);
 
   std::vector<size_t> shuffledOOBIndex = OOBIndex;
   std::shuffle(shuffledOOBIndex.begin(), shuffledOOBIndex.end(), random_number_generator);
