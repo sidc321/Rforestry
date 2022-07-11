@@ -27,36 +27,66 @@ test_that("Tests predict index option", {
     pred_all <- predict(rf, newdata = rf@processed_dta$processed_x[1,], weightMatrix = TRUE)
     expect_equal(sum(pred_all$weightMatrix[1,]), 1)
 
-    pred_holdout <- predict(rf, newdata = rf@processed_dta$processed_x[1,], weightMatrix = TRUE, predictIdx = c(1:4))
-    expect_equal(sum(pred_holdout$weightMatrix[1,1:4]), 0)
+    pred_holdout <- predict(rf, newdata = rf@processed_dta$processed_x[1,], weightMatrix = TRUE, predictIdx = c(1:3))
+    expect_equal(sum(pred_holdout$weightMatrix[1,1:3]), 0)
 
     # Now see if a prediction was able to be made
     if (is.nan(pred_holdout$predictions)) {
       expect_equal(sum(pred_holdout$weightMatrix[1,]), 0)
     } else {
       expect_equal(sum(pred_holdout$weightMatrix[1,]), 1)
+
+      # Check that predictions agree with those given by weightMatrix
+      pred_holdout_all <- predict(rf, newdata = rf@processed_dta$processed_x, weightMatrix = TRUE, predictIdx = c(1:3))
+      weightmatrix_preds <- (pred_holdout_all$weightMatrix %*% as.matrix(rf@processed_dta$y))[,1]
+      expect_equal(all.equal(weightmatrix_preds, pred_holdout_all$predictions), TRUE)
     }
   }
 
-  rf <- forestry(x = x,
-                 y = y,
-                 seed = 131,
-                 OOBhonest = TRUE,
-                 maxDepth = 2,
-                 scale = FALSE,
-                 ntree = 1)
-  test_tree_preds(rf)
 
-  # Test whole forest
-  rf <- forestry(x = x,
+  context("Test honest forest with predictIdx")
+  honest_forest <- forestry(x = x,
                  y = y,
                  seed = 131,
                  OOBhonest = TRUE,
-                 maxDepth = 2,
-                 scale = FALSE,
                  ntree = 1000)
-  test_forest_preds(rf)
+  test_tree_preds(honest_forest)
+  test_forest_preds(honest_forest)
 
+
+  # Test normal RF
+  context("Test normal RF with predictIdx")
+  forest <- forestry(x = x,
+                 y = y,
+                 seed = 131,
+                 ntree = 1000)
+  test_tree_preds(forest)
+  test_forest_preds(forest)
+
+  # test splitratio forest
+  context("test splitratio RF with predictIdx")
+  forest_sr <- forestry(x = x,
+                     y = y,
+                     seed = 131,
+                     splitratio = .5,
+                     ntree = 1000)
+  test_tree_preds(forest_sr)
+  test_forest_preds(forest_sr)
+
+
+  # test groups forest
+  context("test groups forest with predictIdx")
+  forest_groups <- forestry(x = x,
+                            y = y,
+                            seed = 131,
+                            OOBhonest = TRUE,
+                            groups = c(as.factor(c(1,1,1, rep(2,37)))),
+                            ntree = 1000)
+  test_tree_preds(forest_groups)
+  test_forest_preds(forest_groups)
+
+
+  # Now test
 
 
 
