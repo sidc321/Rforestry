@@ -1662,6 +1662,19 @@ multilayerForestry <- function(x,
 #'   weightMatrix corresponding to the predictions made with trees respecting
 #'   holdOutIdx. If there are no trees that have held out all of the indices
 #'   in holdOutIdx, then the predictions will return NaN.
+#' @trainingIdx This is an optional parameter to give the indices of the observations
+#'   in `newdata` from the training data set. This is used when we want to run predict on
+#'   only a subset of observations from the training data set and use `aggregation = "oob"` or
+#'   `aggregation = "doubleOOB"`. For example, at the tree level, a tree make out of
+#'   bag (`aggregation = "oob"`) predictions for the indices in the set
+#'   setdiff(trainingIdx,tree$averagingIndices) and will make double out-of-bag
+#'   predictions for the indices in the set
+#'   setdiff(trainingIdx,union(tree$averagingIndices,tree$splittingIndices).
+#'   Note, this parameter must be set when predict is called with an out-of-bag
+#'   aggregation option on a data set not matching the original training data size.
+#'   The order of indices in `trainingIdx` also needs to match the order of observations
+#'   in newdata. So the observations in `newdata[trainingIdx,]` should
+#'   correspond to `training_data[trainingIdx,]`
 #' @param seed random seed
 #' @param nthread The number of threads with which to run the predictions with.
 #'   This will default to the number of threads with which the forest was trained
@@ -1692,6 +1705,7 @@ predict.forestry <- function(object,
                              newdata = NULL,
                              aggregation = "average",
                              holdOutIdx = NULL,
+                             trainingIdx = NULL,
                              seed = as.integer(runif(1) * 10000),
                              nthread = 0,
                              exact = NULL,
@@ -1715,6 +1729,11 @@ predict.forestry <- function(object,
     stop("holdOutIdx can only be used when aggregation is average")
   }
 
+  if (aggregation %in% c("oob", "doubleOOB") && (!is.null(newdata)) && is.null(trainingIdx) && (nrow(newdata) != (object@processed_dta$nObservations))) {
+    stop(paste0("trainingIdx must be set when doing out of bag predictions with a data set ",
+                "not equal in size to the training data set"))
+  }
+
   # Check that holdOutIdx entries are valid
   if (!is.null(holdOutIdx)) {
     # Check that indices are integers within the range of the training set indices
@@ -1722,6 +1741,26 @@ predict.forestry <- function(object,
         (max(holdOutIdx) > nrow(object@processed_dta$processed_x)) ||
         (min(holdOutIdx) < 1) ) {
       stop("holdOutIdx must contain only integers in the range of the training set indices")
+    }
+  }
+
+  # Check that trainingIdx entries are valid
+  if (!is.null(trainingIdx)) {
+    # Check that correct aggregation is used
+    if (!(aggregation %in% c("oob", "doubleOOB"))) {
+      stop("trainingIdx can only be used when aggregation is oob or doubleOOB")
+    }
+
+    if (nrow(newdata) != length(trainingIdx)) {
+      stop(paste0("The length of trainingIdx must be the same as the number of ",
+                  "observations in the training data"))
+    }
+
+    # Check that indices are integers within the range of the training set indices
+    if (any(trainingIdx %% 1 != 0) ||
+        (max(trainingIdx) > nrow(object@processed_dta$processed_x)) ||
+        (min(trainingIdx) < 1) ) {
+      stop("trainingIdx must contain only integers in the range of the training set indices")
     }
   }
 
@@ -1775,6 +1814,14 @@ predict.forestry <- function(object,
     use_weights <- FALSE
   }
 
+  if (!is.null(trainingIdx)) {
+    useTrainingIndices <- TRUE
+    trainingIndices <- trainingIdx-1
+  } else {
+    useTrainingIndices <- FALSE
+    trainingIndices <- c(-1)
+  }
+
 
   # If option set to terminalNodes, we need to make matrix of ID's
   if (!is.null(holdOutIdx)) {
@@ -1808,14 +1855,6 @@ predict.forestry <- function(object,
 
   } else if (aggregation == "oob") {
 
-    if (!is.null(newdata) && (object@processed_dta$nObservations != nrow(newdata))) {
-      warning(paste(
-        "Attempting to do OOB predictions on a dataset which doesn't match the",
-        "training data!"
-      ))
-      return(NA)
-    }
-
     if (is.null(newdata)) {
       if (object@scale) {
         processed_x <- scale_center(object@processed_dta$processed_x,
@@ -1833,7 +1872,9 @@ predict.forestry <- function(object,
                                    TRUE, # Tell predict we don't have an existing dataframe
                                    FALSE,
                                    weightMatrix,
-                                   exact
+                                   exact,
+                                   useTrainingIndices,
+                                   trainingIndices
       )
     }, error = function(err) {
       print(err)
@@ -1841,14 +1882,6 @@ predict.forestry <- function(object,
     })
 
   } else if (aggregation == "doubleOOB") {
-
-    if (!is.null(newdata) && (object@sampsize != nrow(newdata))) {
-      stop(paste(
-        "Attempting to do OOB predictions on a dataset which doesn't match the",
-        "training data!"
-      ))
-      return(NA)
-    }
 
     if (!object@doubleBootstrap) {
       stop(paste(
@@ -1876,7 +1909,9 @@ predict.forestry <- function(object,
                                    TRUE, # Tell predict we don't have an existing dataframe
                                    TRUE,
                                    weightMatrix,
-                                   exact
+                                   exact,
+                                   useTrainingIndices,
+                                   trainingIndices
       )
     }, error = function(err) {
       print(err)
@@ -2202,7 +2237,9 @@ getOOBpreds <- function(object,
                                                    TRUE,
                                                    doubleOOB,
                                                    FALSE,
-                                                   TRUE)
+                                                   TRUE,
+                                                   FALSE,
+                                                   c(-1))
 
     # If we have scaled the observations, we want to rescale the predictions
     if (object@scale) {

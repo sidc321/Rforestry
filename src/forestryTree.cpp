@@ -1668,7 +1668,7 @@ void forestryTree::getOOGIndex(
     std::vector<size_t> groupMemberships,
     std::vector<size_t> &allIndex
 ){
-    
+
   // For a given tree, we cycle through all averaging indices and get their
   // group memberships. Then we take the set of observations which are in groups
   // which haven't been seen by the current tree, and output this to outputOOBIndex
@@ -1706,7 +1706,8 @@ void forestryTree::getOOBPrediction(
     bool doubleOOB,
     size_t nodesizeStrictAvg,
     std::vector< std::vector<double> >* xNew,
-    arma::Mat<double>* weightMatrix
+    arma::Mat<double>* weightMatrix,
+    std::vector<size_t>& training_idx
 ){
 
   std::vector<size_t> OOBIndex;
@@ -1715,7 +1716,12 @@ void forestryTree::getOOBPrediction(
   // different sets of trees to be used (we want the set of trees)
   // without the averaging set
   std::vector<size_t> allIndex(trainingData->getNumRows());
-  std::iota(allIndex.begin(), allIndex.end(), 0);
+  if (training_idx.size() == 0) {
+      std::iota(allIndex.begin(), allIndex.end(), 0);
+  } else {
+      allIndex = training_idx;
+  }
+
 
   if (trainingData->getGroups()->at(0) != 0) {
     std::vector<size_t> group_membership_vector = *(trainingData->getGroups());

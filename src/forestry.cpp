@@ -758,7 +758,8 @@ std::vector<double> forestry::predictOOB(
     std::vector< std::vector<double> >* xNew,
     arma::Mat<double>* weightMatrix,
     bool doubleOOB,
-    bool exact
+    bool exact,
+    std::vector<size_t> &training_idx
 ) {
 
   size_t numObservations = getTrainingData()->getNumRows();
@@ -769,6 +770,8 @@ std::vector<double> forestry::predictOOB(
     outputOOBPrediction[i] = 0;
     outputOOBCount[i] = 0;
   }
+
+  // If we have been giving training indices for the xNew matrix, use these
 
   // Only needed if exact = TRUE, vector for storing each tree's predictions
   std::vector< std::vector<double> > tree_preds;
@@ -814,7 +817,8 @@ std::vector<double> forestry::predictOOB(
                       doubleOOB,
                       getMinNodeSizeToSplitAvg(),
                       xNew,
-                      weightMatrix
+                      weightMatrix,
+                      training_idx
                   );
                   #if DOPARELLEL
                   std::lock_guard<std::mutex> lock(threadLock);
@@ -1039,6 +1043,8 @@ void forestry::calculateOOBError(
   std::vector<double> outputOOBPrediction(numObservations);
   std::vector<size_t> outputOOBCount(numObservations);
 
+  std::vector<size_t> training_idx;
+
   for (size_t i=0; i<numObservations; i++) {
     outputOOBPrediction[i] = 0;
     outputOOBCount[i] = 0;
@@ -1086,7 +1092,8 @@ void forestry::calculateOOBError(
               doubleOOB,
               getMinNodeSizeToSplitAvg(),
               nullptr,
-              NULL
+              NULL,
+              training_idx
             );
 
             #if DOPARELLEL

@@ -10,6 +10,7 @@
   newdata = NULL,
   aggregation = "average",
   holdOutIdx = NULL,
+  trainingIdx = NULL,
   seed = as.integer(runif(1) * 10000),
   nthread = 0,
   exact = NULL,
@@ -54,10 +55,11 @@ point.}
 
 \item{holdOutIdx}{This is an optional argument, containing a vector of indices
 from the training data set that should be not be allowed to influence the
-predictions of the forest. When these are set, the predictions will be made
-only with trees in the forest that do not contain any of these indices in
-the splitting or averaging sets. When set, this supersedes all other
-aggregation options. If `aggregation == weightMatrix`, this will return the
+predictions of the forest. When a vector of indices of training observations are
+given, the predictions will be made only with trees in the forest that
+do not contain any of these indices in either the splitting or averaging sets.
+This cannot be used at the same time as any other aggregation options.
+If `weightMatrix = TRUE`, this will return the
 weightMatrix corresponding to the predictions made with trees respecting
 holdOutIdx. If there are no trees that have held out all of the indices
 in holdOutIdx, then the predictions will return NaN.}

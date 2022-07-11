@@ -63,7 +63,8 @@ public:
     std::vector< std::vector<double> >* xNew,
     arma::Mat<double>* weightMatrix,
     bool doubleOOB,
-    bool exact
+    bool exact,
+    std::vector<size_t> &training_idx
   );
 
   void fillinTreeInfo(

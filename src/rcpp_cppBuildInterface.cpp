@@ -750,12 +750,19 @@ Rcpp::List rcpp_OBBPredictionsInterface(
     bool existing_df,
     bool doubleOOB,
     bool returnWeightMatrix,
-    bool exact
+    bool exact,
+    bool use_training_idx,
+    Rcpp::IntegerVector training_idx
 ){
   // Then we predict with the feature.new data
   if (existing_df) {
     std::vector< std::vector<double> > featureData =
       Rcpp::as< std::vector< std::vector<double> > >(x);
+
+    std::vector<size_t> training_idx_cpp;
+    if (use_training_idx){
+        training_idx_cpp = Rcpp::as< std::vector<size_t> >(training_idx);
+    }
 
     try {
       Rcpp::XPtr< forestry > testFullForest(forest) ;
@@ -771,7 +778,8 @@ Rcpp::List rcpp_OBBPredictionsInterface(
         std::vector<double> OOBpreds = (*testFullForest).predictOOB(&featureData,
                                         &weightMatrix,
                                         doubleOOB,
-                                        exact);
+                                        exact,
+                                        training_idx_cpp);
         Rcpp::NumericVector wrapped_preds = Rcpp::wrap(OOBpreds);
 
         return Rcpp::List::create(Rcpp::Named("predictions") = wrapped_preds,
@@ -781,7 +789,8 @@ Rcpp::List rcpp_OBBPredictionsInterface(
         std::vector<double> OOBpreds = (*testFullForest).predictOOB(&featureData,
                                         NULL,
                                         doubleOOB,
-                                        exact);
+                                        exact,
+                                        training_idx_cpp);
         Rcpp::NumericVector wrapped_preds = Rcpp::wrap(OOBpreds);
 
         return Rcpp::List::create(Rcpp::Named("predictions") = wrapped_preds);
