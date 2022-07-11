@@ -86,8 +86,27 @@ test_that("Tests predict index option", {
   test_forest_preds(forest_groups)
 
 
-  # Now test
+  # Now test if the results are roughly equal when exact = FALSE
+  context("test predictIdx when exact = FALSE")
+  honest_forest <- forestry(x = x,
+                            y = y,
+                            seed = 131,
+                            OOBhonest = TRUE,
+                            ntree = 1000)
+  test_tree_preds(honest_forest)
+  preds_exact <-  predict(honest_forest,
+                          newdata = honest_forest@processed_dta$processed_x,
+                          weightMatrix = TRUE,
+                          predictIdx = c(1:3))
+  preds_weight_exact <- (preds_exact$weightMatrix %*% as.matrix(honest_forest@processed_dta$y))[,1]
+  preds_inexct <- predict(honest_forest,
+                          newdata = honest_forest@processed_dta$processed_x,
+                          weightMatrix = TRUE,
+                          exact = FALSE,
+                          predictIdx = c(1:3))
+  preds_weight_inexact <- (preds_inexct$weightMatrix %*% as.matrix(honest_forest@processed_dta$y))[,1]
 
-
+  expect_equal(all.equal(preds_exact, preds_inexct, tolerance = 1e-3), TRUE)
+  expect_equal(all.equal(preds_weight_exact, preds_weight_inexact, tolerance = 1e-3), TRUE)
 
 })

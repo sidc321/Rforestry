@@ -500,6 +500,18 @@ std::unique_ptr< std::vector<double> > forestry::predict(
   size_t numObservations = (*xNew)[0].size();
   std::vector<double> prediction(numObservations,0.0);
 
+
+  // If using weights, we need to initialize this
+  double total_weights;
+  if (use_weights) {
+    total_weights = 0.0;
+    for (auto weight_i : *tree_weights) {
+      total_weights += (double) weight_i;
+    }
+  } else {
+    total_weights = (double) getNtree();
+  }
+
   // If we want to return the ridge coefficients, initialize a matrix
   if (coefficients) {
     // Create coefficient vector of vectors of zeros
@@ -618,23 +630,39 @@ std::unique_ptr< std::vector<double> > forestry::predict(
               tree_nodes.push_back(currentTreeTerminalNodes);
               tree_total_nodes.push_back(currentTree->getNodeCount());
             } else {
-              for (size_t j = 0; j < numObservations; j++) {
-                prediction[j] += currentTreePrediction[j];
-              }
+              if (!use_weights) {
+                for (size_t j = 0; j < numObservations; j++) {
+                  prediction[j] += currentTreePrediction[j];
+                }
 
-              if (coefficients) {
-                for (size_t k = 0; k < numObservations; k++) {
-                  for (size_t l = 0; l < coefficients->n_cols; l++) {
-                    (*coefficients)(k,l) += currentTreeCoefficients[k][l];
+                if (coefficients) {
+                  for (size_t k = 0; k < numObservations; k++) {
+                    for (size_t l = 0; l < coefficients->n_cols; l++) {
+                      (*coefficients)(k,l) += currentTreeCoefficients[k][l];
+                    }
                   }
                 }
-              }
 
-              if (terminalNodes) {
-                for (size_t k = 0; k < numObservations; k++) {
-                  (*terminalNodes)(k, i) = currentTreeTerminalNodes[k];
+                if (terminalNodes) {
+                  for (size_t k = 0; k < numObservations; k++) {
+                    (*terminalNodes)(k, i) = currentTreeTerminalNodes[k];
+                  }
+                  (*terminalNodes)(numObservations, i) = (*currentTree).getNodeCount();
                 }
-                (*terminalNodes)(numObservations, i) = (*currentTree).getNodeCount();
+              } else {
+                if (tree_weights->at(i) != (size_t) 0) {
+                  for (size_t j = 0; j < numObservations; j++) {
+                    prediction[j] += ((double) tree_weights->at(i)) * currentTreePrediction[j];
+                  }
+
+                  if (coefficients) {
+                    for (size_t k = 0; k < numObservations; k++) {
+                      for (size_t l = 0; l < coefficients->n_cols; l++) {
+                        (*coefficients)(k,l) += ((double) tree_weights->at(i)) * currentTreeCoefficients[k][l];
+                      }
+                    }
+                  }
+                }
               }
             }
 
@@ -661,8 +689,6 @@ std::unique_ptr< std::vector<double> > forestry::predict(
   #endif
 
   // If exact, we need to aggregate the predictions by tree seed order.
-  double total_weights = 0;
-
   if (exact) {
     std::vector<size_t> indices(tree_seeds.size());
     std::iota(indices.begin(), indices.end(), 0);
@@ -681,7 +707,6 @@ std::unique_ptr< std::vector<double> > forestry::predict(
         size_t cur_index  = *iter;
 
         double cur_weight = use_weights ? (double) (*tree_weights)[weight_index] : (double) 1.0;
-        total_weights += cur_weight;
         weight_index++;
         // Aggregate all predictions for current tree
         for (size_t j = 0; j < numObservations; j++) {
@@ -697,10 +722,6 @@ std::unique_ptr< std::vector<double> > forestry::predict(
     }
   }
 
-  if (!use_weights) {
-    total_weights = (double) getNtree();
-  }
-
   for (size_t j=0; j<numObservations; j++){
     prediction[j] /= total_weights;
   }
@@ -711,7 +732,6 @@ std::unique_ptr< std::vector<double> > forestry::predict(
 
   // If we also update the weight matrix, we now have to divide every entry
   // by the number of trees:
-
   if (weightMatrix) {
     size_t nrow = (*xNew)[0].size();      // number of features to be predicted
     size_t ncol = getNtrain();            // number of train data
