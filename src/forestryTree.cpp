@@ -1532,6 +1532,10 @@ void forestryTree::getOOBindex(
     getAveragingIndex()->begin(),
     getAveragingIndex()->end()
   );
+  std::sort(
+          allIndex.begin(),
+          allIndex.end()
+  );
 
   std::vector<size_t> allSampledIndex(
       getSplittingIndex()->size() + getAveragingIndex()->size()
@@ -1593,6 +1597,11 @@ void forestryTree::getDoubleOOBIndex(
     getAveragingIndex()->end()
   );
 
+  std::sort(
+          allIndex.begin(),
+          allIndex.end()
+  );
+
   std::vector<size_t> allSampledIndex(
       getSplittingIndex()->size() + getAveragingIndex()->size()
   );
@@ -1641,6 +1650,12 @@ void forestryTree::getOOBhonestIndex(
     getAveragingIndex()->end()
   );
 
+  // Super annoying problem, have to sort before doing set_diff
+  std::sort(
+          allIndex.begin(),
+          allIndex.end()
+  );
+
 
   // OOB index is the set difference between sampled index and all index
   std::vector<size_t> OOBIndex(nRows);
@@ -1654,6 +1669,8 @@ void forestryTree::getOOBhonestIndex(
   );
   OOBIndex.resize((unsigned long) (it - OOBIndex.begin()));
 
+  //std::cout << "OOB index inside get OOB HonestIndex" << std::endl;
+  //  print_vector(OOBIndex);
   for (
       std::vector<size_t>::iterator it_ = OOBIndex.begin();
       it_ != OOBIndex.end();
@@ -1675,6 +1692,11 @@ void forestryTree::getOOGIndex(
   std::sort(
     getAveragingIndex()->begin(),
     getAveragingIndex()->end()
+  );
+
+  std::sort(
+          allIndex.begin(),
+          allIndex.end()
   );
 
   // Add all in sample groups to a set
@@ -1707,21 +1729,25 @@ void forestryTree::getOOBPrediction(
     size_t nodesizeStrictAvg,
     std::vector< std::vector<double> >* xNew,
     arma::Mat<double>* weightMatrix,
-    std::vector<size_t>& training_idx
+    const std::vector<size_t>& training_idx
 ){
 
   std::vector<size_t> OOBIndex;
-
+  bool use_training_idx = !(training_idx.size() == 0);
   // OOB with and without using the OOB set as the averaging set requires
   // different sets of trees to be used (we want the set of trees)
   // without the averaging set
+
   std::vector<size_t> allIndex(trainingData->getNumRows());
-  if (training_idx.size() == 0) {
+  if (!use_training_idx) {
       std::iota(allIndex.begin(), allIndex.end(), 0);
   } else {
       allIndex = training_idx;
+      //std::cout << "All Index (size) "<< allIndex.size()  << std::endl;
+      //print_vector(allIndex);
   }
-
+    //std::cout << "tree avging indices" << std::endl;
+    //print_vector(*getAveragingIndex());
 
   if (trainingData->getGroups()->at(0) != 0) {
     std::vector<size_t> group_membership_vector = *(trainingData->getGroups());
@@ -1740,6 +1766,8 @@ void forestryTree::getOOBPrediction(
       getOOBindex(OOBIndex, allIndex);
     }
   }
+  //std::cout << "OOB Index" << std::endl;
+  //print_vector(OOBIndex);
 
   // Xnew has first access being the feature selection and second access being
   // the observation selection.
@@ -1757,20 +1785,49 @@ void forestryTree::getOOBPrediction(
   std::vector<double> currentTreePrediction(OOBIndex.size());
   std::vector<int>* currentTreeTerminalNodes = nullptr;
   std::vector< std::vector<double> > currentTreeCoefficients(OOBIndex.size());
-
   std::vector< std::vector<double> > xnew(trainingData->getNumColumns());
+
+  // If using training indices, need to make sure we get the correct rows in
+  // the new data, so make a map from OOB Indices for the tree -> row id in xnew
+  std::vector<size_t> idx_to_use;
+  std::map<size_t, size_t> map_trainidx;
+  std::vector<size_t> indexInTrain(OOBIndex.size());
+
+  if (use_training_idx) {
+
+      for (size_t i = 0; i < training_idx.size(); i++) {
+          map_trainidx[training_idx[i]] = i;
+      }
+
+      // Print the map
+      //for (const auto& [key, value] : map_trainidx) {
+      //    std::cout << '[' << key << "] = " << value << "; ";
+      //}
+      //std::cout << std::endl << "Idx to use" << std::endl;
+      //print_vector(OOBIndex);
+
+      for (size_t k = 0; k < OOBIndex.size(); k++) {
+          indexInTrain[k] = ((size_t) map_trainidx.at(OOBIndex[k]));
+      }
+  }
+  //std::cout << std::endl << "Idx to use before doing iterator" << std::endl;
+  //print_vector(indexInTrain);
 
   for (size_t k = 0; k < trainingData->getNumColumns(); k++)
     {
       // Populate all values of the Kth feature
-      for (
-          std::vector<size_t>::iterator it=OOBIndex.begin();
-          it!=OOBIndex.end();
-          ++it
-      ) {
-        xnew[k].push_back((*OOBSampleObservations_)[k][*it]);
+      if (use_training_idx) {
+          for ( const auto& row_idx : OOBIndex) {
+              xnew[k].push_back((*OOBSampleObservations_)[k][map_trainidx.at(row_idx)]);
+          }
+      } else {
+          for (const auto& row_idx : OOBIndex) {
+              xnew[k].push_back((*OOBSampleObservations_)[k][row_idx]);
+          }
       }
     }
+    //std::cout << std::endl << "Idx to use after doing iterator" << std::endl;
+    //print_vector(indexInTrain);
 
   // Run predict on the new feature corresponding to all out of bag observations
   predict(
@@ -1783,28 +1840,35 @@ void forestryTree::getOOBPrediction(
     false,
     44,
     nodesizeStrictAvg,
-    &OOBIndex
+    use_training_idx ? &indexInTrain : &OOBIndex
   );
 
-
-  // arma::Mat<double> curWeightMatrix;
-  // size_t nrow = OOBIndex.size(); // number of features to be predicted
-  // size_t ncol = trainingData->getNumRows(); // number of train data
-  // curWeightMatrix.resize(nrow, ncol); // initialize the space for the matrix
-  // curWeightMatrix.zeros(nrow, ncol);// set it all to 0
-
-
-  for (size_t i = 0; i < OOBIndex.size(); i++) {
-    // Update the global OOB vector
-    outputOOBPrediction[OOBIndex[i]] += currentTreePrediction[i];
-    outputOOBCount[OOBIndex[i]] += 1;
-
-    // Check weight matrix before we updte
-    // if (weightMatrix) {
-    //   for (size_t j = 0; j < ncol; j++) {
-    //     (*weightMatrix)(OOBIndex[i], j) += curWeightMatrix(i, j);
-    //   }
-    // }
+    //std::cout << "Index in train" << std::endl;
+    //print_vector(indexInTrain);
+    //std::cout << "OOB Index" << std::endl;
+    //print_vector(OOBIndex);
+  // Now take only the OOB entries in the predictions
+  // If we are using training indices, use those
+  if (use_training_idx) {
+      //std::cout << "tree predictions before selection" << std::endl;
+      //print_vector(currentTreePrediction);
+      //std::cout << "globalOOB predictions before selection " << std::endl;
+      //print_vector(outputOOBPrediction);
+      //std::cout << "size of idx to use " << OOBIndex.size() << std::endl;
+      for (size_t i = 0; i < OOBIndex.size(); i++) {
+          // Update the global OOB vector
+          //std::cout << "putting" << currentTreePrediction[i] << " at idx " << map_trainidx.at(OOBIndex[i]) << " in global vec" << std::endl;
+          outputOOBPrediction[map_trainidx.at(OOBIndex[i])] += currentTreePrediction[i];
+          outputOOBCount[map_trainidx.at(OOBIndex[i])] += 1;
+      }
+      //std::cout << "globalOOB predictions after selection " << std::endl;
+      //print_vector(outputOOBPrediction);
+  } else {
+      for (size_t i = 0; i < OOBIndex.size(); i++) {
+          // Update the global OOB vector
+          outputOOBPrediction[OOBIndex[i]] += currentTreePrediction[i];
+          outputOOBCount[OOBIndex[i]] += 1;
+      }
   }
 }
 

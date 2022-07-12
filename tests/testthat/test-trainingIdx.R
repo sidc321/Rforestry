@@ -42,6 +42,7 @@ test_that("Tests using trainingIdx when doing OOB predictions on smaller data", 
   # Check standard OOB honest forest
   forest <- forestry(x = xtrain,
                      y = ytrain,
+                     seed = 101,
                      OOBhonest = TRUE)
 
   #predict(forest, newdata = xtrain[c(1,4,5),], trainingIdx = c(1,4,5), aggregation = "oob", weightMatrix = TRUE)
@@ -50,7 +51,8 @@ test_that("Tests using trainingIdx when doing OOB predictions on smaller data", 
 
   # Check standard forest
   forest_other <- forestry(x = xtrain,
-                           y = ytrain)
+                           y = ytrain,
+                           seed = 101)
 
   check_oob_preds(forest_other, idx_set = 1:10)
 
@@ -58,13 +60,15 @@ test_that("Tests using trainingIdx when doing OOB predictions on smaller data", 
   # Check standard honest forest
   forest_std_honesty <- forestry(x = xtrain,
                                  y = ytrain,
+                                 seed = 101,
                                  splitratio = .4)
 
-  check_oob_preds(forest_std_honesty, idx_set = c(1,4,7,90,92,101,130))
+  check_oob_preds(forest_std_honesty, idx_set = 1:34)
 
   # Check OOBhonest = TRUE with no double Bootstrap forest
   forest_no_double_boot <- forestry(x = xtrain,
                                     y = ytrain,
+                                    seed = 101,
                                     OOBhonest = TRUE,
                                     doubleBootstrap = FALSE)
 
@@ -73,10 +77,11 @@ test_that("Tests using trainingIdx when doing OOB predictions on smaller data", 
   # Test groups option forest
   forest_groups <- forestry(x = xtrain,
                             y = ytrain,
+                            seed = 101,
                             OOBhonest = TRUE,
                             groups = as.factor(iris$Species))
 
-  check_oob_preds(forest_groups, idx_set = c(1,4,7,3,1))
+  check_oob_preds(forest_groups, idx_set = 1:98)
 
   # Check error handling =======================================================
   expect_error(

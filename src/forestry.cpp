@@ -7,7 +7,7 @@
 #include <thread>
 #include <mutex>
 #include <RcppArmadillo.h>
-#define DOPARELLEL true
+#define DOPARELLEL false
 
 
 forestry::forestry():
@@ -762,7 +762,8 @@ std::vector<double> forestry::predictOOB(
     std::vector<size_t> &training_idx
 ) {
 
-  size_t numObservations = getTrainingData()->getNumRows();
+  bool use_training_idx = !training_idx.empty();
+  size_t numObservations = use_training_idx ? training_idx.size() : getTrainingData()->getNumRows();
   std::vector<double> outputOOBPrediction(numObservations);
   std::vector<size_t> outputOOBCount(numObservations);
 
@@ -829,6 +830,8 @@ std::vector<double> forestry::predictOOB(
 
                   if (exact) {
                     tree_preds.push_back(outputOOBPrediction_iteration);
+                    //std::cout << "Tree predictions "<< std::endl;
+                    //print_vector(outputOOBPrediction_iteration);
                     for (size_t j=0; j < numObservations; j++) {
                       outputOOBCount[j] += outputOOBCount_iteration[j];
                     }
@@ -917,15 +920,6 @@ std::vector<double> forestry::predictOOB(
         outputOOBPrediction[j] = std::numeric_limits<double>::quiet_NaN();
       }
     }
-  }
-
-  // If training idx is set, return the predictions in the correct order and size
-  if (training_idx.size() != 0) {
-    std::vector<double> trainIdxOOBPrediction(training_idx.size());
-    for (size_t i = 0; i < training_idx.size(); i++) {
-      trainIdxOOBPrediction[i] = outputOOBPrediction[training_idx.at(i)];
-    }
-    return trainIdxOOBPrediction;
   }
 
   return outputOOBPrediction;

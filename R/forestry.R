@@ -1957,9 +1957,9 @@ predict.forestry <- function(object,
   }
 
   # If we have a weightMatrix for the training Idx set, pass that back only
-  if (!is.null(trainingIdx)) {
-    rcppPrediction$weightMatrix <- rcppPrediction$weightMatrix[trainingIdx,]
-  }
+  #if (!is.null(trainingIdx)) {
+  #  rcppPrediction$weightMatrix <- rcppPrediction$weightMatrix[trainingIdx,]
+  #}
 
   if (aggregation == "average" && weightMatrix) {
     return(rcppPrediction[c(1,2)])

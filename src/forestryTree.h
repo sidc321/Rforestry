@@ -194,7 +194,7 @@ public:
     size_t nodesizeStrictAvg,
     std::vector< std::vector<double> >* xNew,
     arma::Mat<double>* weightMatrix,
-    std::vector<size_t>& training_idx
+    const std::vector<size_t>& training_idx
   );
 
   void getShuffledOOBPrediction(
