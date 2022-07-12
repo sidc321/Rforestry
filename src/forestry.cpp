@@ -7,7 +7,7 @@
 #include <thread>
 #include <mutex>
 #include <RcppArmadillo.h>
-#define DOPARELLEL false
+#define DOPARELLEL true
 
 
 forestry::forestry():
