@@ -763,7 +763,8 @@ std::vector<double> forestry::predictOOB(
 ) {
 
   bool use_training_idx = !training_idx.empty();
-  size_t numObservations = use_training_idx ? training_idx.size() : getTrainingData()->getNumRows();
+  size_t numTrainingRows = getTrainingData()->getNumRows();
+  size_t numObservations = use_training_idx ? training_idx.size() : numTrainingRows;
   std::vector<double> outputOOBPrediction(numObservations);
   std::vector<size_t> outputOOBCount(numObservations);
 
@@ -896,7 +897,7 @@ std::vector<double> forestry::predictOOB(
     if (weightMatrix) {
       for (size_t j=0; j<numObservations; j++){
         if (outputOOBCount[j] != 0) {
-          for (size_t i = 0; i < numObservations; i++) {
+          for (size_t i = 0; i < numTrainingRows; i++) {
             (*weightMatrix)(j,i) = (*weightMatrix)(j,i) / outputOOBCount[j];
           }
         }
@@ -912,7 +913,7 @@ std::vector<double> forestry::predictOOB(
         outputOOBPrediction[j] = outputOOBPrediction[j] / outputOOBCount[j];
         //Also divide the weightMatrix
         if (weightMatrix) {
-          for (size_t i = 0; i < numObservations; i++) {
+          for (size_t i = 0; i < numTrainingRows; i++) {
             (*weightMatrix)(j,i) = (*weightMatrix)(j,i) / outputOOBCount[j];
           }
         }

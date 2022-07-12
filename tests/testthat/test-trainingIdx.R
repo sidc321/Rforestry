@@ -16,23 +16,23 @@ test_that("Tests using trainingIdx when doing OOB predictions on smaller data", 
     p_oob_weights <- predict(rf, newdata = x_new, aggregation = "oob", weightMatrix = TRUE)
     p_oob_idx_weights <- predict(rf, newdata = x_new[idx_set,], aggregation = "oob", trainingIdx = idx_set, weightMatrix = TRUE)
 
-    #expect_equal(all.equal((p_oob_weights$weightMatrix %*% as.matrix(rf@processed_dta$y))[,1][idx_set],
-    #                       (p_oob_idx_weights$weightMatrix %*% as.matrix(rf@processed_dta$y))[,1])
-    #             , TRUE)
+    expect_equal(all.equal((p_oob_weights$weightMatrix %*% as.matrix(rf@processed_dta$y))[,1][idx_set],
+                           (p_oob_idx_weights$weightMatrix %*% as.matrix(rf@processed_dta$y))[,1])
+                 , TRUE)
 
     # Test doubleOOB aggregation
     if (rf@doubleBootstrap) {
       p_doob <- predict(rf, newdata = x_new, aggregation = "doubleOOB")
       p_doob_idx <- predict(rf, newdata = x_new[idx_set,], aggregation = "doubleOOB", trainingIdx = idx_set)
-      expect_equal(all.equal(p_doob[idx_set], p_doob_idx[idx_set]), TRUE)
+      expect_equal(all.equal(p_doob[idx_set], p_doob_idx), TRUE)
 
       # Check weight matrix equality
       p_doob_weights <- predict(rf, newdata = x_new, aggregation = "doubleOOB", weightMatrix = TRUE)
       p_doob_idx_weights <- predict(rf, newdata = x_new[idx_set,], aggregation = "doubleOOB", trainingIdx = idx_set, weightMatrix = TRUE)
 
-      #expect_equal(all.equal((p_doob_weights$weightMatrix %*% as.matrix(rf@processed_dta$y))[,1][idx_set],
-      #                       (p_doob_idx_weights$weightMatrix %*% as.matrix(rf@processed_dta$y))[,1])
-      #             , TRUE)
+      expect_equal(all.equal((p_doob_weights$weightMatrix %*% as.matrix(rf@processed_dta$y))[,1][idx_set],
+                             (p_doob_idx_weights$weightMatrix %*% as.matrix(rf@processed_dta$y))[,1])
+                   , TRUE)
     }
   }
 
@@ -84,19 +84,16 @@ test_that("Tests using trainingIdx when doing OOB predictions on smaller data", 
   check_oob_preds(forest_groups, idx_set = 1:98)
 
 
+  forest <- forestry(x = xtrain,
+                     y = ytrain,
+                     seed = 101,
+                     OOBhonest = TRUE)
 
   # Now do an extreme set of tests with arbitrary randomized index sets
   set.seed(2781236)
   for (i in 1:20){
     idx <- sample(1:150, replace = FALSE, size = i+5)
-
-    p_idx <- (predict(forest, newdata = xtrain[idx,], trainingIdx = idx, aggregation = "oob"))
-    p_oob <- (predict(forest, newdata = xtrain, aggregation = "oob")[idx])
-    expect_equal(all.equal(p_idx, p_oob), TRUE)
-
-    p_didx <- (predict(forest, newdata = xtrain[idx,], trainingIdx = idx, aggregation = "doubleOOB"))
-    p_doob <- (predict(forest, newdata = xtrain, aggregation = "doubleOOB")[idx])
-    expect_equal(all.equal(p_didx, p_doob), TRUE)
+    check_oob_preds(rf = forest, idx_set = idx)
   }
 
   # Check error handling =======================================================
