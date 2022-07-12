@@ -919,6 +919,15 @@ std::vector<double> forestry::predictOOB(
     }
   }
 
+  // If training idx is set, return the predictions in the correct order and size
+  if (training_idx.size() != 0) {
+    std::vector<double> trainIdxOOBPrediction(training_idx.size());
+    for (size_t i = 0; i < training_idx.size(); i++) {
+      trainIdxOOBPrediction[i] = outputOOBPrediction[training_idx.at(i)];
+    }
+    return trainIdxOOBPrediction;
+  }
+
   return outputOOBPrediction;
 }
 

@@ -44,6 +44,8 @@ test_that("Tests using trainingIdx when doing OOB predictions on smaller data", 
                      y = ytrain,
                      OOBhonest = TRUE)
 
+  #predict(forest, newdata = xtrain[c(1,4,5),], trainingIdx = c(1,4,5), aggregation = "oob", weightMatrix = TRUE)
+
   check_oob_preds(forest)
 
   # Check standard forest
