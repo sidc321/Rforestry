@@ -64,6 +64,20 @@ weightMatrix corresponding to the predictions made with trees respecting
 holdOutIdx. If there are no trees that have held out all of the indices
 in holdOutIdx, then the predictions will return NaN.}
 
+\item{trainingIdx}{This is an optional parameter to give the indices of the observations
+in `newdata` from the training data set. This is used when we want to run predict on
+only a subset of observations from the training data set and use `aggregation = "oob"` or
+`aggregation = "doubleOOB"`. For example, at the tree level, a tree make out of
+bag (`aggregation = "oob"`) predictions for the indices in the set
+setdiff(trainingIdx,tree$averagingIndices) and will make double out-of-bag
+predictions for the indices in the set
+setdiff(trainingIdx,union(tree$averagingIndices,tree$splittingIndices).
+Note, this parameter must be set when predict is called with an out-of-bag
+aggregation option on a data set not matching the original training data size.
+The order of indices in `trainingIdx` also needs to match the order of observations
+in newdata. So the observations in `newdata[trainingIdx,]` should
+correspond to `training_data[trainingIdx,]`}
+
 \item{seed}{random seed}
 
 \item{nthread}{The number of threads with which to run the predictions with.

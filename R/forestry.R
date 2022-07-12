@@ -1662,7 +1662,7 @@ multilayerForestry <- function(x,
 #'   weightMatrix corresponding to the predictions made with trees respecting
 #'   holdOutIdx. If there are no trees that have held out all of the indices
 #'   in holdOutIdx, then the predictions will return NaN.
-#' @trainingIdx This is an optional parameter to give the indices of the observations
+#' @param trainingIdx This is an optional parameter to give the indices of the observations
 #'   in `newdata` from the training data set. This is used when we want to run predict on
 #'   only a subset of observations from the training data set and use `aggregation = "oob"` or
 #'   `aggregation = "doubleOOB"`. For example, at the tree level, a tree make out of
