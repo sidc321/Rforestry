@@ -1673,8 +1673,12 @@ multilayerForestry <- function(x,
 #'   Note, this parameter must be set when predict is called with an out-of-bag
 #'   aggregation option on a data set not matching the original training data size.
 #'   The order of indices in `trainingIdx` also needs to match the order of observations
-#'   in newdata. So the observations in `newdata[trainingIdx,]` should
-#'   correspond to `training_data[trainingIdx,]`
+#'   in newdata. So for an arbitrary index set `trainingIdx` and dataframe `newdata`,
+#'    of the same size as the training set, the predictions from `predict(rf, newdata[trainingIdx,],`
+#'   `aggregation = "oob", trainingIdx = trainingIdx)` should match the
+#'   predictions of to `predict(rf, newdata, aggregation = "oob")[trainingIdx]`.
+#'   This option also works with the `weightMatrix` option and will return the
+#'   (smaller) weightMatrix for the observations in the passed data frame.
 #' @param seed random seed
 #' @param nthread The number of threads with which to run the predictions with.
 #'   This will default to the number of threads with which the forest was trained
