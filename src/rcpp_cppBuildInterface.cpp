@@ -770,7 +770,7 @@ Rcpp::List rcpp_OBBPredictionsInterface(
       arma::Mat<double> weightMatrix;
 
       if (returnWeightMatrix) {
-        size_t nrow = featureData[0].size(); // number of features to be predicted
+        size_t nrow = (*testFullForest).getNtrain(); // number of features to be predicted
         size_t ncol = (*testFullForest).getNtrain(); // number of train data
         weightMatrix.resize(nrow, ncol); // initialize the space for the matrix
         weightMatrix.zeros(nrow, ncol);// set it all to 0

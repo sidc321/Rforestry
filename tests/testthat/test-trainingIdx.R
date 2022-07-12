@@ -2,35 +2,35 @@ test_that("Tests using trainingIdx when doing OOB predictions on smaller data", 
   library(Rforestry)
 
   # Helper function for checking the equality of predictions
-  check_oob_preds <- function(rf) {
+  check_oob_preds <- function(rf, idx_set) {
     # Try running for a transformation of x_new
     x_new <- rf@processed_dta$processed_x
     x_new[, 1] <- .23*x_new[, 1]
 
     # Test OOB Aggregation
     p_oob <- predict(rf, newdata = x_new, aggregation = "oob")
-    p_oob_idx <- predict(rf, newdata = x_new[1:10,], aggregation = "oob", trainingIdx = 1:10)
-    expect_equal(all.equal(p_oob[1:10], p_oob_idx), TRUE)
+    p_oob_idx <- predict(rf, newdata = x_new[idx_set,], aggregation = "oob", trainingIdx = idx_set)
+    expect_equal(all.equal(p_oob[idx_set], p_oob_idx), TRUE)
 
     # Check weight matrices are equal
     p_oob_weights <- predict(rf, newdata = x_new, aggregation = "oob", weightMatrix = TRUE)
-    p_oob_idx_weights <- predict(rf, newdata = x_new[1:10,], aggregation = "oob", trainingIdx = 1:10, weightMatrix = TRUE)
+    p_oob_idx_weights <- predict(rf, newdata = x_new[idx_set,], aggregation = "oob", trainingIdx = idx_set, weightMatrix = TRUE)
 
-    expect_equal(all.equal((p_oob_weights$weightMatrix %*% as.matrix(rf@processed_dta$y))[,1][1:10],
+    expect_equal(all.equal((p_oob_weights$weightMatrix %*% as.matrix(rf@processed_dta$y))[,1][idx_set],
                            (p_oob_idx_weights$weightMatrix %*% as.matrix(rf@processed_dta$y))[,1])
                  , TRUE)
 
     # Test doubleOOB aggregation
     if (rf@doubleBootstrap) {
       p_doob <- predict(rf, newdata = x_new, aggregation = "doubleOOB")
-      p_doob_idx <- predict(rf, newdata = x_new[1:10,], aggregation = "doubleOOB", trainingIdx = 1:10)
-      expect_equal(all.equal(p_doob[1:10], p_doob_idx[1:10]), TRUE)
+      p_doob_idx <- predict(rf, newdata = x_new[idx_set,], aggregation = "doubleOOB", trainingIdx = idx_set)
+      expect_equal(all.equal(p_doob[idx_set], p_doob_idx[idx_set]), TRUE)
 
       # Check weight matrix equality
       p_doob_weights <- predict(rf, newdata = x_new, aggregation = "doubleOOB", weightMatrix = TRUE)
-      p_doob_idx_weights <- predict(rf, newdata = x_new[1:10,], aggregation = "doubleOOB", trainingIdx = 1:10, weightMatrix = TRUE)
+      p_doob_idx_weights <- predict(rf, newdata = x_new[idx_set,], aggregation = "doubleOOB", trainingIdx = idx_set, weightMatrix = TRUE)
 
-      expect_equal(all.equal((p_doob_weights$weightMatrix %*% as.matrix(rf@processed_dta$y))[,1][1:10],
+      expect_equal(all.equal((p_doob_weights$weightMatrix %*% as.matrix(rf@processed_dta$y))[,1][idx_set],
                              (p_doob_idx_weights$weightMatrix %*% as.matrix(rf@processed_dta$y))[,1])
                    , TRUE)
     }
@@ -46,13 +46,13 @@ test_that("Tests using trainingIdx when doing OOB predictions on smaller data", 
 
   #predict(forest, newdata = xtrain[c(1,4,5),], trainingIdx = c(1,4,5), aggregation = "oob", weightMatrix = TRUE)
 
-  check_oob_preds(forest)
+  check_oob_preds(forest, idx_set = 1:10)
 
   # Check standard forest
   forest_other <- forestry(x = xtrain,
                            y = ytrain)
 
-  check_oob_preds(forest_other)
+  check_oob_preds(forest_other, idx_set = 1:10)
 
 
   # Check standard honest forest
@@ -60,7 +60,7 @@ test_that("Tests using trainingIdx when doing OOB predictions on smaller data", 
                                  y = ytrain,
                                  splitratio = .4)
 
-  check_oob_preds(forest_std_honesty)
+  check_oob_preds(forest_std_honesty, idx_set = c(1,4,7,90,92,101,130))
 
   # Check OOBhonest = TRUE with no double Bootstrap forest
   forest_no_double_boot <- forestry(x = xtrain,
@@ -68,7 +68,7 @@ test_that("Tests using trainingIdx when doing OOB predictions on smaller data", 
                                     OOBhonest = TRUE,
                                     doubleBootstrap = FALSE)
 
-  check_oob_preds(forest_no_double_boot)
+  check_oob_preds(forest_no_double_boot, idx_set = 1:10)
 
   # Test groups option forest
   forest_groups <- forestry(x = xtrain,
@@ -76,7 +76,7 @@ test_that("Tests using trainingIdx when doing OOB predictions on smaller data", 
                             OOBhonest = TRUE,
                             groups = as.factor(iris$Species))
 
-  check_oob_preds(forest_groups)
+  check_oob_preds(forest_groups, idx_set = c(1,4,7,3,1))
 
   # Check error handling =======================================================
   expect_error(
