@@ -1,3 +1,5 @@
 from setuptools import setup
 
-setup()
+setup(
+    data_files=[("Lib/site-packages", ["../libforestryCpp.dylib"])]
+)
