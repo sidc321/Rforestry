@@ -802,7 +802,7 @@ forestry <- function(x,
     # Print warning if the group number and minTreesPerGroup results in a large
     # forest
     if (minTreesPerGroup>0 && length(levels(groups))*minTreesPerGroup > 2000) {
-      warning(paste0("Using ",length(levels(groups))," groups with ",
+      print(paste0("Using ",length(levels(groups))," groups with ",
                      minTreesPerGroup," trees per group will train ",
                      length(levels(groups))*minTreesPerGroup," trees in the forest."))
     }
@@ -1750,11 +1750,6 @@ predict.forestry <- function(object,
 
   # Check that trainingIdx entries are valid
   if (!is.null(trainingIdx)) {
-    # Check that correct aggregation is used
-    if (!(aggregation %in% c("oob", "doubleOOB"))) {
-      stop("trainingIdx can only be used when aggregation is oob or doubleOOB")
-    }
-
     if (nrow(newdata) != length(trainingIdx)) {
       stop(paste0("The length of trainingIdx must be the same as the number of ",
                   "observations in the training data"))
@@ -1765,6 +1760,13 @@ predict.forestry <- function(object,
         (max(trainingIdx) > nrow(object@processed_dta$processed_x)) ||
         (min(trainingIdx) < 1) ) {
       stop("trainingIdx must contain only integers in the range of the training set indices")
+    }
+
+    # Check that correct aggregation is used
+    if (!(aggregation %in% c("oob", "doubleOOB"))) {
+      warning(paste0("trainingIdx are only used when aggregation is oob or doubleOOB.",
+                     " The current aggregation doesn't match either so trainingIdx will be ignored"))
+      trainingIdx <- NULL
     }
   }
 

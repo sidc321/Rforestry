@@ -102,4 +102,16 @@ test_that("Tests sampling with groups", {
 
   expect_equal(rf@ntree, 30)
 
+  # Test note on the number of trees
+  expect_output(
+    rf <- forestry(x = x,
+                   y = y,
+                   ntree = 10,
+                   seed = 83,
+                   minTreesPerGroup = 1000,
+                   groups = iris$Species),
+    "Using 3 groups with 1000 trees per group will train 3000 trees in the forest."
+
+  )
+
 })

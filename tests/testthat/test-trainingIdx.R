@@ -39,6 +39,9 @@ test_that("Tests using trainingIdx when doing OOB predictions on smaller data", 
   xtrain <- iris[,-c(1,5)]
   ytrain <- iris[,1]
 
+  set.seed(322313)
+  idx_use <- sample(1:150, replace = FALSE, size = 23)
+
   # Check standard OOB honest forest
   forest <- forestry(x = xtrain,
                      y = ytrain,
@@ -47,14 +50,14 @@ test_that("Tests using trainingIdx when doing OOB predictions on smaller data", 
 
   #predict(forest, newdata = xtrain[c(1,4,5),], trainingIdx = c(1,4,5), aggregation = "oob", weightMatrix = TRUE)
 
-  check_oob_preds(forest, idx_set = 1:10)
+  check_oob_preds(forest, idx_set = idx_use)
 
   # Check standard forest
   forest_other <- forestry(x = xtrain,
                            y = ytrain,
                            seed = 101)
 
-  check_oob_preds(forest_other, idx_set = 1:10)
+  check_oob_preds(forest_other, idx_set = idx_use)
 
 
   # Check standard honest forest
@@ -63,7 +66,7 @@ test_that("Tests using trainingIdx when doing OOB predictions on smaller data", 
                                  seed = 101,
                                  splitratio = .4)
 
-  check_oob_preds(forest_std_honesty, idx_set = 1:34)
+  check_oob_preds(forest_std_honesty, idx_set = idx_use)
 
   # Check OOBhonest = TRUE with no double Bootstrap forest
   forest_no_double_boot <- forestry(x = xtrain,
@@ -72,7 +75,7 @@ test_that("Tests using trainingIdx when doing OOB predictions on smaller data", 
                                     OOBhonest = TRUE,
                                     doubleBootstrap = FALSE)
 
-  check_oob_preds(forest_no_double_boot, idx_set = 1:10)
+  check_oob_preds(forest_no_double_boot, idx_set = idx_use)
 
   # Test groups option forest
   forest_groups <- forestry(x = xtrain,
@@ -81,7 +84,7 @@ test_that("Tests using trainingIdx when doing OOB predictions on smaller data", 
                             OOBhonest = TRUE,
                             groups = as.factor(iris$Species))
 
-  check_oob_preds(forest_groups, idx_set = 1:98)
+  check_oob_preds(forest_groups, idx_set = idx_use)
 
 
   forest <- forestry(x = xtrain,
@@ -96,7 +99,14 @@ test_that("Tests using trainingIdx when doing OOB predictions on smaller data", 
     check_oob_preds(rf = forest, idx_set = idx)
   }
 
+
   # Check error handling =======================================================
+  expect_warning(
+    predict_OOBpreds <- predict(forest, newdata = xtrain[1:20,],
+                                aggregation = "average", trainingIdx = 1:20),
+    "trainingIdx are only used when aggregation is oob or doubleOOB. The current aggregation doesn't match either so trainingIdx will be ignored"
+  )
+
   expect_error(
     predict_OOBpreds <- predict(forest_groups, aggregation = "average"),
     "When using an aggregation that is not oob or doubleOOB, one must supply newdata"
@@ -111,5 +121,8 @@ test_that("Tests using trainingIdx when doing OOB predictions on smaller data", 
     predict_OOBpreds <- predict(forest_groups, aggregation = "oob", newdata = xtrain[1:30,], trainingIdx = 1:20),
     "The length of trainingIdx must be the same as the number of observations in the training data"
   )
+
+
+
 
 })
