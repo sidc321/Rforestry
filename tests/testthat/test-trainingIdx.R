@@ -106,6 +106,8 @@ test_that("Tests using trainingIdx when doing OOB predictions on smaller data", 
                                 aggregation = "average", trainingIdx = 1:20),
     "trainingIdx are only used when aggregation is oob or doubleOOB. The current aggregation doesn't match either so trainingIdx will be ignored"
   )
+  # Expect the output to be using average aggregation
+  expect_equal(all.equal(predict_OOBpreds, predict(forest, newdata = xtrain[1:20,])), TRUE)
 
   expect_error(
     predict_OOBpreds <- predict(forest_groups, aggregation = "average"),
