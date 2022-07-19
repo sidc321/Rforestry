@@ -139,7 +139,10 @@ void forestry::addTrees(size_t ntree) {
   unsigned int newEndingTreeNumber;
   size_t numToGrow, groupToGrow;
 
-  if (getMinTreesPerGroup() > 0) {
+  // This is called with ntree = 0 only when loading a saved forest.
+  // When minTreesPerGroup takes precedence over ntree, we need to make sure to
+  // train 0 trees when ntree = 0, otherwise this messes up the reconstruction of the forest
+  if ((ntree != 0) && (getMinTreesPerGroup() > 0)) {
     numToGrow =
       (unsigned int) getMinTreesPerGroup() * ((*std::max_element(getTrainingData()->getGroups()->begin(),
                                                                  getTrainingData()->getGroups()->end())));
