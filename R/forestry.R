@@ -3175,7 +3175,7 @@ relinkCPP_prt <- function(object) {
 
     tryCatch({
       # Now we have to decide whether we use reconstruct tree or reconstructforests
-      if (class(object)[1] == "forestry") {
+      if (inherits(object,"forestry")) {
         if(!length(object@R_forest))
           stop("Forest was saved without first calling `forest <- make_savable(forest)`. ",
                "This forest cannot be reconstructed.")
@@ -3241,7 +3241,7 @@ relinkCPP_prt <- function(object) {
 
         object@forest <- forest_and_df_ptr$forest_ptr
         object@dataframe <- forest_and_df_ptr$data_frame_ptr
-      } else if (class(object)[1] == "multilayerForestry") {
+      } else if (inherits(object,"multilayerForestry")) {
         #print("Got past filtering")
 
         if(!length(object@R_forests))
@@ -3349,9 +3349,9 @@ relinkCPP_prt <- function(object) {
 make_savable <- function(object) {
     # We check if it is either a forestry object, or a multilayer forestry object
     # and save it accordingly
-    if (class(object)[1] == "forestry") {
+    if (inherits(object, "forestry")) {
       object@R_forest <- CppToR_translator(object@forest)
-    } else if (class(object)[1] == "multilayerForestry") {
+    } else if (inherits(object,"multilayerForestry")) {
       object@R_forests <- rcpp_multilayer_CppToR_translator(object@forest)
       object@gammas <- rcpp_gammas_translator(object@forest)
       object@R_residuals <- rcpp_residuals_translator(object@forest)
