@@ -111,7 +111,29 @@ test_that("Tests sampling with groups", {
                    minTreesPerGroup = 1000,
                    groups = iris$Species),
     "Using 3 groups with 1000 trees per group will train 3000 trees in the forest."
-
   )
+
+  context("Save and load with minTreePerGroup > ntree")
+  wd <- tempdir()
+
+  rf <- forestry(x = x,
+                 y = y,
+                 ntree = 10,
+                 seed = 83,
+                 minTreesPerGroup = 10,
+                 groups = iris$Species)
+
+
+  y_pred_before <- predict(rf, x, aggregation = "oob")
+
+  saveForestry(rf, filename = file.path(wd, "forest.Rda"))
+  rm(rf)
+  forest_after <- loadForestry(file.path(wd, "forest.Rda"))
+
+  y_pred_after <- predict(forest_after, x, aggregation = "oob")
+  testthat::expect_equal(all.equal(y_pred_before, y_pred_after),TRUE)
+
+  file.remove(file.path(wd, "forest.Rda"))
+
 
 })
