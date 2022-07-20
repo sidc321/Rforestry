@@ -80,7 +80,7 @@ test_that("Tests predict index option", {
                             y = y,
                             seed = 131,
                             OOBhonest = TRUE,
-                            groups = c(as.factor(c(1,1,1, rep(2,37)))),
+                            groups = (as.factor(c(1,1,1, rep(2,37)))),
                             ntree = 1000)
   test_tree_preds(forest_groups)
   test_forest_preds(forest_groups)
