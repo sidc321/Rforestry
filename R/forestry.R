@@ -2530,22 +2530,10 @@ predictInfo <- function(object,
 #'   taken. By default this is zero, so just a single linear correction is used.
 #' @param linear A flag indicating whether or not we want to do a final linear
 #'   bias correction after doing the nonlinear corrections. Default is TRUE.
-#' @param double A flag indicating if one should use aggregation = "doubleOOB" for
-#'   the initial predictions rather than aggregation = "oob." Default is FALSE.
-#' @param simple flag indicating whether we should do a simple linear adjustment
-#'  or do different adjustments by quantiles. Default is TRUE.
+#' @param binary A flag indicating whether or not the linear correction should use
+#'   logistic regression for binary outcomes.
+#' @param aggregation Gives the aggregation to use for the first round of predictions.
 #' @param verbose flag which displays the bias of each qunatile.
-#' @param use_residuals flag indicating if we should use the residuals to fit the
-#'  bias correction steps. Defualt is FALSE which means that we will use Y
-#'  rather than Y-Y.hat as the regression outcome in the bias correction steps.
-#' @param adaptive flag to indicate whether we use adaptiveForestry or not in the
-#'  regression step. Default is FALSE.
-#' @param monotone flag to indicate whether or not we should use monotonicity
-#'  in the regression of Y on Y hat (when doing forest correction steps).
-#'  If TRUE, will constrain the corrected prediction for Y to be monotone in the
-#'  original prediction of Y. Default is FALSE.
-#' @param num_quants Number of quantiles to use when doing quantile specific bias
-#'  correction. Will only be used if simple = FALSE. Default is 5.
 #' @param params.forestry A list of parameters to pass to the subsequent forestry
 #'  calls. Note that these forests will be trained on features of dimension
 #'  length(feats) + 1 as the correction forests are trained on Y ~ cbind(newdata[,feats], Y.hat).
@@ -2580,18 +2568,14 @@ predictInfo <- function(object,
 #'
 #' @export
 correctedPredict <- function(object,
-                             newdata = NULL,
+                             newdata,
                              feats = NULL,
                              observations = NULL,
                              nrounds = 0,
                              linear = TRUE,
-                             double = FALSE,
-                             simple = TRUE,
+                             binary = FALSE,
+                             aggregation = ifelse(object@OOBhonest, "doubleOOB","oob") ,
                              verbose = FALSE,
-                             use_residuals = FALSE,
-                             adaptive = FALSE,
-                             monotone = FALSE,
-                             num_quants = 5,
                              params.forestry = list(),
                              keep_fits = FALSE
                              )
@@ -2615,40 +2599,42 @@ correctedPredict <- function(object,
   }
 
   # Check the parameters match parameters for forestry or adaptiveForestry
-  if (adaptive) {
-    valid_params <- names(as.list(args(Rforestry::adaptiveForestry)))
-  } else {
-    valid_params <- names(as.list(args(Rforestry::forestry)))
-  }
+  valid_params <- names(as.list(args(Rforestry::forestry)))
   if (any(!(names(params.forestry) %in% valid_params))) {
     bad_params <- paste(names(params.forestry)[which((!(names(params.forestry) %in% valid_params)))])
     stop(paste0("Invalid parameter in params.forestry: ",
                 bad_params," "))
   }
 
-
-  if (double) {
-    agg = "doubleOOB"
-  } else {
-    agg = "oob"
-  }
-
   # First get out of bag preds
-  oob.preds <- predict(object = object, aggregation = agg)
+  train.preds <- predict(object = object,
+                         aggregation = aggregation)
+
+  test.preds <- predict(object = object,
+                        newdata = newdata)
+
 
   if (is.null(observations)) {
     observations <- 1:nrow(object@processed_dta$processed_x)
   }
 
   if (is.null(feats)) {
-    adjust.data <- data.frame(Y = object@processed_dta$y[observations],
-                              Y.hat = oob.preds[observations])
+    train.data <- data.frame(Y = object@processed_dta$y[observations],
+                              Y.hat = train.preds[observations])
+    test.data <- data.frame(Y.hat = test.preds)
   } else {
-    adjust.data <- data.frame(object@processed_dta$processed_x[observations,feats],
-                              Y = object@processed_dta$y[observations],
-                              Y.hat = oob.preds[observations])
+    train.data <- data.frame(object@processed_dta$processed_x[observations,feats],
+                             Y = object@processed_dta$y[observations],
+                             Y.hat = train.preds[observations])
+
     # give adjust data the column names from feats
-    colnames(adjust.data) <- c(paste0("V",feats), "Y","Y.hat")
+    colnames(train.data) <- c(paste0("V",feats), "Y","Y.hat")
+
+    test.data <- data.frame(newdata[,feats],
+                            Y.hat = test.preds[observations])
+
+    # give adjust data the column names from feats
+    colnames(test.data) <- c(paste0("V",feats),"Y.hat")
   }
 
 
@@ -2658,204 +2644,95 @@ correctedPredict <- function(object,
   if (nrounds > 0) {
     for (round_i in 1:nrounds) {
       # Set right outcome to regress for regression step
-      if(use_residuals) {
-        y_reg <- adjust.data %>% dplyr::pull(Y) - adjust.data %>% dplyr::pull(Y.hat)
-      } else {
-        y_reg <- adjust.data %>% dplyr::pull(Y)
-      }
+      y_reg <- train.data %>% dplyr::pull(Y)
 
-      if (adaptive) {
-        # Set default params for adaptive forestry
-        params.forestry.i <- params.forestry
-        params.forestry.i$x <- adjust.data %>% dplyr::select(-Y)
-        params.forestry.i$y <- y_reg
+      # Fit the bias correction random forest
+      params.forestry.i <- params.forestry
+      params.forestry.i$x <- train.data %>% dplyr::select(-Y)
+      params.forestry.i$y <- y_reg
+      params.forestry.i$OOBhonest <- TRUE
+      fit.i <- do.call(forestry, c(params.forestry.i))
+      pred.i <- predict(fit.i,
+                        newdata = train.data %>% dplyr::select(-Y),
+                        aggregation = aggregation)
 
-        fit.i <- do.call(adaptiveForestry, c(params.forestry.i))
-
-        pred.i <- predict(fit.i, newdata = adjust.data %>% dplyr::select(-Y),
-                          aggregation = agg, weighting = 1)
-      } else if (monotone) {
-        # Set default params for monotonicity in the Y.hat feature
-        params.forestry.i <- params.forestry
-        params.forestry.i$x <- adjust.data %>% dplyr::select(-Y)
-        params.forestry.i$y <- y_reg
-        params.forestry.i$OOBhonest <- TRUE
-        params.forestry.i$monotoneAvg <- TRUE
-        params.forestry.i$monotonicConstraints <- c(rep(0,ncol(adjust.data)-2),1)
+      # Adjust the predicted Y hats in the training data
+      train.data[, ncol(train.data)] <- pred.i
+      names(train.data)[ncol(train.data)] <- "Y.hat"
 
 
-        fit.i <- do.call(forestry,c(params.forestry.i))
-      } else {
-        # Set default forestry params
-        params.forestry.i <- params.forestry
-        params.forestry.i$x <- adjust.data %>% dplyr::select(-Y)
-        params.forestry.i$y <- y_reg
-        params.forestry.i$OOBhonest <- TRUE
+      # Adjust the predicted Y hats in the testing data
+      test.data[, ncol(test.data)] <- predict(fit.i,
+                                              newdata = test.data)
+      names(test.data)[ncol(test.data)] <- "Y.hat"
 
-        fit.i <- do.call(forestry, c(params.forestry.i))
-      }
-      pred.i <- predict(fit.i, adjust.data %>% dplyr::select(-Y),
-                          aggregation = agg)
       # Store the ith fit
-      rf_fits[[round_i]] <- fit.i
-    }
-
-    # If we predicted some residuals, we now have to add the old Y.hat to them
-    # to get the new Y.hat
-    if (use_residuals) {
-      pred.i <- pred.i + (adjust.data %>% dplyr::pull(Y.hat))
-    }
-
-    # Adjust the predicted Y hats
-    adjust.data[, ncol(adjust.data)] <- pred.i
-    names(adjust.data)[ncol(adjust.data)] <- "Y.hat"
-
-    # if we have a new feature, we need to run the correction fits on that as well
-    if (!is.null(newdata)) {
-      # Get initial predictions
-      pred_data <- data.frame(newdata[,feats],
-                              Y.hat = predict(object, newdata))
-
-      # Set column names to follow a format matching the features used
-      if (!is.null(feats)) {
-        colnames(pred_data) <- c(paste0("V",feats), "Y.hat")
+      if (keep_fits){
+        rf_fits[[round_i]] <- fit.i
       }
 
-      for (iter in 1:nrounds) {
-        adjusted.pred <- predict(rf_fits[[iter]], newdata = pred_data)
-        pred_data$Y.hat <- adjusted.pred
+      if (verbose) {
+        print(paste0("Step ",round_i))
+        print(paste0("In sample R squared ", cor(train.data$Y.hat, train.data$Y) ^ 2))
+        print(paste0("SD of Y true: ", sd(train.data$Y), " SD of Y hat: ", sd(train.data$Y)))
+        print(paste0("SD of Y hat test ", sd(test.data$Y.hat)))
       }
-    }
-  }
 
-  if (!is.null(newdata)) {
-    if (nrounds > 0) {
-      preds.initial <- pred_data$Y.hat
-    } else {
-      preds.initial <- predict(object, newdata)
-    }
-  }
-
-  # Given a dataframe with Y and Y.hat at least, fits an OLS and gives the LOO
-  # predictions on the sample
-  loo_pred_helper <- function(df) {
-    adjust.lm <- lm(Y ~ ., data = df)
-
-    # Get LOO coefficients
-    loo.coefs <- lm.influence(adjust.lm)$coefficients
-    for (j in 1:ncol(loo.coefs)){
-      loo.coefs[,j] <- loo.coefs[,j] + unname(adjust.lm$coefficients[j])
-    }
-
-    # Calculate the predictions with the LOO coefficients
-    design.matrix <- data.frame(Int = 1, df[,-(ncol(df)-1)])
-    prod.matrix <- as.matrix(design.matrix) * as.matrix(loo.coefs)
-    preds.adjusted <- rowSums(prod.matrix)
-    return(list("insample_preds"=preds.adjusted, "adjustment_model" = adjust.lm))
+    } # End nround loop
   }
 
   if (linear) {
-    # Now do linear adjustment
-    if (simple) {
+    if (binary) {
+      linear_fit <- glm(Y ~.,
+                          data = train.data,
+                          family = "binomial")
 
-      # Now we either return the adjusted in sample predictions, or the
-      # out of sample predictions scaled according to the adjustment model
-      if (is.null(newdata)) {
-        preds.adjusted <- loo_pred_helper(adjust.data)$insample_preds
-      } else {
-        model <- loo_pred_helper(adjust.data)$adjustment_model
-        data_pred <- data.frame(newdata[,feats],
-                                Y.hat = preds.initial)
-        if (!is.null(feats)) {
-          colnames(data_pred) <- c(paste0("V",feats),"Y.hat")
-        }
+      # Adjust the predicted Y hats in the training data
+      train.data[, ncol(train.data)] <- predict(linear_fit,
+                                                newdata = train.data,
+                                                type = "response")
+      names(train.data)[ncol(train.data)] <- "Y.hat"
 
-        preds.adjusted <- predict(model,
-                                  newdata = data_pred)
-        preds.adjusted <- unname(preds.adjusted)
-      }
+      # Adjust the predicted Y hats in the testing data
+      test.data[, ncol(test.data)] <- predict(linear_fit,
+                                              newdata = test.data,
+                                              type = "response")
+      names(test.data)[ncol(test.data)] <- "Y.hat"
 
     } else {
-      # split Yhat into quantiles
-      q_num <- num_quants+1
-      Y.hat <- adjust.data$Y.hat
-      Y <- adjust.data$Y
+      linear_fit <- lm(Y ~., data=train.data)
 
-      # Get the cuts of the different quantiles
-      cuts <- cut(Y.hat,
-                  quantile(Y.hat, probs=seq(0,1,length.out = q_num) ) ,
-                  include.lowest=TRUE)
+      # Adjust the predicted Y hats in the training data
+      train.data[, ncol(train.data)] <- predict(linear_fit,
+                                                newdata = train.data)
+      names(train.data)[ncol(train.data)] <- "Y.hat"
 
-      q_indices <- as.numeric(cuts)
-      new_pred <- rep(0, length(Y.hat))
 
-      # Fit a different LM in each quantile
-      fits <- lapply(1:max(q_indices), function(i) {lm(Y ~., adjust.data[which(q_indices == i),])})
-
-      for ( i in 1:max(q_indices) ) {
-        idx <- which(q_indices == i)
-        if ( verbose ) {
-          print(paste0("Quantile: ",i, " ", levels(cuts)[i]))
-          bias <- mean(Y[idx] - Y.hat[idx])
-          print(bias)
-        }
-
-        # Again we have to check if the data was in or out of sample, and do predictions
-        # accordingly
-        new_pred[idx] <- loo_pred_helper(adjust.data[idx,])$insample_preds
-        new_pred <- unlist(new_pred)
-      }
-
-      if (!is.null(newdata)) {
-        # Now we have fit the Q_num different models, we take the models and use
-        # split Yhat into quantiles
-
-        # Training quantiles
-        training_quantiles <- quantile(Y.hat, probs=seq(0,1,length.out = q_num))
-        training_quantiles[1] <- -Inf
-
-        # Get the quantile each testing observation falls into
-        testing.quantiles <- rep(0,length(preds.initial))
-        for (i in 1:length(preds.initial)) {
-          for (q_i in 1:(length(training_quantiles)-1)) {
-            testing.quantiles[i] <- sum(preds.initial[i]>training_quantiles[1:(length(training_quantiles)-1)])
-          }
-        }
-        # Now predict for each index set using the right model
-        preds.adjusted <- rep(0, nrow(newdata))
-        for ( i in 1:(length(training_quantiles)-1)) {
-          pred_df <- data.frame(newdata[which(testing.quantiles == i), feats],
-                                Y.hat = preds.initial[which(testing.quantiles == i)])
-          if (!is.null(feats)) {
-            colnames(pred_df) <- c(paste0("V",feats),"Y.hat")
-          }
-          preds.adjusted[which(testing.quantiles == i)] <- predict(fits[[i]],
-                                                                   newdata = pred_df)
-        }
-      } else {
-        preds.adjusted <- new_pred
-      }
+      # Adjust the predicted Y hats in the testing data
+      test.data[, ncol(test.data)] <- predict(linear_fit,
+                                              newdata = test.data)
+      names(test.data)[ncol(test.data)] <- "Y.hat"
     }
 
-    if (!keep_fits) {
-      return(preds.adjusted)
-    } else {
-      return(list("predictions" = preds.adjusted, "fits" = rf_fits))
+
+    if (verbose) {
+      print(paste0("Step ",nrounds+1," linear correction "))
+      print(linear_fit$coefficients)
+
+      print(paste0("In sample R squared ", cor(train.data$Y.hat, train.data$Y) ^ 2))
+      print(paste0("SD of Y true: ", sd(train.data$Y), " SD of Y hat: ", sd(train.data$Y)))
+      print(paste0("SD of Y hat test ", sd(test.data$Y.hat)))
     }
+  }
+
+
+  if (keep_fits) {
+    return(list("fits" = rf_fits,
+                "train.preds" = train.data[, ncol(train.data)] ,
+                "test.preds"=test.data[, ncol(test.data)]))
   } else {
-    if (!keep_fits) {
-      if (!is.null(newdata)) {
-        return(pred_data$Y.hat)
-      } else {
-        return(adjust.data[,ncol(adjust.data)])
-      }
-    } else {
-      if (!is.null(newdata)) {
-        return(list("predictions" = pred_data$Y.hat, "fits" = rf_fits))
-      } else {
-        return(list("predictions" = adjust.data[,ncol(adjust.data)], "fits" = rf_fits))
-      }
-    }
+    return(list("train.preds" = train.data[, ncol(train.data)] ,
+                "test.preds"=test.data[, ncol(test.data)]))
   }
 }
 
