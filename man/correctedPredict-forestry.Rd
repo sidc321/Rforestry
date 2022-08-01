@@ -6,18 +6,14 @@
 \usage{
 correctedPredict(
   object,
-  newdata = NULL,
+  newdata,
   feats = NULL,
   observations = NULL,
   nrounds = 0,
   linear = TRUE,
-  double = FALSE,
-  simple = TRUE,
+  binary = FALSE,
+  aggregation = ifelse(object@OOBhonest, "doubleOOB", "oob"),
   verbose = FALSE,
-  use_residuals = FALSE,
-  adaptive = FALSE,
-  monotone = FALSE,
-  num_quants = 5,
   params.forestry = list(),
   keep_fits = FALSE
 )
@@ -42,28 +38,12 @@ taken. By default this is zero, so just a single linear correction is used.}
 \item{linear}{A flag indicating whether or not we want to do a final linear
 bias correction after doing the nonlinear corrections. Default is TRUE.}
 
-\item{double}{A flag indicating if one should use aggregation = "doubleOOB" for
-the initial predictions rather than aggregation = "oob." Default is FALSE.}
+\item{binary}{A flag indicating whether or not the linear correction should use
+logistic regression for binary outcomes.}
 
-\item{simple}{flag indicating whether we should do a simple linear adjustment
-or do different adjustments by quantiles. Default is TRUE.}
+\item{aggregation}{Gives the aggregation to use for the first round of predictions.}
 
 \item{verbose}{flag which displays the bias of each qunatile.}
-
-\item{use_residuals}{flag indicating if we should use the residuals to fit the
-bias correction steps. Defualt is FALSE which means that we will use Y
-rather than Y-Y.hat as the regression outcome in the bias correction steps.}
-
-\item{adaptive}{flag to indicate whether we use adaptiveForestry or not in the
-regression step. Default is FALSE.}
-
-\item{monotone}{flag to indicate whether or not we should use monotonicity
-in the regression of Y on Y hat (when doing forest correction steps).
-If TRUE, will constrain the corrected prediction for Y to be monotone in the
-original prediction of Y. Default is FALSE.}
-
-\item{num_quants}{Number of quantiles to use when doing quantile specific bias
-correction. Will only be used if simple = FALSE. Default is 5.}
 
 \item{params.forestry}{A list of parameters to pass to the subsequent forestry
 calls. Note that these forests will be trained on features of dimension
@@ -104,7 +84,6 @@ Perform predictions given the forest using a bias correction based on
  # Corrected predictions
  pred.bc <- correctedPredict(forest,
                              newdata = x,
-                             simple = TRUE,
                              nrounds = 0)
 
 }

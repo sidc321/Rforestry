@@ -2563,7 +2563,6 @@ predictInfo <- function(object,
 #'  # Corrected predictions
 #'  pred.bc <- correctedPredict(forest,
 #'                              newdata = x,
-#'                              simple = TRUE,
 #'                              nrounds = 0)
 #'
 #' @export
@@ -2598,6 +2597,7 @@ correctedPredict <- function(object,
     }
   }
 
+  Y=NULL
   # Check the parameters match parameters for forestry or adaptiveForestry
   valid_params <- names(as.list(args(Rforestry::forestry)))
   if (any(!(names(params.forestry) %in% valid_params))) {
