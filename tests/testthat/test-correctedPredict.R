@@ -17,18 +17,19 @@ test_that('Bias corrections', {
 
   preds <- predict(forest, newdata = x, aggregation = "oob")
 
-  rmse <- sqrt(mean((preds - y)^2))
+  rmse <- sqrt(mean((preds - y[,1])^2))
 
   # Now do some bias corrected predictions with the forest ---------------------
   pred.bc2 <- correctedPredict(forest,
+                               newdata = x,
                                nrounds = 5)
 
-  rmse.bc2 <- sqrt(mean((pred.bc2 - y)^2))
+  rmse.bc2 <- sqrt(mean((pred.bc2$test.preds - y[,1])^2))
 
-  expect_equal(length(pred.bc2), 1000)
+  expect_equal(length(pred.bc2$test.preds), 1000)
 
 
-  expect_gt(rmse, rmse.bc2)
+  expect_gt(rmse.bc2,rmse)
 
   # Try the iris data ----------------------------------------------------------
 
@@ -53,7 +54,7 @@ test_that('Bias corrections', {
                               nrounds = 1)
   pred.bc3
 
-  rmse.bc3 <- sqrt(mean((pred.bc3 - y)^2))
+  rmse.bc3 <- sqrt(mean((pred.bc3$test.preds - y)^2))
 
 
 
