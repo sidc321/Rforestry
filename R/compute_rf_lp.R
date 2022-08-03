@@ -50,7 +50,8 @@ compute_lp <- function(object,
                        feature,
                        p,
                        scale=FALSE,
-                       aggregation="average"){
+                       aggregation="average",
+                       trainingIdx=NULL){
 
   # Checks and parsing:
   if (!inherits(object, "forestry")) {
@@ -72,6 +73,7 @@ compute_lp <- function(object,
   # Calculate the weight matrix with the correct aggregation
   args.predict <- list("aggregation" = aggregation,
                        "object" = object,
+                       "newdata" = newdata,
                        "weightMatrix" = TRUE)
   if (!is.null(trainingIdx)) {
     args.predict$trainingIdx <- trainingIdx

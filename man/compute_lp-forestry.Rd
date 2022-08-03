@@ -5,7 +5,15 @@
 \alias{compute_lp}
 \title{compute lp distances}
 \usage{
-compute_lp(object, newdata, feature, p, scale = FALSE, aggregation = "average")
+compute_lp(
+  object,
+  newdata,
+  feature,
+  p,
+  scale = FALSE,
+  aggregation = "average",
+  trainingIdx = NULL
+)
 }
 \arguments{
 \item{object}{A `forestry` object.}
