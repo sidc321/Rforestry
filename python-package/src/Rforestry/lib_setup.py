@@ -98,7 +98,7 @@ def setup_lib(lib):
     lib.get_prediction.restype = ctypes.c_double
 
     lib.get_weightMatrix.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_size_t]
-    lib.get_prediction.restype = ctypes.c_double
+    lib.get_weightMatrix.restype = ctypes.c_double
 
     lib.getVI.argtypes = [ctypes.c_void_p]
     lib.getVI.restype = ctypes.c_void_p
