@@ -427,20 +427,34 @@ std::vector<double>* get_tree_info(void* forest_ptr,
     info_holder = forest->getForest()->at(tree_idx)->getTreeInfo(forest->getTrainingData());
     int num_nodes = forest->getForest()->at(tree_idx)->getNodeCount();
     
-    std::vector<double>* tree_info(
-            new std::vector<double>(num_nodes*6)
+    std::vector<double>* treeInfo(
+            new std::vector<double>(num_nodes*8)
     );
 
     for (int i = 0; i < num_nodes; i++) {
-        tree_info->at(i) = (double)info_holder->left_child_id.at(i);
-        tree_info->at(num_nodes+i) = (double)info_holder->right_child_id.at(i);
-        tree_info->at(num_nodes*2+i) = (double)info_holder->var_id.at(i);
-        tree_info->at(num_nodes*3+i) = (double)info_holder->num_avg_samples.at(i);
-        tree_info->at(num_nodes*4+i) = info_holder->split_val.at(i);
-        tree_info->at(num_nodes*5+i) = info_holder->values.at(i);
+        treeInfo->at(i) = (double)info_holder->left_child_id.at(i);
+        treeInfo->at(num_nodes+i) = (double)info_holder->right_child_id.at(i);
+        treeInfo->at(num_nodes*2+i) = (double)info_holder->var_id.at(i);
+        treeInfo->at(num_nodes*3+i) = (double)info_holder->num_avg_samples.at(i);
+        treeInfo->at(num_nodes*4+i) = info_holder->split_val.at(i);
+        treeInfo->at(num_nodes*5+i) = info_holder->values.at(i);
+        treeInfo->at(num_nodes*6+i) = info_holder->naLeftCount.at(i);
+        treeInfo->at(num_nodes*7+i) = info_holder->naLeftCount.at(i);
     }
 
-    return tree_info;
+    treeInfo->push_back((info_holder->splittingSampleIndex).size());
+    for (size_t i = 0; i < (info_holder->splittingSampleIndex).size(); i++){
+        treeInfo->push_back(info_holder->splittingSampleIndex.at(i));
+    }
+
+    treeInfo->push_back((info_holder->averagingSampleIndex).size());
+    for (size_t i = 0; i < (info_holder->averagingSampleIndex).size(); i++){
+        treeInfo->push_back(info_holder->averagingSampleIndex.at(i));
+    }
+
+    treeInfo->push_back(info_holder->seed);
+
+    return treeInfo;
     
 
 }
@@ -479,6 +493,177 @@ double get_prediction(void* prediction_ptr, int i){
 double get_weightMatrix(void* prediction_ptr, size_t i, size_t j){
     predict_info* predictionResults = reinterpret_cast<predict_info* >(prediction_ptr);
     return predictionResults->weightMatrix->at(i, j);
+}
+
+
+void* py_reconstructree(void* data_ptr,
+        size_t ntree,
+        bool replace,
+        size_t sampSize,
+        double splitRatio,
+        bool OOBhonest,
+        bool doubleBootstrap,
+        size_t mtry,
+        size_t minNodeSizeSpt,
+        size_t minNodeSizeAvg,
+        size_t minNodeSizeToSplitSpt,
+        size_t minNodeSizeToSplitAvg,
+        double minSplitGain,
+        size_t maxDepth,
+        size_t interactionDepth,
+        unsigned int seed,
+        size_t nthread,
+        bool verbose,
+        bool splitMiddle,
+        size_t maxObs,
+        size_t minTreesPerGroup,
+        bool hasNas,
+        bool linear,
+        bool symmetric,
+        double overfitPenalty,
+        bool doubleTree,
+        size_t* tree_counts,
+        double* thresholds,
+        int* features,
+        int* na_left_count,
+        int* na_right_count,
+        size_t* split_idx,
+        size_t* average_idx,
+        double* predict_weights,
+        unsigned int* tree_seeds){
+
+    // Do stuff
+    DataFrame* df = reinterpret_cast<DataFrame* >(data_ptr);
+    forestry* forest ( new (std::nothrow) forestry(
+            df,
+            0,
+            replace,
+            sampSize,
+            splitRatio,
+            OOBhonest,
+            doubleBootstrap,
+            mtry,
+            minNodeSizeSpt,
+            minNodeSizeAvg,
+            minNodeSizeToSplitSpt,
+            minNodeSizeToSplitAvg,
+            minSplitGain,
+            maxDepth,
+            interactionDepth,
+            seed,
+            nthread,
+            verbose,
+            splitMiddle,
+            maxObs,
+            minTreesPerGroup,
+            hasNas,
+            linear,
+            symmetric,
+            overfitPenalty,
+            doubleTree
+    ));
+
+    std::vector<size_t>* categoricalColumns = df->getCatCols();
+
+    std::unique_ptr< std::vector<size_t> > categoricalFeatureCols_copy(
+      new std::vector<size_t>
+    );
+    for (size_t i = 0; i < categoricalColumns->size(); i++){
+        categoricalFeatureCols_copy->push_back(categoricalColumns->at(i));
+    }
+    
+
+    // Decode the forest data and create appropriate pointers
+    std::unique_ptr< std::vector< std::vector<int> > > var_ids(
+      new std::vector< std::vector<int> >
+    );
+    std::unique_ptr< std::vector< std::vector<double> > > split_vals(
+        new std::vector< std::vector<double> >
+    );
+    std::unique_ptr< std::vector< std::vector<int> > > naLeftCounts(
+        new std::vector< std::vector<int> >
+    );
+    std::unique_ptr< std::vector< std::vector<int> > > naRightCounts(
+        new std::vector< std::vector<int> >
+    );
+    std::unique_ptr< std::vector< std::vector<size_t> > > averagingSampleIndex(
+        new std::vector< std::vector<size_t> >
+    );
+    std::unique_ptr< std::vector< std::vector<size_t> > > splittingSampleIndex(
+        new std::vector< std::vector<size_t> >
+    );
+    std::unique_ptr< std::vector<unsigned int> > treeSeeds(
+        new std::vector<unsigned int>
+    );
+    std::unique_ptr< std::vector< std::vector<double> > > predictWeights(
+        new std::vector< std::vector<double> >
+    );
+
+    // Reserve space for each of the vectors equal to ntree
+    var_ids->reserve(ntree);
+    split_vals->reserve(ntree);
+    averagingSampleIndex->reserve(ntree);
+    splittingSampleIndex->reserve(ntree);
+    naLeftCounts->reserve(ntree);
+    naRightCounts->reserve(ntree);
+    treeSeeds->reserve(ntree);
+    predictWeights->reserve(ntree);
+
+    // Now actually populate the vectors
+    size_t ind = 0, ind_s = 0, ind_a = 0;
+    for(size_t i = 0; i < ntree; i++){
+        std::vector<int> cur_var_ids(tree_counts[3*i], 0);
+        std::vector<double> cur_split_vals(tree_counts[3*i], 0);
+        std::vector<int> curNaLeftCounts(tree_counts[3*i], 0);
+        std::vector<int> curNaRightCounts(tree_counts[3*i], 0);
+        std::vector<size_t> curSplittingSampleIndex(tree_counts[3*i+1], 0);
+        std::vector<size_t> curAveragingSampleIndex(tree_counts[3*i+2], 0);
+        std::vector<double> cur_predict_weights(tree_counts[3*i], 0);
+
+        for(size_t j = 0; j < tree_counts[3*i]; j++){
+            cur_var_ids.at(j) = features[ind];
+            cur_split_vals.at(j) = thresholds[ind];
+            curNaLeftCounts.at(j) = na_left_count[ind];
+            curNaRightCounts.at(j) = na_right_count[ind];
+            cur_predict_weights.at(j) = predict_weights[ind];
+
+            ind++;
+        }
+
+        for(size_t j = 0; j < tree_counts[3*i+1]; j++){
+            curSplittingSampleIndex.at(j) = split_idx[ind_s];
+            ind_s++;
+        }
+
+        for(size_t j = 0; j < tree_counts[3*i+2]; j++){
+            curAveragingSampleIndex.at(j) = average_idx[ind_a];
+            ind_a++;
+        }
+
+        var_ids->push_back(cur_var_ids);
+        split_vals->push_back(cur_split_vals);
+        naLeftCounts->push_back(curNaLeftCounts);
+        naRightCounts->push_back(curNaRightCounts);
+        splittingSampleIndex->push_back(curSplittingSampleIndex);
+        averagingSampleIndex->push_back(curAveragingSampleIndex);
+        predictWeights->push_back(cur_predict_weights);
+        treeSeeds->push_back(tree_seeds[i]);
+    }
+    
+    // call reconstructTrees
+    forest->reconstructTrees(categoricalFeatureCols_copy,
+                                   treeSeeds,
+                                   var_ids,
+                                   split_vals,
+                                   naLeftCounts,
+                                   naRightCounts,
+                                   averagingSampleIndex,
+                                   splittingSampleIndex,
+                                   predictWeights
+                                   );
+
+    return forest;
+
 }
     
 

@@ -112,6 +112,45 @@ def setup_lib(lib):
     lib.get_path.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_double), ctypes.c_int]
     lib.get_path.restype = ctypes.c_void_p
 
+    lib.py_reconstructree.argtypes = [
+        ctypes.c_void_p,
+        ctypes.c_size_t,
+        ctypes.c_bool,
+        ctypes.c_size_t,
+        ctypes.c_double,
+        ctypes.c_bool,
+        ctypes.c_bool,
+        ctypes.c_size_t,
+        ctypes.c_size_t,
+        ctypes.c_size_t,
+        ctypes.c_size_t,
+        ctypes.c_size_t,
+        ctypes.c_double,
+        ctypes.c_size_t,
+        ctypes.c_size_t,
+        ctypes.c_uint,
+        ctypes.c_size_t,
+        ctypes.c_bool,
+        ctypes.c_bool,
+        ctypes.c_size_t,
+        ctypes.c_size_t,
+        ctypes.c_bool,
+        ctypes.c_bool,
+        ctypes.c_bool,
+        ctypes.c_double,
+        ctypes.c_bool,
+        ctypes.POINTER(ctypes.c_size_t),
+        ctypes.POINTER(ctypes.c_double),
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_size_t),
+        ctypes.POINTER(ctypes.c_size_t),
+        ctypes.POINTER(ctypes.c_double),
+        ctypes.POINTER(ctypes.c_uint)
+    ]
+    lib.py_reconstructree.restype = ctypes.c_void_p
+
 
 def get_data_pointer(data):
     data = np.ascontiguousarray(data.values[:,:], np.double)

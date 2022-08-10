@@ -9,17 +9,17 @@ from random import randrange
 import ctypes
 from sklearn.model_selection import LeaveOneOut
 import statsmodels.api as sm
+import pickle
 
-from . import lib_setup
-
-from . import Py_preprocessing
+import lib_setup
+import Py_preprocessing
 
 
 # --- Loading the dynamic library -----------------
 if platform.system() == "Linux":
-    lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "libforestryCpp.so")))
+    lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), "libforestryCpp.so")))
 elif platform.system() == "Darwin":
-    lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "libforestryCpp.dylib")))
+    lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), "libforestryCpp.dylib")))
 lib_setup.setup_lib(lib)
 
 
@@ -1175,12 +1175,16 @@ class RandomForest:
                 cur_id
             ))
 
+            ind = numNodes*8
+
             self.Py_forest[cur_id]['children_right'] = np.empty(numNodes, dtype=np.intc)
             self.Py_forest[cur_id]['children_left'] = np.empty(numNodes, dtype=np.intc)
             self.Py_forest[cur_id]['feature'] = np.empty(numNodes, dtype=np.intc)
             self.Py_forest[cur_id]['n_node_samples'] = np.empty(numNodes, dtype=np.intc)
             self.Py_forest[cur_id]['threshold'] = np.empty(numNodes, dtype=np.double)
             self.Py_forest[cur_id]['values'] = np.empty(numNodes, dtype=np.double)
+            self.Py_forest[cur_id]['na_left_count'] = np.empty(numNodes, dtype=np.intc)
+            self.Py_forest[cur_id]['na_right_count'] = np.empty(numNodes, dtype=np.intc)
 
             for i in range(numNodes):
                 self.Py_forest[cur_id]['children_right'][i] = int(lib.vector_get(tree_info, i))
@@ -1189,6 +1193,23 @@ class RandomForest:
                 self.Py_forest[cur_id]['n_node_samples'][i] = int(lib.vector_get(tree_info, numNodes*3 + i))
                 self.Py_forest[cur_id]['threshold'][i] = lib.vector_get(tree_info, numNodes*4 + i)
                 self.Py_forest[cur_id]['values'][i] = lib.vector_get(tree_info, numNodes*5 + i)
+                self.Py_forest[cur_id]['na_left_count'][i] = int(lib.vector_get(tree_info, numNodes*6 + i))
+                self.Py_forest[cur_id]['na_right_count'][i] = int(lib.vector_get(tree_info, numNodes*7 + i))
+
+            self.Py_forest[cur_id]['splitting_sample_idx'] = np.empty(int(lib.vector_get(tree_info, ind)), dtype=np.intc)
+            ind += 1
+            for i in range(self.Py_forest[cur_id]['splitting_sample_idx'].size):
+                self.Py_forest[cur_id]['splitting_sample_idx'][i] = int(lib.vector_get(tree_info, ind))
+                ind += 1
+
+            self.Py_forest[cur_id]['averaging_sample_idx'] = np.empty(int(lib.vector_get(tree_info, ind)), dtype=np.intc)
+            ind+=1
+            for i in range(self.Py_forest[cur_id]['averaging_sample_idx'].size):
+                self.Py_forest[cur_id]['averaging_sample_idx'][i] = int(lib.vector_get(tree_info, ind))
+                ind+=1
+
+            
+            self.Py_forest[cur_id]['seed'] = int(lib.vector_get(tree_info, ind))
 
         return
 
@@ -1549,6 +1570,127 @@ class RandomForest:
         self.__init__(**valid_params)
         return self
 
+
+
+    # Saving and loading
+    def save_forestry(self, filename):
+        self.translate_tree_python()
+
+        with open(filename, 'wb') as outp:  # Overwrites any existing file.
+            # Set the ctypes pointers to None before saving (required by pickle)
+            temp_df = self.dataframe
+            temp_forest = self.forest
+            self.dataframe = None
+            self.forest = None
+
+            pickle.dump(self, outp, pickle.HIGHEST_PROTOCOL)
+
+            # Reset the pointers
+            self.dataframe = temp_df
+            self.forest = temp_forest
+
+
+    def load_forestry(self, filename):
+        with open(filename, 'rb') as inp:
+            rf = pickle.load(inp)
+                
+            groupVector = pd.to_numeric(rf.processed_dta['groups']) if rf.processed_dta['groups'] is not None else np.repeat(0, rf.processed_dta['nObservations'])
+            rf.dataframe = ctypes.c_void_p(lib.get_data(
+                lib_setup.get_data_pointer(pd.concat([rf.processed_dta['processed_x'], pd.Series(rf.processed_dta['y'])], axis=1)),
+                lib_setup.get_array_pointer(rf.processed_dta['categoricalFeatureCols'], dtype=np.ulonglong), rf.processed_dta['categoricalFeatureCols'].size,
+                lib_setup.get_array_pointer(rf.processed_dta['linearFeatureCols'], dtype=np.ulonglong), rf.processed_dta['linearFeatureCols'].size,
+                lib_setup.get_array_pointer(rf.processed_dta['featureWeights'], dtype=np.double),
+                lib_setup.get_array_pointer(rf.processed_dta['featureWeightsVariables'], dtype=np.ulonglong), rf.processed_dta['featureWeightsVariables'].size,
+                lib_setup.get_array_pointer(rf.processed_dta['observationWeights'], dtype=np.double),
+                lib_setup.get_array_pointer(rf.processed_dta['monotonicConstraints'], dtype=np.intc),
+                lib_setup.get_array_pointer(groupVector, dtype=np.ulonglong),
+                rf.monotoneAvg,
+                lib_setup.get_array_pointer(rf.processed_dta['symmetric'], dtype=np.ulonglong), rf.processed_dta['symmetric'].size,
+                rf.processed_dta['nObservations'], rf.processed_dta['numColumns']+1,
+                rf.seed
+            ))
+
+            tree_info = np.empty(rf.ntree*3, dtype=np.intc)
+            total_nodes, total_split_idx, total_av_idx = 0, 0, 0
+            for i in range(rf.ntree): 
+                tree_info[3*i] = rf.Py_forest[i]['children_right'].size
+                total_nodes += tree_info[3*i]
+
+                tree_info[3*i+1] = rf.Py_forest[i]['splitting_sample_idx'].size
+                total_split_idx += tree_info[3*i+1]
+
+                tree_info[3*i+2] = rf.Py_forest[i]['averaging_sample_idx'].size
+                total_av_idx += tree_info[3*i+2]
+                
+            thresholds = np.empty(total_nodes, dtype=np.double)
+            features = np.empty(total_nodes, dtype=np.intc)
+            na_left_counts = np.empty(total_nodes, dtype=np.intc)
+            na_right_counts = np.empty(total_nodes, dtype=np.intc)
+            sample_split_idx = np.empty(total_split_idx, dtype=np.intc)
+            sample_av_idx = np.empty(total_av_idx, dtype=np.intc)
+            predict_weights = np.empty(total_nodes, dtype=np.double)
+            tree_seeds = np.empty(rf.ntree, dtype=np.uintc)
+
+            ind, ind_s, ind_a = 0, 0, 0
+            for i in range(rf.ntree):
+                for j in range(tree_info[3*i]):
+                    thresholds[ind] = rf.Py_forest[i]['threshold'][j]
+                    features[ind] = rf.Py_forest[i]['feature'][j]
+                    na_left_counts[ind] = rf.Py_forest[i]['na_left_count'][j]
+                    na_right_counts[ind] = rf.Py_forest[i]['na_right_count'][j]
+                    predict_weights[ind] = rf.Py_forest[i]['values'][j]
+
+                    ind += 1
+
+                for j in range(tree_info[3*i+1]):
+                    sample_split_idx[ind_s] = rf.Py_forest[i]['splitting_sample_idx'][j]
+                    ind_s += 1
+                
+                for j in range(tree_info[3*i+2]):
+                    sample_av_idx[ind_a] = rf.Py_forest[i]['averaging_sample_idx'][j]
+                    ind_a += 1
+
+                tree_seeds[i] = rf.Py_forest[i]['seed']
+
+            rf.forest = ctypes.c_void_p(lib.py_reconstructree(
+                rf.dataframe,
+                rf.ntree,
+                rf.replace,
+                rf.sampsize,
+                rf.splitratio,
+                rf.OOBhonest,
+                rf.doubleBootstrap,
+                rf.mtry,
+                rf.nodesizeSpl,
+                rf.nodesizeAvg,
+                rf.nodesizeStrictSpl,
+                rf.nodesizeStrictAvg,
+                rf.minSplitGain,
+                rf.maxDepth,
+                rf.interactionDepth,
+                rf.seed,
+                rf.nthread,
+                rf.verbose,
+                rf.middleSplit,
+                rf.maxObs,
+                rf.minTreesPerGroup,
+                rf.processed_dta['hasNas'],
+                rf.linear,
+                not np.any(rf.processed_dta['symmetric']),
+                rf.overfitPenalty,
+                rf.doubleTree,
+                lib_setup.get_array_pointer(tree_info, dtype=np.ulonglong),
+                lib_setup.get_array_pointer(thresholds, dtype=np.double),
+                lib_setup.get_array_pointer(features, dtype=np.intc),
+                lib_setup.get_array_pointer(na_left_counts, dtype=np.intc),
+                lib_setup.get_array_pointer(na_right_counts, dtype=np.intc),
+                lib_setup.get_array_pointer(sample_split_idx, dtype=np.ulonglong),
+                lib_setup.get_array_pointer(sample_av_idx, dtype=np.ulonglong),
+                lib_setup.get_array_pointer(predict_weights, dtype=np.double),
+                lib_setup.get_array_pointer(tree_seeds, dtype=np.uintc),
+            ))
+            
+            return rf
 
 # make linFeats same as symmetric...
 
