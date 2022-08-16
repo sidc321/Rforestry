@@ -11,20 +11,24 @@ cat_col = np.random.choice(['a', 'b', 'c'], size=len(X.index))
 X['CategoricalVar'] = cat_col
 
 # Create a RandomForest object
-fr = RandomForest(OOBhonest=True, doubleBootstrap=True, scale=False, ntree=500)
+fr = RandomForest(ntree=500)
 
-print('Traingng the forest')
-fr.fit(X, y)
+print('Trainging the forest')
+fr.fit(X, y, linFeats=[0, 1])
 
 print('Making doubleOOB predictions')
-preds = fr.predict(aggregation='doubleOOB')
+preds = fr.predict(X)
 print(preds)
 
-fr.save_forestry('rforest.py')
+fr.save_forestry('rforest')
 
 
-fr_load = fr.load_forestry('rforest.py')
-preds_after = fr_load.predict(aggregation='doubleOOB')
+fr_load = fr.load_forestry('rforest')
+preds_after = fr_load.predict(X)
 print(preds_after)
 
 print('\n The two predictions are equal: ' + str(np.array_equal(preds, preds_after)))
+
+
+fr = RandomForest()
+print(fr.test_array(5))

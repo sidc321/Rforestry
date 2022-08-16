@@ -276,6 +276,7 @@ void forestryTree::predict(
     size_t operator()() {return currentNumber++; }
   };
 
+
   std::vector<size_t> updateIndex(outputPrediction.size());
   rangeGenerator _rangeGenerator(0);
   std::generate(updateIndex.begin(), updateIndex.end(), _rangeGenerator);

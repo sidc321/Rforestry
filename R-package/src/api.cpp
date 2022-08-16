@@ -20,6 +20,9 @@ void* get_data (
         double* feat_weights,
         size_t* feat_weight_vars,
         size_t countFtWeightVars,
+        double* deep_feat_weights,
+        size_t* deep_feat_weight_vars,
+        size_t countDeepFtWeightVars,
         double* observation_weights,
         int* mon_constraints,
         size_t* groupMemberships,
@@ -88,8 +91,7 @@ void* get_data (
             new std::vector<double>(numColumns)
     );
 
-    for (size_t i = 0; i < numColumns; i++)
-    {
+    for (size_t i = 0; i < numColumns; i++){
         feature_weights->at(i) = feat_weights[i];
     }
 
@@ -104,13 +106,32 @@ void* get_data (
     }
 
 
+    // Deep feature weights for each column
+    std::unique_ptr< std::vector<double> > deep_feature_weights (
+            new std::vector<double>(numColumns)
+    );
+
+    for (size_t i = 0; i < numColumns; i++){
+        deep_feature_weights->at(i) = deep_feat_weights[i];
+    }
+
+
+    // Deep feature indecies based
+    std::unique_ptr< std::vector<size_t> > deep_feature_weight_vars (
+            new std::vector<size_t> (countDeepFtWeightVars)
+    );
+
+    for (size_t i = 0; i < countDeepFtWeightVars; i++) {
+        deep_feature_weight_vars->at(i) = deep_feat_weight_vars[i];
+    }
+
+
     // Observation weights
     std::unique_ptr< std::vector<double> > obs_weights (
             new std::vector<double>(numRows)
     );
 
-    for (size_t i = 0; i < numRows; i++)
-    {
+    for (size_t i = 0; i < numRows; i++){
         obs_weights->at(i) = observation_weights[i];
     }
 
@@ -120,8 +141,7 @@ void* get_data (
             new std::vector<int>(numColumns)
     );
 
-    for (size_t i = 0; i < numColumns; i++)
-    {
+    for (size_t i = 0; i < numColumns; i++){
         monotone_constraints->at(i) = mon_constraints[i];
     }
 
@@ -131,8 +151,7 @@ void* get_data (
             new std::vector<size_t>(numRows)
     );
 
-    for (size_t i = 0; i < numRows; i++)
-    {
+    for (size_t i = 0; i < numRows; i++){
         groups->at(i) = groupMemberships[i];
     }
 
@@ -156,14 +175,15 @@ void* get_data (
             numColumns,
             std::move(feature_weights),
             std::move(feature_weight_vars),
-            std::move(feature_weights),
-            std::move(feature_weight_vars),
+            std::move(deep_feature_weights),
+            std::move(deep_feature_weight_vars),
             std::move(obs_weights),
             std::move(monotone_constraints),
             std::move(groups),
             monotoneAvg,
             std::move(symmetric_constraints)
     );
+
     return test_df;
 }
 
@@ -664,6 +684,20 @@ void* py_reconstructree(void* data_ptr,
 
     return forest;
 
+}
+
+int test_array_passing(double (&test_arr)[]){
+
+    test_arr[1] = 1;
+
+    return 0;
+}
+
+int test_array(size_t* arr){
+
+    arr[0] = 1000;
+
+    return 0;
 }
     
 

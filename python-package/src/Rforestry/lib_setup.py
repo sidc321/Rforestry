@@ -16,6 +16,9 @@ def setup_lib(lib):
         ctypes.POINTER(ctypes.c_size_t),
         ctypes.c_size_t,
         ctypes.POINTER(ctypes.c_double),
+        ctypes.POINTER(ctypes.c_size_t),
+        ctypes.c_size_t,
+        ctypes.POINTER(ctypes.c_double),
         ctypes.POINTER(ctypes.c_int),
         ctypes.POINTER(ctypes.c_size_t),
         ctypes.c_bool,
@@ -166,10 +169,9 @@ def get_data_pointer(data):
     # in_array_ptrs = (c_double_p * len(data))(*(r.ctypes.data_as(c_double_p) for r in data))
     # return in_array_ptrs
 
-    return get_array_pointer(data.flatten(), np.double)
+    return get_array_pointer(data.ravel(), np.double)
 
 
 
 def get_array_pointer(array, dtype):
-    arr = np.ascontiguousarray(array, dtype)
-    return np.ctypeslib.as_ctypes(arr)
+    return np.ctypeslib.as_ctypes(np.ascontiguousarray(array, dtype))
