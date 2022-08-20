@@ -1139,6 +1139,169 @@ std::vector<double> forestry::predictOOB(
 }
 
 
+void forestry::predictOOB_forestry(
+    std::vector< std::vector<double> >* xNew,
+    double (&outputOOBPrediction)[],
+    arma::Mat<double>* weightMatrix,
+    bool doubleOOB,
+    bool exact
+) {
+
+  size_t numObservations = getTrainingData()->getNumRows();
+  std::vector<size_t> outputOOBCount(numObservations);
+
+  for (size_t i=0; i<numObservations; i++) {
+    outputOOBCount[i] = 0;
+  }
+
+  // Only needed if exact = TRUE, vector for storing each tree's predictions
+  std::vector< std::vector<double> > tree_preds;
+  std::vector<size_t> tree_seeds;
+
+    #if DOPARELLEL
+      size_t nthreadToUse = getNthread();
+      if (nthreadToUse == 0) {
+        // Use all threads
+        nthreadToUse = std::thread::hardware_concurrency();
+      }
+      if (isVerbose()) {
+        std::cout << "Calculating OOB parallel using " << nthreadToUse << " threads"
+                          << std::endl;
+      }
+      std::vector<std::thread> allThreads(nthreadToUse);
+      std::mutex threadLock;
+
+      // For each thread, assign a sequence of tree numbers that the thread
+      // is responsible for handling
+      for (size_t t = 0; t < nthreadToUse; t++) {
+        auto dummyThread = std::bind(
+          [&](const int iStart, const int iEnd, const int t_) {
+            // loop over all items
+            for (int i=iStart; i < iEnd; i++) {
+    #else
+              // For non-parallel version, just simply iterate all trees serially
+              for(int i=0; i<((int) getNtree()); i++ ) {
+    #endif
+                try {
+                  std::vector<double> outputOOBPrediction_iteration(numObservations);
+                  std::vector<size_t> outputOOBCount_iteration(numObservations);
+                  for (size_t j=0; j<numObservations; j++) {
+                    outputOOBPrediction_iteration[j] = 0;
+                    outputOOBCount_iteration[j] = 0;
+                  }
+                  forestryTree *currentTree = (*getForest())[i].get();
+                  (*currentTree).getOOBPrediction(
+                      outputOOBPrediction_iteration,
+                      outputOOBCount_iteration,
+                      getTrainingData(),
+                      getOOBhonest(),
+                      doubleOOB,
+                      getMinNodeSizeToSplitAvg(),
+                      xNew,
+                      weightMatrix
+                  );
+                  #if DOPARELLEL
+                  std::lock_guard<std::mutex> lock(threadLock);
+                  #endif
+
+                  // based on tree seeds when tree seeds might be uninitialized
+                  tree_seeds.push_back(currentTree->getSeed());
+
+                  if (exact) {
+                    tree_preds.push_back(outputOOBPrediction_iteration);
+                    for (size_t j=0; j < numObservations; j++) {
+                      outputOOBCount[j] += outputOOBCount_iteration[j];
+                    }
+                  } else {
+                    for (size_t j=0; j < numObservations; j++) {
+                      outputOOBPrediction[j] += outputOOBPrediction_iteration[j];
+                      outputOOBCount[j] += outputOOBCount_iteration[j];
+                    }
+                  }
+
+                } catch (std::runtime_error &err) {
+                  // std::cerr << err.what() << std::endl;
+                }
+              }
+    #if DOPARELLEL
+            },
+            t * getNtree() / nthreadToUse,
+            (t + 1) == nthreadToUse ?
+            getNtree() :
+              (t + 1) * getNtree() / nthreadToUse,
+              t
+        );
+        allThreads[t] = std::thread(dummyThread);
+          }
+          std::for_each(
+            allThreads.begin(),
+            allThreads.end(),
+            [](std::thread& x) { x.join(); }
+          );
+    #endif
+
+  double OOB_MSE = 0;
+
+  if (exact) {
+    std::vector<size_t> indices(tree_seeds.size());
+    std::iota(indices.begin(), indices.end(), 0);
+    //Order the indices by the seeds of the corresponding trees
+    std::sort(indices.begin(), indices.end(),
+              [&](size_t a, size_t b) -> bool {
+                return tree_seeds[a] > tree_seeds[b];
+              });
+
+
+    // Now aggregate using the new index ordering
+    for (std::vector<size_t>::iterator iter = indices.begin();
+         iter != indices.end();
+         ++iter)
+    {
+      size_t cur_index = *iter;
+
+      // Aggregate all predictions for current tree
+      for (size_t j = 0; j < numObservations; j++) {
+        if (outputOOBCount[j] != 0) {
+          outputOOBPrediction[j] += tree_preds[cur_index][j] / outputOOBCount[j];
+
+        } else {
+          outputOOBPrediction[j] = std::numeric_limits<double>::quiet_NaN();
+        }
+      }
+    }
+    //Also divide the weightMatrix
+    if (weightMatrix) {
+      for (size_t j=0; j<numObservations; j++){
+        if (outputOOBCount[j] != 0) {
+          for (size_t i = 0; i < numObservations; i++) {
+            (*weightMatrix)(j,i) = (*weightMatrix)(j,i) / outputOOBCount[j];
+          }
+        }
+      }
+    }
+
+  } else {
+    for (size_t j=0; j<numObservations; j++){
+      double trueValue = getTrainingData()->getOutcomePoint(j);
+      if (outputOOBCount[j] != 0) {
+        OOB_MSE +=
+          pow(trueValue - outputOOBPrediction[j] / outputOOBCount[j], 2);
+        outputOOBPrediction[j] = outputOOBPrediction[j] / outputOOBCount[j];
+        //Also divide the weightMatrix
+        if (weightMatrix) {
+          for (size_t i = 0; i < numObservations; i++) {
+            (*weightMatrix)(j,i) = (*weightMatrix)(j,i) / outputOOBCount[j];
+          }
+        }
+      } else {
+        outputOOBPrediction[j] = std::numeric_limits<double>::quiet_NaN();
+      }
+    }
+  }
+
+}
+
+
 void forestry::calculateVariableImportance() {
   // For all variables, shuffle + get OOB Error, record in
 

@@ -13,13 +13,13 @@ cat_col = np.random.choice(['a', 'b', 'c'], size=len(X.index))
 X['CategoricalVar'] = cat_col
 
 # Create a RandomForest object
-fr = RandomForest(ntree=500)
+fr = RandomForest(ntree=500, OOBhonest=True)
 
 print('Trainging the forest')
 fr.fit(X, y, linFeats=[0, 1])
 
 print('Making predictions')
-preds = fr.predict(X)
+preds = fr.predict(aggregation='oob')
 print(preds)
 
 # fr.save_forestry('rforest')

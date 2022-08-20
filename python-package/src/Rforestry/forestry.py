@@ -795,17 +795,6 @@ class RandomForest:
         # Initialize the final prediction array
         n_arr = ctypes.c_double * nPreds
         res = n_arr()
-        lib.predict_forest.argtypes = [ctypes.c_void_p, ctypes.c_void_p, 
-                                        ctypes.POINTER(ctypes.c_double), 
-                                        ctypes.c_uint,
-                                        ctypes.c_size_t,
-                                        ctypes.c_bool,
-                                        ctypes.c_bool,
-                                        ctypes.c_bool,
-                                        ctypes.c_void_p,
-                                        ctypes.c_size_t,
-                                        ctypes.POINTER(n_arr)
-                                        ]
         
         # If option set to terminalNodes, we need to make matrix of ID's
         if aggregation == 'oob':
@@ -814,6 +803,14 @@ class RandomForest:
                 warnings.warn('Attempting to do OOB predictions on a dataset which doesn\'t match the training data!')
                 return None
 
+            lib.predictOOB_forest.argtypes = [ctypes.c_void_p, ctypes.c_void_p, 
+                                        ctypes.POINTER(ctypes.c_double), 
+                                        ctypes.c_bool,
+                                        ctypes.c_bool,
+                                        ctypes.c_bool,
+                                        ctypes.POINTER(n_arr)
+                                        ]
+
             if newdata is None:
                 forest_preds = ctypes.c_void_p(lib.predictOOB_forest(
                     self.forest,
@@ -821,8 +818,8 @@ class RandomForest:
                     lib_setup.get_data_pointer(self.processed_dta['processed_x']),
                     False,
                     exact,
-                    nPreds,
-                    self.verbose
+                    self.verbose,
+                    ctypes.byref(res)
                 ))
 
             else:
@@ -832,8 +829,8 @@ class RandomForest:
                     lib_setup.get_data_pointer(processed_x),
                     False,
                     exact,
-                    nPreds,
-                    self.verbose
+                    self.verbose,
+                    ctypes.byref(res)
                 ))
 
         elif aggregation == 'doubleOOB':
@@ -844,6 +841,14 @@ class RandomForest:
             if not self.doubleBootstrap:
                 raise ValueError('Attempting to do double OOB predictions with a forest that was not trained with doubleBootstrap = True')
 
+            lib.predictOOB_forest.argtypes = [ctypes.c_void_p, ctypes.c_void_p, 
+                                        ctypes.POINTER(ctypes.c_double), 
+                                        ctypes.c_bool,
+                                        ctypes.c_bool,
+                                        ctypes.c_bool,
+                                        ctypes.POINTER(n_arr)
+                                        ]
+
             if newdata is None:
                 forest_preds = ctypes.c_void_p(lib.predictOOB_forest(
                     self.forest,
@@ -851,8 +856,8 @@ class RandomForest:
                     lib_setup.get_data_pointer(self.processed_dta['processed_x']),
                     True,
                     exact,
-                    nPreds,
-                    self.verbose
+                    self.verbose,
+                    ctypes.byref(res)
                 ))
 
             else:
@@ -862,12 +867,24 @@ class RandomForest:
                     lib_setup.get_data_pointer(processed_x),
                     False,
                     exact,
-                    len(processed_x.index),
-                    self.verbose
+                    self.verbose,
+                    ctypes.byref(res)
                 ))
 
         
         else:
+            lib.predict_forest.argtypes = [ctypes.c_void_p, ctypes.c_void_p, 
+                                        ctypes.POINTER(ctypes.c_double), 
+                                        ctypes.c_uint,
+                                        ctypes.c_size_t,
+                                        ctypes.c_bool,
+                                        ctypes.c_bool,
+                                        ctypes.c_bool,
+                                        ctypes.c_void_p,
+                                        ctypes.c_size_t,
+                                        ctypes.POINTER(n_arr)
+                                        ]
+
             lib.predict_forest(
                 self.forest,
                 self.dataframe,

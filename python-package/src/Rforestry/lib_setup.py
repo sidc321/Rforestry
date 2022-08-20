@@ -63,16 +63,6 @@ def setup_lib(lib):
     lib.train_forest.restype = ctypes.c_void_p
 
 
-    # set up the predictOOB_forest function
-    lib.predictOOB_forest.argtypes = [ctypes.c_void_p, ctypes.c_void_p, 
-                                        ctypes.POINTER(ctypes.c_double), 
-                                        ctypes.c_bool,
-                                        ctypes.c_bool,
-                                        ctypes.c_int,
-                                        ctypes.c_bool]
-    lib.predictOOB_forest.restype =  ctypes.c_void_p
-
-
     # set up the vector_get function
     lib.vector_get.argtypes = [ctypes.c_void_p, ctypes.c_int]
     lib.vector_get.restype = ctypes.c_double

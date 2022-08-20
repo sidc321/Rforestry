@@ -79,6 +79,14 @@ public:
     bool exact
   );
 
+  void predictOOB_forestry(
+    std::vector< std::vector<double> >* xNew,
+    double (&outputOOBPrediction)[],
+    arma::Mat<double>* weightMatrix,
+    bool doubleOOB,
+    bool exact
+  );
+
   void fillinTreeInfo(
       std::unique_ptr< std::vector< tree_info > > & forest_dta
   );

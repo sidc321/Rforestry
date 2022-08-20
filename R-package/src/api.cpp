@@ -339,63 +339,43 @@ void predict_forest(
 }
 
 
-
-std::vector<double>* predictOOB_forest(
+void predictOOB_forest(
         void* forest_pt,
         void* dataframe_pt,
         double* test_data,
         bool doubleOOB,
         bool exact,
-        int num_test_rows,
-        bool verbose
+        bool verbose,
+        double (&predictions)[]
 ){
     if (verbose)
         std::cout << forest_pt << std::endl;
 
     forestry* forest = reinterpret_cast<forestry *>(forest_pt);
     DataFrame* dta_frame = reinterpret_cast<DataFrame *>(dataframe_pt);
-
     forest->_trainingData = dta_frame;
 
-    // Create Data
-    std::vector<std::vector<double>> data_numpy;
+    //Create Data
+    std::vector< std::vector<double> >* predi_data {
+            new std::vector< std::vector<double> >(dta_frame->getNumColumns(), std::vector<double>(dta_frame->getNumRows()))
+    };
 
-
-    for (int j = 0; j<dta_frame->getNumColumns(); j++) {
-        std::vector<double> col;
-        for (int i = 0; i<num_test_rows; i++){
-            col.push_back(test_data[i*dta_frame->getNumColumns()+j]);
+    for (size_t j = 0; j < dta_frame->getNumColumns(); j++) {
+        for (size_t i = 0; i < dta_frame->getNumRows(); i++){
+            predi_data->at(j).at(i) = test_data[i*dta_frame->getNumColumns() + j];
         }
-        data_numpy.push_back(col);
     }
 
-    std::vector< std::vector<double> >* predi_data (
-            new std::vector< std::vector<double> >
-    );
-
-    for (size_t i = 0; i < dta_frame->getNumColumns(); i++) {
-        predi_data->push_back(data_numpy[i]);
-    }
-
-
-
-    std::vector<double> testForestPredictionOOB = forest->predictOOB(
+    forest->predictOOB_forestry(
             predi_data,
+            predictions,
             nullptr,
             doubleOOB,
             exact
     );
 
-    std::vector<double>* preds (
-            new std::vector<double>(num_test_rows)
-    ) ;
+    delete(predi_data);
 
-    for (size_t i = 0; i < num_test_rows; i++){
-        preds->at(i) = testForestPredictionOOB[i];
-    }
-
-
-    return preds;
 }
 
 std::vector<double>* getVI(void* forest_pt){
