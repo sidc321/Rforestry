@@ -748,15 +748,20 @@ class RandomForest:
         # Preprocess the data. We only run the data checker if ridge is turned on,
         # because even in the case where there were no NAs in train, we still want to predict.
 
-        if newdata is not None:
-            Py_preprocessing.forest_checker(self)
+        Py_preprocessing.forest_checker(self)
 
+        if newdata is not None:
             if not (isinstance(newdata, pd.DataFrame) or type(newdata).__module__ == np.__name__ or isinstance(newdata, list) or isinstance(newdata, pd.Series)):
                 raise AttributeError('newdata must be a Pandas DataFrame, a numpy array, a Pandas Series, or a regular list')
 
             newdata = (pd.DataFrame(newdata)).copy()
             newdata.reset_index(drop=True, inplace=True)
-            newdata = Py_preprocessing.testing_data_checker(self, newdata, self.processed_dta['hasNas'])
+            Py_preprocessing.testing_data_checker(self, newdata, self.processed_dta['hasNas'])
+
+            if self.processed_dta['featNames'] is not None:
+                if not all(newdata.columns == self.processed_dta['featNames']):
+                    warnings.warn('newdata columns have been reordered so that they match the training feature matrix')
+                    newdata = newdata[self.processed_dta['featNames']]
             
             processed_x = Py_preprocessing.preprocess_testing(newdata, self.processed_dta['categoricalFeatureCols'], self.processed_dta['categoricalFeatureMapping'])
 
@@ -777,7 +782,7 @@ class RandomForest:
               raise ValueError('trees must contain indices which are integers between -ntree and ntree-1')
     
         # If trees are being used, we need to convert them into a weight vector
-        tree_weights = np.repeat(0, self.ntree)
+        tree_weights = np.zeros(self.ntree, dtype=np.ulonglong)
         if trees is not None:
             for i in range(len(trees)):
                 tree_weights[trees[i]] += 1
@@ -786,6 +791,22 @@ class RandomForest:
             use_weights = False
 
         nPreds = len(processed_x.index) if newdata is not None else self.processed_dta['nObservations']
+
+        # Initialize the final prediction array
+        n_arr = ctypes.c_double * nPreds
+        res = n_arr()
+        lib.predict_forest.argtypes = [ctypes.c_void_p, ctypes.c_void_p, 
+                                        ctypes.POINTER(ctypes.c_double), 
+                                        ctypes.c_uint,
+                                        ctypes.c_size_t,
+                                        ctypes.c_bool,
+                                        ctypes.c_bool,
+                                        ctypes.c_bool,
+                                        ctypes.c_void_p,
+                                        ctypes.c_size_t,
+                                        ctypes.POINTER(n_arr)
+                                        ]
+        
         # If option set to terminalNodes, we need to make matrix of ID's
         if aggregation == 'oob':
 
@@ -847,7 +868,7 @@ class RandomForest:
 
         
         else:
-            forest_preds = ctypes.c_void_p(lib.predict_forest(
+            lib.predict_forest(
                 self.forest,
                 self.dataframe,
                 lib_setup.get_data_pointer(processed_x),
@@ -857,15 +878,11 @@ class RandomForest:
                 weightMatrix,
                 use_weights,
                 lib_setup.get_array_pointer(tree_weights, dtype=np.ulonglong),
-                len(processed_x.index)
-            ))
-
-
-        res = np.empty(nPreds)
-        for i in range(nPreds):
-            res[i] = lib.vector_get(forest_preds, i)
+                len(processed_x.index),
+                ctypes.byref(res)
+            )
         
-        return res
+        return np.array(res)
 
 
     def get_oob(self, noWarning = False):
@@ -977,12 +994,12 @@ class RandomForest:
             raise ValueError('We cannot do local-conformal intervals unless OOBhonest is True')
 
         #Check the RandomForest object
-        Py_preprocessing.forest_checker(self)
+        # Py_preprocessing.forest_checker(self)
 
-        #Check the newdata
-        newdata = Py_preprocessing.testing_data_checker(self, newdata, self.processed_dta['hasNas'])
-        newdata = pd.DataFrame(newdata)
-        processed_x = Py_preprocessing.preprocess_testing(newdata, self.processed_dta['categoricalFeatureCols'], self.processed_dta['categoricalFeatureMapping'])
+        # #Check the newdata
+        # newdata = Py_preprocessing.testing_data_checker(self, newdata, self.processed_dta['hasNas'])
+        # newdata = pd.DataFrame(newdata)
+        # processed_x = Py_preprocessing.preprocess_testing(newdata, self.processed_dta['categoricalFeatureCols'], self.processed_dta['categoricalFeatureMapping'])
 
         
         if method == 'OOB-bootstrap':

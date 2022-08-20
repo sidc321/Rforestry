@@ -34,27 +34,16 @@ void* get_data (
         unsigned int seed
 ) {
     // Create Data: first n_cols - 1 are features, last is outcome
-    std::vector<std::vector<double>> data_numpy;
-
-
-    for (int j = 0; j<numColumns; j++) {
-        std::vector<double> col;
-        for (int i = 0; i<numRows; i++){
-            col.push_back(arr[i*numColumns + j]);
-        }
-        data_numpy.push_back(col);
-    }
-
     std::unique_ptr< std::vector< std::vector<double> > > featureData {
-            new std::vector<std::vector<double> >
+            new std::vector< std::vector<double> >(numColumns-1, std::vector<double>(numRows))
     };
 
-
-    for (size_t i = 0; i < numColumns-1; i++) {
-        featureData->push_back(data_numpy[i]);
+    for (size_t j = 0; j < numColumns-1; j++) {
+        for (size_t i = 0; i<numRows; i++){
+            featureData->at(j).at(i) = arr[i*numColumns + j];
+        }
     }
-
-    numColumns--;
+    
 
     // Create outcome data
     std::unique_ptr< std::vector<double> > outcomeData {
@@ -62,8 +51,10 @@ void* get_data (
     };
 
     for (size_t i = 0; i < numRows; i++) {
-        outcomeData->at(i) = data_numpy[numColumns][i];
+        outcomeData->at(i) = arr[numColumns*i-1];
     }
+
+    numColumns--;
 
 
     // Categorical features column
@@ -253,7 +244,7 @@ void* train_forest(
     return forest;
 }
 
-void* predict_forest(
+void predict_forest(
         void* forest_pt,
         void* dataframe_pt,
         double* test_data,
@@ -263,8 +254,10 @@ void* predict_forest(
         bool returnWeightMatrix,
         bool use_weights,
         size_t* tree_weights,
-        int num_test_rows
-){
+        size_t num_test_rows,
+        double (&predictions)[]
+){   
+
 
     forestry* forest = reinterpret_cast<forestry *>(forest_pt);
     DataFrame* dta_frame = reinterpret_cast<DataFrame *>(dataframe_pt);
@@ -272,23 +265,14 @@ void* predict_forest(
     forest->_trainingData = dta_frame;
 
     // Create Data
-    std::vector<std::vector<double>> data_numpy;
+    std::vector< std::vector<double> >* predi_data {
+            new std::vector< std::vector<double> >(dta_frame->getNumColumns(), std::vector<double>(num_test_rows))
+    };
 
-
-    for (int j = 0; j<dta_frame->getNumColumns(); j++) {
-        std::vector<double> col;
-        for (int i = 0; i<num_test_rows; i++){
-            col.push_back(test_data[i*dta_frame->getNumColumns()+j]);
+    for (size_t j = 0; j < dta_frame->getNumColumns(); j++) {
+        for (size_t i = 0; i < num_test_rows; i++){
+            predi_data->at(j).at(i) = test_data[i*dta_frame->getNumColumns() + j];
         }
-        data_numpy.push_back(col);
-    }
-
-    std::vector< std::vector<double> >* predi_data (
-            new std::vector< std::vector<double> >
-    );
-
-    for (size_t i = 0; i < dta_frame->getNumColumns(); i++) {
-        predi_data->push_back(data_numpy[i]);
     }
 
 
@@ -302,22 +286,18 @@ void* predict_forest(
             new std::vector<size_t>(forest->getNtree())
     );
 
-    for (size_t i = 0; i < forest->getNtree(); i++)
-    {
+    for (size_t i = 0; i < forest->getNtree(); i++){
         weights->at(i) = tree_weights[i];
     }
-
-
-    // Initialize the final predictions
-    std::vector<double>* testForestPrediction;
 
     
     if (returnWeightMatrix) {
         size_t nrow = num_test_rows;
         size_t ncol = forest->getNtrain();
         weightMatrix.zeros(nrow, ncol);
-        testForestPrediction = forest->predict(
+        forest->predict_forestry(
                 predi_data,
+                predictions,
                 &weightMatrix,
                 nullptr,
                 nullptr,
@@ -330,29 +310,32 @@ void* predict_forest(
     }
 
     else {
-        testForestPrediction = forest->predict(
-                predi_data,
-                nullptr,
-                nullptr,
-                nullptr,
-                seed,
-                nthread,
-                exact,
-                use_weights,
-                weights
+        forest->predict_forestry(
+            predi_data,
+            predictions,
+            nullptr,
+            nullptr,
+            nullptr,
+            seed,
+            nthread,
+            exact,
+            use_weights,
+            weights
         );
 
-        return (void*)testForestPrediction;
+        delete(predi_data);
+        delete(weights);
+
     }
 
 
-    predict_info* predictionResults = new predict_info;
-    predictionResults->predictions = testForestPrediction;
-    predictionResults->weightMatrix = &weightMatrix;
-    predictionResults->terminalNodes = &terminalNodes;
-    predictionResults->coefficients = &coefficients;
+    // predict_info* predictionResults = new predict_info;
+    // predictionResults->predictions = testForestPrediction;
+    // predictionResults->weightMatrix = &weightMatrix;
+    // predictionResults->terminalNodes = &terminalNodes;
+    // predictionResults->coefficients = &coefficients;
 
-    return (void*)predictionResults;
+    // return (void*)predictionResults;
 }
 
 

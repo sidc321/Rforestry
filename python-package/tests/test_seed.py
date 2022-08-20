@@ -19,11 +19,11 @@ def test_different_predictions():
     X = df.loc[:, df.columns != 'target']
     y = df['target']
 
-    forest1 = RandomForest(ntree=1, maxDepth = 2, seed=1, scale=False)
+    forest1 = RandomForest(ntree=10, maxDepth = 2, seed=1, scale=False)
     forest1.fit(X, y)
     p1 = forest1.predict(X)
 
-    forest2 = RandomForest(ntree=1, maxDepth = 2, seed=1, scale=False)
+    forest2 = RandomForest(ntree=10, maxDepth = 2, seed=1, scale=False)
     forest2.fit(X, y)
     p2 = forest2.predict(X)
     assert np.array_equal(p1, p2)
@@ -34,7 +34,7 @@ def test_different_predictions():
     X2 = df2.loc[:, df2.columns != 'target']
     y2 = df2['target']
 
-    forest3 = RandomForest(ntree=1, maxDepth = 2, seed=1, scale=False)
+    forest3 = RandomForest(ntree=10, maxDepth = 2, seed=1, scale=False)
     forest3.fit(X2, y2)
     p3 = forest3.predict(X2)
 

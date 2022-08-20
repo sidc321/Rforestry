@@ -59,6 +59,19 @@ public:
     std::vector<size_t>* tree_weights
   );
 
+  void predict_forestry(
+    std::vector< std::vector<double> >* xNew,
+    double (&predictions)[],
+    arma::Mat<double>* weightMatrix,
+    arma::Mat<double>* coefficients,
+    arma::Mat<int>* terminalNodes,
+    unsigned int seed,
+    size_t nthread,
+    bool exact,
+    bool use_weights,
+    std::vector<size_t>* tree_weights
+  );
+
   std::vector<double> predictOOB(
     std::vector< std::vector<double> >* xNew,
     arma::Mat<double>* weightMatrix,

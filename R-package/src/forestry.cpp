@@ -734,6 +734,246 @@ void forestry::addTrees(size_t ntree) {
 }
 
 
+void forestry::predict_forestry(
+  std::vector< std::vector<double> >* xNew,
+  double (&prediction)[],
+  arma::Mat<double>* weightMatrix,
+  arma::Mat<double>* coefficients,
+  arma::Mat<int>* terminalNodes,
+  unsigned int seed,
+  size_t nthread,
+  bool exact,
+  bool use_weights,
+  std::vector<size_t>* tree_weights
+){
+
+  //return new std::vector<double> ((*xNew)[0]);
+
+  size_t numObservations = (*xNew)[0].size();
+
+  // If we want to return the ridge coefficients, initialize a matrix
+  if (coefficients) {
+    // Create coefficient vector of vectors of zeros
+    std::vector< std::vector<float> > coef;
+    size_t numCol = (*coefficients).n_cols;
+    for (size_t i=0; i<numObservations; i++) {
+      std::vector<float> row;
+      for (size_t j = 0; j<numCol; j++) {
+        row.push_back(0);
+      }
+      coef.push_back(row);
+    }
+  }
+
+  // Only needed if exact = TRUE, vector for storing each tree's predictions
+  std::vector< std::vector<double> > tree_preds;
+  std::vector< std::vector<int> > tree_nodes;
+  std::vector<size_t> tree_seeds;
+  std::vector<size_t> tree_total_nodes;
+
+
+  #if DOPARELLEL
+  size_t nthreadToUse = nthread;
+
+  if (nthreadToUse == 0) {
+    // Use all threads
+    nthreadToUse = std::thread::hardware_concurrency();
+  }
+
+
+  if (isVerbose()) {
+    std::cout << "Prediction parallel using " << nthreadToUse << " threads"
+              << std::endl;
+  }
+
+  std::vector<std::thread> allThreads(nthreadToUse);
+  std::mutex threadLock;
+
+  // For each thread, assign a sequence of tree numbers that the thread
+  // is responsible for handling
+  for (size_t t = 0; t < nthreadToUse; t++) {
+    auto dummyThread = std::bind(
+      [&](const int iStart, const int iEnd, const int t_) {
+
+        // loop over al assigned trees, iStart is the starting tree number
+        // and iEnd is the ending tree number
+        for (int i=iStart; i < iEnd; i++) {
+  #else
+  // For non-parallel version, just simply iterate all trees serially
+  for(int i=0; i<((int) getNtree()); i++ ) {
+  #endif
+          try {
+            std::vector<double> currentTreePrediction(numObservations);
+            std::vector<int> currentTreeTerminalNodes(numObservations);
+            std::vector< std::vector<double> > currentTreeCoefficients(numObservations);
+
+            //If terminal nodes, pass option to tree predict
+            forestryTree *currentTree = (*getForest())[i].get();
+
+            if (coefficients) {
+              for (size_t l=0; l<numObservations; l++) {
+                currentTreeCoefficients[l] = std::vector<double>(coefficients->n_cols);
+              }
+
+              (*currentTree).predict(
+                  currentTreePrediction,
+                  &currentTreeTerminalNodes,
+                  currentTreeCoefficients,
+                  xNew,
+                  getTrainingData(),
+                  weightMatrix,
+                  getlinear(),
+                  seed + i,
+                  getMinNodeSizeToSplitAvg()
+              );
+
+            } else {
+              (*currentTree).predict(
+                  currentTreePrediction,
+                  &currentTreeTerminalNodes,
+                  currentTreeCoefficients,
+                  xNew,
+                  getTrainingData(),
+                  weightMatrix,
+                  getlinear(),
+                  seed + i,
+                  getMinNodeSizeToSplitAvg()
+              );
+
+            }
+
+            // HERE IF NEED TERMINAL NODES, pass option to tree predict, then
+            // lock thread (shouldn't really need to), use i as offset and flip
+            // bool of matrix
+
+            #if DOPARELLEL
+            std::lock_guard<std::mutex> lock(threadLock);
+            # endif
+
+            // If we need to use the exact seeding order we save the tree
+            // predictions and the tree seeds
+
+            // For now store tree seeds even when not running exact,
+            // hopefully this solves a valgrind error relating to the sorting
+            // based on tree seeds when tree seeds might be uninitialized
+            tree_seeds.push_back(currentTree->getSeed());
+
+            if (exact) {
+              tree_preds.push_back(currentTreePrediction);
+              tree_nodes.push_back(currentTreeTerminalNodes);
+              tree_total_nodes.push_back(currentTree->getNodeCount());
+            } else {
+              for (size_t j = 0; j < numObservations; j++) {
+                prediction[j] += currentTreePrediction[j];
+              }
+
+              if (coefficients) {
+                for (size_t k = 0; k < numObservations; k++) {
+                  for (size_t l = 0; l < coefficients->n_cols; l++) {
+                    (*coefficients)(k,l) += currentTreeCoefficients[k][l];
+                  }
+                }
+              }
+
+              if (terminalNodes) {
+                for (size_t k = 0; k < numObservations; k++) {
+                  (*terminalNodes)(k, i) = currentTreeTerminalNodes[k];
+                }
+                (*terminalNodes)(numObservations, i) = (*currentTree).getNodeCount();
+              }
+            }
+
+          } catch (std::runtime_error &err) {
+            std::cerr << err.what() << std::endl;
+          }
+      }
+  #if DOPARELLEL
+      },
+      t * getNtree() / nthreadToUse,
+      (t + 1) == nthreadToUse ?
+        getNtree() :
+        (t + 1) * getNtree() / nthreadToUse,
+      t
+    );
+    allThreads[t] = std::thread(dummyThread);
+  }
+
+  std::for_each(
+    allThreads.begin(),
+    allThreads.end(),
+    [](std::thread& x) { x.join(); }
+  );
+  #endif
+
+  // If exact, we need to aggregate the predictions by tree seed order.
+  double total_weights = 0;
+
+  if (exact) {
+    std::vector<size_t> indices(tree_seeds.size());
+    std::iota(indices.begin(), indices.end(), 0);
+    //Order the indices by the seeds of the corresponding trees
+    std::sort(indices.begin(), indices.end(),
+              [&](size_t a, size_t b) -> bool {
+                return tree_seeds[a] > tree_seeds[b];
+              });
+
+    size_t weight_index = 0;
+    // Now aggregate using the new index ordering
+    for (std::vector<size_t>::iterator iter = indices.begin();
+        iter != indices.end();
+        ++iter)
+    {
+        size_t cur_index  = *iter;
+
+        double cur_weight = use_weights ? (double) (*tree_weights)[weight_index] : (double) 1.0;
+        total_weights += cur_weight;
+        weight_index++;
+        // Aggregate all predictions for current tree
+        for (size_t j = 0; j < numObservations; j++) {
+          prediction[j] += cur_weight * tree_preds[cur_index][j];
+        }
+
+        if (terminalNodes) {
+          for (size_t k = 0; k < numObservations; k++) {
+            (*terminalNodes)(k, cur_index) = tree_nodes[cur_index][k];
+          }
+          (*terminalNodes)(numObservations, cur_index) = tree_total_nodes[cur_index];
+        }
+    }
+  }
+
+  if (!use_weights) {
+    total_weights = (double) getNtree();
+  }
+
+  for (size_t j=0; j<numObservations; j++){
+    prediction[j] /= total_weights;
+  }
+
+  // If we also update the weight matrix, we now have to divide every entry
+  // by the number of trees:
+
+  if (weightMatrix) {
+    size_t nrow = (*xNew)[0].size();      // number of features to be predicted
+    size_t ncol = getNtrain();            // number of train data
+    for ( size_t i = 0; i < nrow; i++) {
+      for (size_t j = 0; j < ncol; j++) {
+        (*weightMatrix)(i,j) = (*weightMatrix)(i,j) / _ntree;
+      }
+    }
+  }
+
+  if (coefficients) {
+    for (size_t k = 0; k < numObservations; k++) {
+      for (size_t l = 0; l < coefficients->n_cols; l++) {
+        (*coefficients)(k,l) /= total_weights;
+      }
+    }
+  }
+
+}
+
+
 std::vector<double> forestry::predictOOB(
     std::vector< std::vector<double> >* xNew,
     arma::Mat<double>* weightMatrix,

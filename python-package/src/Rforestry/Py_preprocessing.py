@@ -303,29 +303,23 @@ def training_data_checker(
 @title Test data check
 @name testing_data_checker-RandomForest
 @description Check the testing data to do prediction
-@param object A RandomForest object.
+@param forest A RandomForest object.
 @param newdata A data frame of testing predictors.
 @param hasNas TRUE if the there were nan-s in the training data FALSE otherwise.
 @return A feature dataframe if it can be used for new predictions.
 """
-def testing_data_checker(object, newdata, hasNas):
-    if len(newdata.columns) != object.processed_dta['numColumns']:
-        raise ValueError('newdata has ' + str(len(newdata.columns)) + ' but the forest was trained with ' + str(object.processed_dta['numColumns']) + ' columns.')
+def testing_data_checker(forest, newdata, hasNas):
+    if len(newdata.columns) != forest.processed_dta['numColumns']:
+        raise ValueError('newdata has ' + str(len(newdata.columns)) + ' but the forest was trained with ' + str(forest.processed_dta['numColumns']) + ' columns.')
 
-    if object.processed_dta['featNames'] is not None:
-        if not (set(newdata.columns) == set(object.processed_dta['featNames'])):
+    if forest.processed_dta['featNames'] is not None:
+        if not (set(newdata.columns) == set(forest.processed_dta['featNames'])):
             raise ValueError('newdata has different columns then the ones the forest was trained with.')
 
-        if not all(newdata.columns == object.processed_dta['featNames']):
-            warnings.warn('newdata columns have been reordered so that they match the training feature matrix')
-            newdata = newdata[object.processed_dta['featNames']]
     
         # If linear is true we can't predict observations with some features missing.
-        if object.linear and newdata.isnull().values.any():
+        if forest.linear and newdata.isnull().values.any():
             raise ValueError('linear does not support missing data')
-
-    return newdata
-
 
 def sample_weights_checker(featureWeights, mtry, ncol):
     if featureWeights.size != ncol:
@@ -350,8 +344,9 @@ Checks if RandomForest object has valid pointer for C++ object.
 @param object a RandomForest object
 @return A message if the forest does not have a valid C++ pointer.
 """
-def forest_checker(object):
-    pass
+def forest_checker(fr):
+    if (not fr.dataframe) or (not fr.forest):
+        raise ValueError('The RandomForest object has invalid ctypes pointers.')
 
 
 
@@ -418,7 +413,6 @@ def preprocess_training(x, y):
 #'   corresponding numeric representation.
 #' @return A preprocessed training dataaset x
 def preprocess_testing (x, categoricalFeatureCols, categoricalFeatureMapping):
-    x = pd.DataFrame(x)
 
     # Track the order of all features
     testingFeatureNames = x.columns.values

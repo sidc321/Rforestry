@@ -2,6 +2,8 @@ from forestry import RandomForest
 from sklearn.datasets import load_iris
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split
+
 
 # Getting the dataset
 data = load_iris()
@@ -16,19 +18,19 @@ fr = RandomForest(ntree=500)
 print('Trainging the forest')
 fr.fit(X, y, linFeats=[0, 1])
 
-print('Making doubleOOB predictions')
+print('Making predictions')
 preds = fr.predict(X)
 print(preds)
 
-fr.save_forestry('rforest')
+# fr.save_forestry('rforest')
 
 
-fr_load = fr.load_forestry('rforest')
-preds_after = fr_load.predict(X)
-print(preds_after)
+# fr_load = fr.load_forestry('rforest')
+# preds_after = fr_load.predict(X)
+# print(preds_after)
 
-print('\n The two predictions are equal: ' + str(np.array_equal(preds, preds_after)))
+# print('\n The two predictions are equal: ' + str(np.array_equal(preds, preds_after)))
 
 
-fr = RandomForest()
-print(fr.test_array(5))
+# fr = RandomForest()
+# print(fr.test_array_passing(5))
