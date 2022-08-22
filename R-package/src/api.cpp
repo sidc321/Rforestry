@@ -255,7 +255,8 @@ void predict_forest(
         bool use_weights,
         size_t* tree_weights,
         size_t num_test_rows,
-        double (&predictions)[]
+        double (&predictions)[],
+        double (&weight_matrix)[]
 ){   
 
 
@@ -292,9 +293,7 @@ void predict_forest(
 
     
     if (returnWeightMatrix) {
-        size_t nrow = num_test_rows;
-        size_t ncol = forest->getNtrain();
-        weightMatrix.zeros(nrow, ncol);
+        weightMatrix.zeros(num_test_rows, forest->getNtrain());                
         forest->predict_forestry(
                 predi_data,
                 predictions,
@@ -307,6 +306,15 @@ void predict_forest(
                 false,
                 nullptr
         );
+
+        size_t idx = 0;
+        for (size_t i = 0; i < num_test_rows; i++){
+            for (size_t j = 0; j < forest->getNtrain(); j++){
+                weight_matrix[idx] = weightMatrix(i,j);
+                idx++;
+            }
+        }
+        
     }
 
     else {
@@ -323,10 +331,10 @@ void predict_forest(
             weights
         );
 
-        delete(predi_data);
-        delete(weights);
-
     }
+
+    delete(predi_data);
+    delete(weights);
 
 
     // predict_info* predictionResults = new predict_info;

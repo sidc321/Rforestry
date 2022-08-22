@@ -280,10 +280,13 @@ void forestryTree::predict(
   std::vector<size_t> updateIndex(outputPrediction.size());
   rangeGenerator _rangeGenerator(0);
   std::generate(updateIndex.begin(), updateIndex.end(), _rangeGenerator);
-  (*getRoot()).predict(outputPrediction,
+
+  if (weightMatrix){
+    (*getRoot()).predict(outputPrediction,
                        terminalNodes,
                        outputCoefficients,
                        &updateIndex,
+                       getAveragingIndex(),
                        xNew,
                        trainingData,
                        weightMatrix,
@@ -292,6 +295,23 @@ void forestryTree::predict(
                        seed,
                        nodesizeStrictAvg,
                        OOBIndex);
+  }
+  else{
+    (*getRoot()).predict(outputPrediction,
+                       terminalNodes,
+                       outputCoefficients,
+                       &updateIndex,
+                       nullptr,
+                       xNew,
+                       trainingData,
+                       weightMatrix,
+                       linear,
+                       getOverfitPenalty(),
+                       seed,
+                       nodesizeStrictAvg,
+                       OOBIndex);
+  }
+  
   //std::cout << "Seed is" << seed << ".\n";
 }
 

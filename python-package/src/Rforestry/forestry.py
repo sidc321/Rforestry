@@ -795,6 +795,11 @@ class RandomForest:
         # Initialize the final prediction array
         n_arr = ctypes.c_double * nPreds
         res = n_arr()
+
+        weight_arr = ctypes.c_double * (nPreds * self.processed_dta['nObservations'])
+        if weightMatrix:
+            weight_matrix = weight_arr()
+
         
         # If option set to terminalNodes, we need to make matrix of ID's
         if aggregation == 'oob':
@@ -882,7 +887,8 @@ class RandomForest:
                                         ctypes.c_bool,
                                         ctypes.c_void_p,
                                         ctypes.c_size_t,
-                                        ctypes.POINTER(n_arr)
+                                        ctypes.POINTER(n_arr),
+                                        ctypes.POINTER(weight_arr)
                                         ]
 
             lib.predict_forest(
@@ -896,9 +902,13 @@ class RandomForest:
                 use_weights,
                 lib_setup.get_array_pointer(tree_weights, dtype=np.ulonglong),
                 len(processed_x.index),
-                ctypes.byref(res)
+                ctypes.byref(res),
+                None if not weightMatrix else ctypes.byref(weight_matrix)
             )
         
+        if weightMatrix:
+            weight_matrix = np.array(weight_matrix)
+            return np.array(res), np.lib.stride_tricks.as_strided(weight_matrix, shape=(nPreds, self.processed_dta['nObservations']), strides=(weight_matrix.itemsize*self.processed_dta['nObservations'],weight_matrix.itemsize))
         return np.array(res)
 
 
@@ -933,7 +943,8 @@ class RandomForest:
         
         return np.mean((y_true - preds)**2)
 
-
+    ##### TODO: CHANGE get_vi after weightmatrix!!!!!!!!!!!!!!!!!!!#######
+    ##### TODO: Check out Bottleneck for faster numpy!!!!!!!!!!!!!!!!!!!!!!!!!
     def get_vi(self, noWarning=False):
         """
         Calculate the percentage increase in OOB error of the forest
