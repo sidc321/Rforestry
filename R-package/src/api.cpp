@@ -266,13 +266,14 @@ void predict_forest(
     forest->_trainingData = dta_frame;
 
     // Create Data
+    size_t ncol = dta_frame->getNumColumns();
     std::vector< std::vector<double> >* predi_data {
-            new std::vector< std::vector<double> >(dta_frame->getNumColumns(), std::vector<double>(num_test_rows))
+            new std::vector< std::vector<double> >(ncol, std::vector<double>(num_test_rows))
     };
 
-    for (size_t j = 0; j < dta_frame->getNumColumns(); j++) {
+    for (size_t j = 0; j < ncol; j++) {
         for (size_t i = 0; i < num_test_rows; i++){
-            predi_data->at(j).at(i) = test_data[i*dta_frame->getNumColumns() + j];
+            predi_data->at(j).at(i) = test_data[i*ncol + j];
         }
     }
 
@@ -293,7 +294,7 @@ void predict_forest(
 
     
     if (returnWeightMatrix) {
-        weightMatrix.zeros(num_test_rows, forest->getNtrain());                
+        weightMatrix.zeros(num_test_rows, dta_frame->getNumRows());                
         forest->predict_forestry(
                 predi_data,
                 predictions,
@@ -309,7 +310,7 @@ void predict_forest(
 
         size_t idx = 0;
         for (size_t i = 0; i < num_test_rows; i++){
-            for (size_t j = 0; j < forest->getNtrain(); j++){
+            for (size_t j = 0; j < dta_frame->getNumRows(); j++){
                 weight_matrix[idx] = weightMatrix(i,j);
                 idx++;
             }
@@ -353,8 +354,10 @@ void predictOOB_forest(
         double* test_data,
         bool doubleOOB,
         bool exact,
+        bool returnWeightMatrix,
         bool verbose,
-        double (&predictions)[]
+        double (&predictions)[],
+        double (&weight_matrix)[]
 ){
     if (verbose)
         std::cout << forest_pt << std::endl;
@@ -364,23 +367,49 @@ void predictOOB_forest(
     forest->_trainingData = dta_frame;
 
     //Create Data
+    size_t ncol = dta_frame->getNumColumns();
     std::vector< std::vector<double> >* predi_data {
-            new std::vector< std::vector<double> >(dta_frame->getNumColumns(), std::vector<double>(dta_frame->getNumRows()))
+            new std::vector< std::vector<double> >(ncol, std::vector<double>(dta_frame->getNumRows()))
     };
 
-    for (size_t j = 0; j < dta_frame->getNumColumns(); j++) {
+    for (size_t j = 0; j < ncol; j++) {
         for (size_t i = 0; i < dta_frame->getNumRows(); i++){
-            predi_data->at(j).at(i) = test_data[i*dta_frame->getNumColumns() + j];
+            predi_data->at(j).at(i) = test_data[i*ncol + j];
         }
     }
 
-    forest->predictOOB_forestry(
+    // Initialize the weightMatrix
+    arma::Mat<double> weightMatrix;
+
+    if (returnWeightMatrix) {
+        weightMatrix.zeros(dta_frame->getNumRows(), dta_frame->getNumRows());  
+        
+        forest->predictOOB_forestry(
+                predi_data,
+                predictions,
+                &weightMatrix,
+                doubleOOB,
+                exact
+        );
+
+        size_t idx = 0;
+        for (size_t i = 0; i < dta_frame->getNumRows(); i++){
+            for (size_t j = 0; j < dta_frame->getNumRows(); j++){
+                weight_matrix[idx] = weightMatrix(i,j);
+                idx++;
+            }
+        }
+    }
+
+    else {
+        forest->predictOOB_forestry(
             predi_data,
             predictions,
             nullptr,
             doubleOOB,
             exact
-    );
+        );
+    }
 
     delete(predi_data);
 

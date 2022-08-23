@@ -813,7 +813,9 @@ class RandomForest:
                                         ctypes.c_bool,
                                         ctypes.c_bool,
                                         ctypes.c_bool,
-                                        ctypes.POINTER(n_arr)
+                                        ctypes.c_bool,
+                                        ctypes.POINTER(n_arr),
+                                        ctypes.POINTER(weight_arr)
                                         ]
 
             if newdata is None:
@@ -823,8 +825,10 @@ class RandomForest:
                     lib_setup.get_data_pointer(self.processed_dta['processed_x']),
                     False,
                     exact,
+                    weightMatrix,
                     self.verbose,
-                    ctypes.byref(res)
+                    ctypes.byref(res),
+                    None if not weightMatrix else ctypes.byref(weight_matrix)
                 ))
 
             else:
@@ -834,8 +838,10 @@ class RandomForest:
                     lib_setup.get_data_pointer(processed_x),
                     False,
                     exact,
+                    weightMatrix,
                     self.verbose,
-                    ctypes.byref(res)
+                    ctypes.byref(res),
+                    None if not weightMatrix else ctypes.byref(weight_matrix)
                 ))
 
         elif aggregation == 'doubleOOB':
@@ -851,7 +857,9 @@ class RandomForest:
                                         ctypes.c_bool,
                                         ctypes.c_bool,
                                         ctypes.c_bool,
-                                        ctypes.POINTER(n_arr)
+                                        ctypes.c_bool,
+                                        ctypes.POINTER(n_arr),
+                                        ctypes.POINTER(weight_arr)
                                         ]
 
             if newdata is None:
@@ -861,8 +869,10 @@ class RandomForest:
                     lib_setup.get_data_pointer(self.processed_dta['processed_x']),
                     True,
                     exact,
+                    weightMatrix,
                     self.verbose,
-                    ctypes.byref(res)
+                    ctypes.byref(res),
+                    None if not weightMatrix else ctypes.byref(weight_matrix)
                 ))
 
             else:
@@ -872,8 +882,10 @@ class RandomForest:
                     lib_setup.get_data_pointer(processed_x),
                     False,
                     exact,
+                    weightMatrix,
                     self.verbose,
-                    ctypes.byref(res)
+                    ctypes.byref(res),
+                    None if not weightMatrix else ctypes.byref(weight_matrix)
                 ))
 
         
@@ -908,7 +920,7 @@ class RandomForest:
         
         if weightMatrix:
             weight_matrix = np.array(weight_matrix)
-            return np.array(res), np.lib.stride_tricks.as_strided(weight_matrix, shape=(nPreds, self.processed_dta['nObservations']), strides=(weight_matrix.itemsize*self.processed_dta['nObservations'],weight_matrix.itemsize))
+            return {'predictions': np.array(res), 'weightMatrix': np.lib.stride_tricks.as_strided(weight_matrix, shape=(nPreds, self.processed_dta['nObservations']), strides=(weight_matrix.itemsize*self.processed_dta['nObservations'],weight_matrix.itemsize))}
         return np.array(res)
 
 
