@@ -19,18 +19,12 @@ print('Trainging the forest')
 fr.fit(X, y, linFeats=[0, 1])
 
 print('Making predictions')
-res = fr.predict(weightMatrix=True, aggregation='doubleOOB')
-print(res)
+preds = fr.predict(weightMatrix=True, aggregation='doubleOOB')
 
-# fr.save_forestry('rforest')
+fr.save_forestry('rforest')
 
+fr_load = fr.load_forestry('rforest')
+preds_after = fr_load.predict(weightMatrix=True, aggregation='doubleOOB')
+print(preds_after)
 
-# fr_load = fr.load_forestry('rforest')
-# preds_after = fr_load.predict(X)
-# print(preds_after)
-
-# print('\n The two predictions are equal: ' + str(np.array_equal(preds, preds_after)))
-
-
-# fr = RandomForest()
-# print(fr.test_array_passing(5))
+print('\n The two predictions are equal: ' + str(np.array_equal(preds['predictions'], preds_after['predictions'])))

@@ -132,6 +132,9 @@ def setup_lib(lib):
     ]
     lib.py_reconstructree.restype = ctypes.c_void_p
 
+    # Set up delete
+    lib.delete_forestry.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+
 
 def get_data_pointer(data):
     data = np.ascontiguousarray(data.values[:,:], np.double)

@@ -686,18 +686,9 @@ void* py_reconstructree(void* data_ptr,
 
 }
 
-int test_array_passing(double (&test_arr)[]){
-
-    test_arr[1] = 1;
-
-    return 0;
-}
-
-int test_array(size_t* arr){
-
-    arr[0] = 1000;
-
-    return 0;
+void delete_forestry(void* forest_pt, void* dataframe_pt){
+    delete(reinterpret_cast<DataFrame* >(dataframe_pt));
+    delete(reinterpret_cast<forestry* >(forest_pt));
 }
     
 

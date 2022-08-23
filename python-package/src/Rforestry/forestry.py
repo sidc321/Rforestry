@@ -1747,33 +1747,9 @@ class RandomForest:
             
             return rf
 
-    def test_array_passing(self, n):
-        n_arr = ctypes.c_double * n
-        res = n_arr()
-        print(res)
-        for i in res:print(i)
-
-        lib.test_array_passing.argtypes = [ctypes.POINTER(n_arr)]
-        lib.test_array_passing.restype = ctypes.c_int
-        
-        print(lib.test_array_passing(ctypes.byref(res)))
-
-        print(res)
-        for i in res:print(i)
-
-    def test_array(self, n):
-        arr = np.repeat(0, n)
-        print(np.ctypeslib.as_ctypes_type(np.int64))  
-        a = np.ascontiguousarray(arr, dtype=np.ulonglong)
-        a = np.ctypeslib.as_ctypes(a)
-
-
-        lib.test_array.argtypes = [ctypes.POINTER(ctypes.c_size_t)]
-        lib.test_array.restype = ctypes.c_int
-
-        lib.test_array(a)
-
-        print(a[0])
+    def __del__(self):
+        # Free the pointers to foretsry and dataframe
+        lib.delete_forestry(self.forest, self.dataframe)
 
 # make linFeats same as symmetric...
 
