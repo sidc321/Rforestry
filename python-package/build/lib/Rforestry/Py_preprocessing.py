@@ -151,7 +151,6 @@ def forest_parameter_checker(
         raise ValueError('doubleTree must be True or False.')
 
 
-
     # Some more checks
 
     if minSplitGain > 0 and (not linear):
@@ -174,37 +173,8 @@ def forest_parameter_checker(
         interactionDepth = maxDepth
 
     
-    return (
-        ntree,
-        replace,
-        sampsize,
-        sample_fraction,
-        mtry,
-        nodesizeSpl,
-        nodesizeAvg,
-        nodesizeStrictSpl,
-        nodesizeStrictAvg,
-        minSplitGain,
-        maxDepth,
-        interactionDepth,
-        splitratio,
-        OOBhonest,
-        doubleBootstrap,
-        seed,
-        verbose,
-        nthread,
-        middleSplit,
-        maxObs,
-        linear,
-        minTreesPerGroup,
-        monotoneAvg,
-        overfitPenalty,
-        scale,
-        doubleTree
-    )
+    return splitratio, replace, doubleTree, interactionDepth
     
-
-
 
 
 """
@@ -220,8 +190,9 @@ def forest_parameter_checker(
 #' @return A tuple of parameters after checking the selected parameters are valid.
 """
 def training_data_checker(
-    object,
-    x,
+    forest,
+    nrows,
+    nfeatures,
     y,
     linFeats,
     monotonicConstraints,
@@ -231,20 +202,14 @@ def training_data_checker(
     hasNas
 ):
     
-    x = pd.DataFrame(x)
-    y = np.array(y)
-    nrows, nfeatures = x.shape
-
     #make np arrays
-    monotonicConstraints = np.array(monotonicConstraints)
     symmetric = np.array(symmetric)
-    observationWeights = np.array(observationWeights)
 
     # Check if the input dimension of x matches y
     if nrows != y.size:
         raise ValueError('The dimension of input dataset x doesn\'t match the output y.')
 
-    if object.linear and hasNas:
+    if forest.linear and hasNas:
         raise ValueError('Cannot do imputation splitting with linear.')
 
     if np.isnan(y).any():
@@ -253,23 +218,20 @@ def training_data_checker(
     if any(i < 0 or i >= nfeatures for i in linFeats):
         raise ValueError('linFeats must contain positive integers less than len(x.columns).')
 
-    if (not object.replace) and object.sampsize > nrows:
+    if (not forest.replace) and forest.sampsize > nrows:
         raise ValueError('You cannot sample without replacement with size more than total number of observations.')
 
-    if object.mtry > nfeatures:
+    if forest.mtry > nfeatures:
         raise ValueError('mtry cannot exceed total amount of features in x.')
 
     if monotonicConstraints.size != nfeatures:
-        raise ValueError('monotonicConstraints must be the size of x')
+        raise ValueError('monotonicConstraints must have the size of x')
     
     if any(i != 0 and i != 1 and i != -1 for i in monotonicConstraints):
         raise ValueError('monotonicConstraints must be either 1, 0, or -1')
 
-    if any(i != 0 for i in monotonicConstraints) and object.linear:
+    if any(i != 0 for i in monotonicConstraints) and forest.linear:
         raise ValueError('Cannot use linear splitting with monotonicConstraints')
-
-    if not object.replace:
-        observationWeights = np.repeat(0, nrows)
 
     if observationWeights.size != nrows:
         raise ValueError('observationWeights must have length len(x)')
@@ -277,22 +239,22 @@ def training_data_checker(
     if any(i < 0 for i in observationWeights):
         raise ValueError('The entries in observationWeights must be non negative')
 
-    if np.sum(observationWeights) == 0:
+    if forest.replace and np.sum(observationWeights) == 0:
         raise ValueError('There must be at least one non-zero weight in observationWeights')
 
     if any(i != 0 for i in symmetric):
-        if object.linear:
+        if forest.linear:
            raise ValueError('Symmetric forests cannot be combined with linear aggregation please set either symmetric = False or linear = False') 
 
         if hasNas:
             raise ValueError('Symmetric forests cannot be combined with missing values please impute the missing features before training a forest with symmetry')
 
-        if object.scale:
+        if forest.scale:
             warnings.warn('As symmetry is implementing pseudo outcomes, this causes problems when the Y values are scaled. Setting scale = False')
 
         # for now don't scale when we run symmetric splitting since we use pseudo outcomes
-        # and wnat to retain the scaling of Y
-        object.scale = False
+        # and want to retain the scaling of Y
+        forest.scale = False
 
         #OPTIMIZE ???
         if any(j != 1 and j != 0 for j in symmetric):
@@ -301,35 +263,33 @@ def training_data_checker(
         if sum(j > 0 for j in symmetric) > 10:
             warnings.warn('Running symmetric splits in more than 10 features is very slow')
 
-    observationWeights = observationWeights / np.sum(observationWeights)
-
     # if the splitratio is 1, then we use adaptive rf and avgSampleSize is
     # equal to the total sampsize
 
-    if object.splitratio == 0 or object.splitratio == 1:
-        splitSampleSize = object.sampsize
-        avgSampleSize = object.sampsize
+    if forest.splitratio == 0 or forest.splitratio == 1:
+        splitSampleSize = forest.sampsize
+        avgSampleSize = forest.sampsize
     else:
-        splitSampleSize = object.splitratio * object.sampsize
-        avgSampleSize = math.floor(object.sampsize - splitSampleSize)
+        splitSampleSize = forest.splitratio * forest.sampsize
+        avgSampleSize = math.floor(forest.sampsize - splitSampleSize)
         splitSampleSize = math.floor(splitSampleSize)
 
-    if object.nodesizeStrictSpl > splitSampleSize:
+    if forest.nodesizeStrictSpl > splitSampleSize:
         warnings.warn('nodesizeStrictSpl cannot exceed splitting sample size. We have set nodesizeStrictSpl to be the maximum.')
-        object.nodesizeStrictSpl = splitSampleSize
+        forest.nodesizeStrictSpl = splitSampleSize
 
-    if object.nodesizeStrictAvg > avgSampleSize:
+    if forest.nodesizeStrictAvg > avgSampleSize:
         warnings.warn('nodesizeStrictAvg cannot exceed averaging sample size. We have set nodesizeStrictAvg to be the maximum.')
-        object.nodesizeStrictAvg = avgSampleSize
+        forest.nodesizeStrictAvg = avgSampleSize
 
 
-    if object.doubleTree:
-        if object.nodesizeStrictAvg > splitSampleSize:
+    if forest.doubleTree:
+        if forest.nodesizeStrictAvg > splitSampleSize:
             warnings.warn('nodesizeStrictAvg cannot exceed splitting sample size. We have set nodesizeStrictAvg to be the maximum.')
-            object.nodesizeStrictAvg = splitSampleSize
-        if object.nodesizeStrictSpl > avgSampleSize:
+            forest.nodesizeStrictAvg = splitSampleSize
+        if forest.nodesizeStrictSpl > avgSampleSize:
             warnings.warn('nodesizeStrictSpl cannot exceed averaging sample size. We have set nodesizeStrictSpl to be the maximum.')
-            object.nodesizeStrictSpl = avgSampleSize
+            forest.nodesizeStrictSpl = avgSampleSize
 
 
     if groups is not None:
@@ -337,51 +297,31 @@ def training_data_checker(
             raise ValueError('groups must have a data dtype of categorical. Try using pd.Categorical(...) or pd.Series(..., dtype="category").')
         if len(groups.unique()) == 1:
             raise ValueError('groups must have more than 1 level to be left out from sampling.')
-        groups = pd.Series(groups, dtype='category')
-
-
-    return (
-        x,
-        y,
-        linFeats,
-        monotonicConstraints,
-        groups,
-        observationWeights,
-        symmetric,
-        hasNas
-    )
-
+        
 
 """
 @title Test data check
 @name testing_data_checker-RandomForest
 @description Check the testing data to do prediction
-@param object A RandomForest object.
+@param forest A RandomForest object.
 @param newdata A data frame of testing predictors.
 @param hasNas TRUE if the there were nan-s in the training data FALSE otherwise.
 @return A feature dataframe if it can be used for new predictions.
 """
-def testing_data_checker(object, newdata, hasNas):
-    if len(newdata.columns) != object.processed_dta['numColumns']:
-        raise ValueError('newdata has ' + str(len(newdata.columns)) + ' but the forest was trained with ' + str(object.processed_dta['numColumns']) + ' columns.')
+def testing_data_checker(forest, newdata, hasNas):
+    if len(newdata.columns) != forest.processed_dta['numColumns']:
+        raise ValueError('newdata has ' + str(len(newdata.columns)) + ' but the forest was trained with ' + str(forest.processed_dta['numColumns']) + ' columns.')
 
-    if object.processed_dta['featNames'] is not None:
-        if not (set(newdata.columns) == set(object.processed_dta['featNames'])):
+    if forest.processed_dta['featNames'] is not None:
+        if not (set(newdata.columns) == set(forest.processed_dta['featNames'])):
             raise ValueError('newdata has different columns then the ones the forest was trained with.')
 
-        if not all(newdata.columns == object.processed_dta['featNames']):
-            warnings.warn('newdata columns have been reordered so that they match the training feature matrix')
-            newdata = newdata[object.processed_dta['featNames']]
     
         # If linear is true we can't predict observations with some features missing.
-        if object.linear and newdata.isnull().values.any():
+        if forest.linear and newdata.isnull().values.any():
             raise ValueError('linear does not support missing data')
 
-    return newdata
-
-
 def sample_weights_checker(featureWeights, mtry, ncol):
-    featureWeights = np.array(featureWeights)
     if featureWeights.size != ncol:
         raise ValueError('featureWeights and deepFeatureWeights must have length len(x.columns)')
 
@@ -396,19 +336,17 @@ def sample_weights_checker(featureWeights, mtry, ncol):
     if len(featureWeightsVariables) < mtry:
         raise ValueError('mtry is too large. Given the feature weights, can\'t select that many features.')
     
-    featureWeightsVariables = np.array(featureWeightsVariables)
-    featureWeights = featureWeights / np.sum(featureWeights)
-    return (featureWeightsVariables, featureWeights)
+    featureWeightsVariables = np.array(featureWeightsVariables, dtype=np.ulonglong)
+    return featureWeightsVariables
 
 """
 Checks if RandomForest object has valid pointer for C++ object.
 @param object a RandomForest object
 @return A message if the forest does not have a valid C++ pointer.
 """
-def forest_checker(object):
-    pass
-
-
+def forest_checker(fr):
+    if (not fr.dataframe) or (not fr.forest):
+        raise ValueError('The RandomForest object has invalid ctypes pointers.')
 
 
 
@@ -422,7 +360,6 @@ def forest_checker(object):
 #'   the preprocessing.
 
 def preprocess_training(x, y):
-    x = pd.DataFrame(x)
     # Check if the input dimension of x matches y
     if len(x.index) != y.size:
         raise ValueError('The dimension of input dataset x doesn\'t match the output vector y.')
@@ -433,11 +370,9 @@ def preprocess_training(x, y):
         warnings.warn('No names are given for each column.')
 
     # Track all categorical features (both factors and characters)
-
     categoricalFeatureCols = np.array((x.select_dtypes('category')).columns)
     featureCharacterCols = np.array((x.select_dtypes('object')).columns)
-    # Note: this will select all the data types that are objects - pointers to another 
-    # block, like strings, dictionaries, etc.
+
 
     if featureCharacterCols.size != 0:  #convert to a factor
         warnings.warn('Character value features will be cast to categorical data.')
@@ -478,7 +413,6 @@ def preprocess_training(x, y):
 #'   corresponding numeric representation.
 #' @return A preprocessed training dataaset x
 def preprocess_testing (x, categoricalFeatureCols, categoricalFeatureMapping):
-    x = pd.DataFrame(x)
 
     # Track the order of all features
     testingFeatureNames = x.columns.values
