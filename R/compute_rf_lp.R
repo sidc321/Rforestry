@@ -125,11 +125,7 @@ compute_lp <- function(object,
                        nrow = nrow(newdata),
                        ncol = nrow(train_set),
                        byrow = FALSE) -
-<<<<<<< HEAD
-                matrix(train_set[,feature],
-=======
                 matrix(feature_in_traindata,
->>>>>>> detachment
                        nrow = nrow(newdata),
                        ncol = nrow(train_set),
                        byrow = TRUE)
