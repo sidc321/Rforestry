@@ -282,6 +282,7 @@ void forestryTree::predict(
                        terminalNodes,
                        outputCoefficients,
                        &updateIndex,
+                       weightMatrix ? getAveragingIndex() : nullptr,
                        xNew,
                        trainingData,
                        weightMatrix,

@@ -168,6 +168,7 @@ void RFNode::predict(
   std::vector<int>* terminalNodes,
   std::vector< std::vector<double> > &outputCoefficients,
   std::vector<size_t>* updateIndex,
+  std::vector<size_t>* predictionAveragingIndices,
   std::vector< std::vector<double> >* xNew,
   DataFrame* trainingData,
   arma::Mat<double>* weightMatrix,
@@ -240,8 +241,10 @@ void RFNode::predict(
       // If weightMatrix is not a NULL pointer, then we want to update it,
       // because we have choosen aggregation = "weightmatrix".
       std::vector<size_t> idx_in_leaf =
-        (*trainingData).get_all_row_idx(getAveragingIndex());
-      // The following will lock the access to weightMatrix
+                (*trainingData).get_all_row_idx(predictionAveragingIndices);
+
+
+        // The following will lock the access to weightMatrix
       std::lock_guard<std::mutex> lock(mutex_weightMatrix);
       for (
           std::vector<size_t>::iterator it = (*updateIndex).begin();
@@ -430,13 +433,140 @@ void RFNode::predict(
 
     }
 
-    // Recursively get predictions from its children
+      // If we need to return the weightmatrix, do the same thing for the training data
+      std::vector<size_t>* leftPartitionAveragingIndex = nullptr;
+      std::vector<size_t>* rightPartitionAveragingIndex = nullptr;
+      if (weightMatrix) {
+
+          leftPartitionAveragingIndex = new std::vector<size_t>();
+          rightPartitionAveragingIndex = new std::vector<size_t>();
+
+          // Test if the splitting feature is categorical
+          if (
+                  categorical_split
+                  ){
+
+              for (
+                      std::vector<size_t>::iterator it = (*predictionAveragingIndices).begin();
+                      it != (*predictionAveragingIndices).end();
+                      ++it
+                      ) {
+
+                  double currentValue = trainingData->getPoint(*it, getSplitFeature());
+
+                  if (std::isnan(currentValue)){
+                      size_t draw;
+
+                      // If we have a missing feature value, if no NAs were observed when
+                      // splitting send to left/right with probability proportional to
+                      // number of observations in left/right child node else send
+                      // right/left with probability in proportion to NA's which went
+                      // left/right when splitting
+
+                      if ((naLeftCount == 0) && (naRightCount == 0)) {
+                          draw = discrete_dist_nonmissing(random_number_generator);
+                      } else {
+                          draw = discrete_dist(random_number_generator);
+                      }
+
+                      // Have to push to three indices when we have trinary splits
+                      if (draw == 0) {
+                          (*leftPartitionAveragingIndex).push_back(*it);
+                      } else {
+                          (*rightPartitionAveragingIndex).push_back(*it);
+                      }
+
+                  } else if (currentValue == getSplitValue()) {
+                      (*leftPartitionAveragingIndex).push_back(*it);
+                  } else {
+                      (*rightPartitionAveragingIndex).push_back(*it);
+                  }
+              }
+
+          } else {
+
+              // For non-categorical, split to left (<) and right (>=) according to the
+              // split value
+              for (
+                      std::vector<size_t>::iterator it = (*predictionAveragingIndices).begin();
+                      it != (*predictionAveragingIndices).end();
+                      ++it
+                      ) {
+
+                  double currentValue = trainingData->getPoint(*it, getSplitFeature());
+
+                  if (std::isnan(currentValue)){
+                      size_t draw;
+
+                      // If we have a missing feature value, if no NAs were observed when
+                      // splitting send to left/right with probability proportional to
+                      // number of observations in left/right child node else send
+                      // right/left with probability in proportion to NA's which went
+                      // left/right when splitting
+                      if (getTrinary()) {
+                          if ((naLeftCount == 0) && (naRightCount == 0)) {
+                              draw = discrete_dist_nonmissing(random_number_generator);
+                          } else {
+                              draw = discrete_dist(random_number_generator);
+                          }
+
+                          // Have to push to three indices when we have trinary splits
+                          if (draw == -1) {
+                              (*leftPartitionAveragingIndex).push_back(*it);
+                          } else if (draw == 1) {
+                              (*rightPartitionAveragingIndex).push_back(*it);
+                          }
+                      } else {
+                          if ((naLeftCount == 0) && (naRightCount == 0)) {
+                              draw = discrete_dist_nonmissing(random_number_generator);
+                          } else {
+                              draw = discrete_dist(random_number_generator);
+                          }
+                          // Now push to index
+                          if (draw == 0) {
+                              (*leftPartitionAveragingIndex).push_back(*it);
+                          } else {
+                              (*rightPartitionAveragingIndex).push_back(*it);
+                          }
+                      }
+
+                  } else {
+                      // Check if the current split feature is a symmetric feature
+                      if (getTrinary() && (std::find(
+                              trainingData->getSymmetricIndices()->begin(),
+                              trainingData->getSymmetricIndices()->end(),
+                              getSplitFeature()) != trainingData->getSymmetricIndices()->end())) {
+
+                          // If this is a symmetric feature, have to use the absolute value
+                          // of the feature value
+                          if (std::fabs(currentValue) < getSplitValue()) {
+                              (*leftPartitionAveragingIndex).push_back(*it);
+                          } else {
+                              (*rightPartitionAveragingIndex).push_back(*it);
+                          }
+                      } else {
+                          // Run standard predictions
+                          if (currentValue < getSplitValue()) {
+                              (*leftPartitionAveragingIndex).push_back(*it);
+                          } else {
+                              (*rightPartitionAveragingIndex).push_back(*it);
+                          }
+                      }
+                  }
+              }
+
+          }
+
+      }
+
+      // Recursively get predictions from its children
     if ((*leftPartitionIndex).size() > 0) {
       (*getLeftChild()).predict(
           outputPrediction,
           terminalNodes,
           outputCoefficients,
           leftPartitionIndex,
+          leftPartitionAveragingIndex,
           xNew,
           trainingData,
           weightMatrix,
@@ -454,6 +584,7 @@ void RFNode::predict(
           terminalNodes,
           outputCoefficients,
           rightPartitionIndex,
+          rightPartitionAveragingIndex,
           xNew,
           trainingData,
           weightMatrix,
@@ -467,6 +598,11 @@ void RFNode::predict(
 
     delete(leftPartitionIndex);
     delete(rightPartitionIndex);
+    if (weightMatrix) {
+        delete(leftPartitionAveragingIndex);
+        delete(rightPartitionAveragingIndex);
+    }
+
   }
 }
 

@@ -1409,11 +1409,10 @@ Rcpp::List rcpp_reconstruct_forests(
   std::vector< std::unique_ptr< std::vector< std::vector<double> > > > split_vals;
   std::vector< std::unique_ptr< std::vector< std::vector<int> > > > naLeftCounts;
   std::vector< std::unique_ptr< std::vector< std::vector<int> > > > naRightCounts;
-  std::vector< std::unique_ptr< std::vector< std::vector<size_t> > > > leafAveidxs;
-  std::vector< std::unique_ptr< std::vector< std::vector<size_t> > > > leafSplidxs;
   std::vector< std::unique_ptr< std::vector< std::vector<size_t> > > > averagingSampleIndex;
   std::vector< std::unique_ptr< std::vector< std::vector<size_t> > > > splittingSampleIndex;
   std::vector< std::unique_ptr< std::vector<unsigned int> > > tree_seeds;
+  std::vector< std::unique_ptr< std::vector< std::vector<double> > > > weights;
 
   std::vector< forestry* > multilayerForests;
   // Now we need to iterate through the length of number forests, and for each
@@ -1427,10 +1426,9 @@ Rcpp::List rcpp_reconstruct_forests(
       std::vector< std::vector<double> > cur_split_vals;
       std::vector< std::vector<int> > cur_naLeftCounts;
       std::vector< std::vector<int> > cur_naRightCounts;
-      std::vector< std::vector<size_t> > cur_leafAveidxs;
-      std::vector< std::vector<size_t> > cur_leafSplidxs;
       std::vector< std::vector<size_t> > cur_averagingSampleIndex;
       std::vector< std::vector<size_t> > cur_splittingSampleIndex;
+      std::vector< std::vector<double> > cur_weights;
       std::vector< unsigned int > cur_tree_seeds;
 
     // Now for the current forest, we iterate through and build the trees
@@ -1446,32 +1444,28 @@ Rcpp::List rcpp_reconstruct_forests(
           Rcpp::as< std::vector<double> > (Rcpp::as<Rcpp::List>(Rcpp::as<Rcpp::List>(R_forests[j])[i])[1])
       );
 
-      cur_leafAveidxs.push_back(
+      cur_averagingSampleIndex.push_back(
         Rcpp::as< std::vector<size_t> > (Rcpp::as<Rcpp::List>(Rcpp::as<Rcpp::List>(R_forests[j])[i])[2])
       );
 
-      cur_leafSplidxs.push_back(
+      cur_splittingSampleIndex.push_back(
         Rcpp::as< std::vector<size_t> > (Rcpp::as<Rcpp::List>(Rcpp::as<Rcpp::List>(R_forests[j])[i])[3])
       );
 
-      cur_averagingSampleIndex.push_back(
-        Rcpp::as< std::vector<size_t> > (Rcpp::as<Rcpp::List>(Rcpp::as<Rcpp::List>(R_forests[j])[i])[4])
-      );
-
-      cur_splittingSampleIndex.push_back(
-        Rcpp::as< std::vector<size_t> > (Rcpp::as<Rcpp::List>(Rcpp::as<Rcpp::List>(R_forests[j])[i])[5])
-      );
-
       cur_naLeftCounts.push_back(
-        Rcpp::as< std::vector<int> > (Rcpp::as<Rcpp::List>(Rcpp::as<Rcpp::List>(R_forests[j])[i])[6])
+        Rcpp::as< std::vector<int> > (Rcpp::as<Rcpp::List>(Rcpp::as<Rcpp::List>(R_forests[j])[i])[4])
       );
 
       cur_naRightCounts.push_back(
-        Rcpp::as< std::vector<int> > (Rcpp::as<Rcpp::List>(Rcpp::as<Rcpp::List>(R_forests[j])[i])[7])
+        Rcpp::as< std::vector<int> > (Rcpp::as<Rcpp::List>(Rcpp::as<Rcpp::List>(R_forests[j])[i])[5])
       );
 
       cur_tree_seeds.push_back(
-        Rcpp::as< unsigned int > (Rcpp::as<Rcpp::List>(Rcpp::as<Rcpp::List>(R_forests[j])[i])[8])
+        Rcpp::as< unsigned int > (Rcpp::as<Rcpp::List>(Rcpp::as<Rcpp::List>(R_forests[j])[i])[6])
+      );
+
+      cur_weights.push_back(
+              Rcpp::as< std::vector<double> > (Rcpp::as<Rcpp::List>(Rcpp::as<Rcpp::List>(R_forests[j])[i])[7])
       );
     }
     // Now the cur vectors hold the info for each tree, we have to
@@ -1492,14 +1486,6 @@ Rcpp::List rcpp_reconstruct_forests(
         new std::vector< std::vector<int> >(cur_naRightCounts)
     ));
 
-    leafAveidxs.push_back(std::unique_ptr< std::vector< std::vector<size_t> > >(
-        new std::vector< std::vector<size_t> >(cur_leafAveidxs)
-    ));
-
-    leafSplidxs.push_back(std::unique_ptr< std::vector< std::vector<size_t> > >(
-        new std::vector< std::vector<size_t> >(cur_leafSplidxs)
-    ));
-
     averagingSampleIndex.push_back(std::unique_ptr< std::vector< std::vector<size_t> > >(
         new std::vector< std::vector<size_t> >(cur_averagingSampleIndex)
     ));
@@ -1510,6 +1496,9 @@ Rcpp::List rcpp_reconstruct_forests(
 
     tree_seeds.push_back(std::unique_ptr< std::vector<unsigned int> >(
         new std::vector< unsigned int >(cur_tree_seeds)
+    ));
+    weights.push_back(std::unique_ptr< std::vector< std::vector<double> > >(
+            new std::vector< std::vector<double> >(cur_weights)
     ));
 
     // Decode catCols and R_forest
@@ -1655,7 +1644,7 @@ Rcpp::List rcpp_reconstruct_forests(
                                      naRightCounts[j],
                                      averagingSampleIndex[j],
                                      splittingSampleIndex[j],
-                                     split_vals[j]);
+                                     weights[j]);
 
     // Push back the jth forest to the vector of forests
     multilayerForests.push_back(testFullForest);

@@ -57,6 +57,7 @@ public:
     std::vector<int>* terminalNodes,
     std::vector< std::vector<double> > &outputCoefficients,
     std::vector<size_t>* updateIndex,
+    std::vector<size_t>* predictionAveragingIndices,
     std::vector< std::vector<double> >* xNew,
     DataFrame* trainingData,
     arma::Mat<double>* weightMatrix,
