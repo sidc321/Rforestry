@@ -78,12 +78,9 @@ public:
       std::unique_ptr< std::vector< std::vector<double> >  > & split_vals,
       std::unique_ptr< std::vector< std::vector<int> >  > & naLeftCounts,
       std::unique_ptr< std::vector< std::vector<int> >  > & naRightCounts,
-      std::unique_ptr< std::vector< std::vector<size_t> >  > & leafAveidxs,
-      std::unique_ptr< std::vector< std::vector<size_t> >  > & leafSplidxs,
-      std::unique_ptr< std::vector< std::vector<size_t> >  > &
-        averagingSampleIndex,
-      std::unique_ptr< std::vector< std::vector<size_t> >  > &
-        splittingSampleIndex);
+      std::unique_ptr< std::vector< std::vector<size_t> >  > & averagingSampleIndex,
+      std::unique_ptr< std::vector< std::vector<size_t> >  > & splittingSampleIndex,
+      std::unique_ptr< std::vector< std::vector<double> >  > & weights);
 
   size_t getTotalNodeCount();
 
