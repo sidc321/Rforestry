@@ -641,6 +641,8 @@ void RFNode::printSubtree(int indentSpace) {
               << getSplitCount()
               << ", # of average samples = "
               << getAverageCount()
+              << " Weight = "
+              << getPredictWeight()
               << std::endl;
     R_FlushConsole();
     R_ProcessEvents();
@@ -661,7 +663,7 @@ void RFNode::printSubtree(int indentSpace) {
               << getNaLeftCount()
               << " "
               << getNaRightCount()
-              << "Weight = "
+              << " Weight = "
               << getPredictWeight()
               << std::endl;
 

@@ -1056,7 +1056,7 @@ Rcpp::List rcpp_multilayer_CppToR_translator(
         Rcpp::IntegerVector naRightCounts =
           Rcpp::wrap((*(forest_dta[j]))[i].naRightCount);
 
-        Rcpp::IntegerVector predictWeights =
+        Rcpp::NumericVector predictWeights =
                   Rcpp::wrap((*(forest_dta[j]))[i].values);
 
         Rcpp::List list_i =
