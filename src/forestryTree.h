@@ -89,19 +89,17 @@ public:
       std::vector<double> split_vals,
       std::vector<int> naLeftCounts,
       std::vector<int> naRightCounts,
-      std::vector<size_t> leafAveidxs,
-      std::vector<size_t> leafSplidxs,
       std::vector<size_t> averagingSampleIndex,
-      std::vector<size_t> splittingSampleIndex);
+      std::vector<size_t> splittingSampleIndex,
+      std::vector<double> predictWeights);
 
   void recursive_reconstruction(
       RFNode* currentNode,
       std::vector<int> * var_ids,
       std::vector<double> * split_vals,
-      std::vector<size_t> * leafAveidxs,
-      std::vector<size_t> * leafSplidxs,
       std::vector<int> * naLeftCounts,
-      std::vector<int> * naRightCounts
+      std::vector<int> * naRightCounts,
+      std::vector<double> * weights
   );
 
   void recursivePartition(

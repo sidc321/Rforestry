@@ -1197,12 +1197,9 @@ void forestry::reconstructTrees(
     std::unique_ptr< std::vector< std::vector<double> >  > & split_vals,
     std::unique_ptr< std::vector< std::vector<int> >  > & naLeftCounts,
     std::unique_ptr< std::vector< std::vector<int> >  > & naRightCounts,
-    std::unique_ptr< std::vector< std::vector<size_t> >  > & leafAveidxs,
-    std::unique_ptr< std::vector< std::vector<size_t> >  > & leafSplidxs,
-    std::unique_ptr< std::vector< std::vector<size_t> >  > &
-      averagingSampleIndex,
-    std::unique_ptr< std::vector< std::vector<size_t> >  > &
-      splittingSampleIndex){
+    std::unique_ptr< std::vector< std::vector<size_t> >  > & averagingSampleIndex,
+    std::unique_ptr< std::vector< std::vector<size_t> >  > & splittingSampleIndex,
+    std::unique_ptr< std::vector< std::vector<double> >  > & weights){
 
     #if DOPARELLEL
     size_t nthreadToUse = this->getNthread();
@@ -1256,10 +1253,9 @@ void forestry::reconstructTrees(
                 (*split_vals)[i],
                 (*naLeftCounts)[i],
                 (*naRightCounts)[i],
-                (*leafAveidxs)[i],
-                (*leafSplidxs)[i],
                 (*averagingSampleIndex)[i],
-                (*splittingSampleIndex)[i]);
+                (*splittingSampleIndex)[i],
+                (*weights)[i]);
 
 #if DOPARELLEL
         std::lock_guard<std::mutex> lock(threadLock);

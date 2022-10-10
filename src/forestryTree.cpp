@@ -282,6 +282,7 @@ void forestryTree::predict(
                        terminalNodes,
                        outputCoefficients,
                        &updateIndex,
+                       weightMatrix ? getAveragingIndex() : nullptr,
                        xNew,
                        trainingData,
                        weightMatrix,
@@ -902,22 +903,24 @@ void forestryTree::recursivePartition(
       (*splittingSampleIndex).size() < getMinNodeSizeSpt() ||
       (depth == getMaxDepth())) {
 
-    // Create two lists on heap and transfer the ownership to the node
-    std::unique_ptr<std::vector<size_t> > averagingSampleIndex_(
-        new std::vector<size_t>(*averagingSampleIndex)
-    );
-    std::unique_ptr<std::vector<size_t> > splittingSampleIndex_(
-        new std::vector<size_t>(*splittingSampleIndex)
-    );
     size_t node_id;
     assignNodeId(node_id);
     (*rootNode).setLeafNode(
-        std::move(averagingSampleIndex_),
-        std::move(splittingSampleIndex_),
+        averagingSampleIndex->size(),
+        splittingSampleIndex->size(),
         node_id,
         trinary,
-        symmetric_details.pseudooutcomes
+        symmetric_details.pseudooutcomes,
+        trainingData->partitionMean(averagingSampleIndex)
     );
+
+    // If we are growing a linear forest, we need to precalculate the ridge coefficients
+    if (linear) {
+        rootNode->setRidgeCoefficients(averagingSampleIndex,
+                                       trainingData,
+                                       overfitPenalty);
+    }
+
     return;
   }
 
@@ -1001,23 +1004,25 @@ void forestryTree::recursivePartition(
   // Create a leaf node if the current bestSplitValue is NA
   if (std::isnan(bestSplitValue)) {
 
-    // Create two lists on heap and transfer the ownership to the node
-    std::unique_ptr<std::vector<size_t> > averagingSampleIndex_(
-        new std::vector<size_t>(*averagingSampleIndex)
-    );
-    std::unique_ptr<std::vector<size_t> > splittingSampleIndex_(
-        new std::vector<size_t>(*splittingSampleIndex)
-    );
     size_t node_id;
     assignNodeId(node_id);
 
     (*rootNode).setLeafNode(
-        std::move(averagingSampleIndex_),
-        std::move(splittingSampleIndex_),
+        averagingSampleIndex->size(),
+        splittingSampleIndex->size(),
         node_id,
         trinary,
-        symmetric_details.pseudooutcomes
+        symmetric_details.pseudooutcomes,
+        trainingData->partitionMean(averagingSampleIndex)
     );
+
+    // If we are growing a linear forest, we need to precalculate the ridge coefficients
+    if (linear) {
+        rootNode->setRidgeCoefficients(averagingSampleIndex,
+                                       trainingData,
+                                       overfitPenalty);
+    }
+
 
   } else {
     // Test if the current feature is categorical
@@ -1061,22 +1066,24 @@ void forestryTree::recursivePartition(
     // If we do have an empty partition we make a leaf node.
     if ((lAvgSize*rAvgSize*lSplSize*rSplSize == 0)) {
 
-      std::unique_ptr<std::vector<size_t> > averagingSampleIndex_(
-          new std::vector<size_t>(*averagingSampleIndex)
-      );
-      std::unique_ptr<std::vector<size_t> > splittingSampleIndex_(
-          new std::vector<size_t>(*splittingSampleIndex)
-      );
       size_t node_id;
       assignNodeId(node_id);
       (*rootNode).setLeafNode(
-          std::move(averagingSampleIndex_),
-          std::move(splittingSampleIndex_),
+          averagingSampleIndex->size(),
+          splittingSampleIndex->size(),
           node_id,
           trinary,
-          symmetric_details.pseudooutcomes
+          symmetric_details.pseudooutcomes,
+          trainingData->partitionMean(averagingSampleIndex)
       );
       return;
+
+      // If we are growing a linear forest, we need to precalculate the ridge coefficients
+      if (linear) {
+          rootNode->setRidgeCoefficients(averagingSampleIndex,
+                                         trainingData,
+                                         overfitPenalty);
+      }
     }
 
     // Stopping-criteria
@@ -1092,21 +1099,25 @@ void forestryTree::recursivePartition(
       );
 
       if (rSquaredDifference < getMinSplitGain()) {
-        std::unique_ptr<std::vector<size_t> > averagingSampleIndex_(
-            new std::vector<size_t>(*averagingSampleIndex)
-        );
-        std::unique_ptr<std::vector<size_t> > splittingSampleIndex_(
-            new std::vector<size_t>(*splittingSampleIndex)
-        );
+
         size_t node_id;
         assignNodeId(node_id);
         (*rootNode).setLeafNode(
-            std::move(averagingSampleIndex_),
-            std::move(splittingSampleIndex_),
+            averagingSampleIndex->size(),
+            splittingSampleIndex->size(),
             node_id,
             trinary,
-            symmetric_details.pseudooutcomes
+            symmetric_details.pseudooutcomes,
+            trainingData->partitionMean(averagingSampleIndex)
         );
+
+        // If we are growing a linear forest, we need to precalculate the ridge coefficients
+        if (linear) {
+            rootNode->setRidgeCoefficients(averagingSampleIndex,
+                                           trainingData,
+                                           overfitPenalty);
+        }
+
         return;
       }
     }
@@ -1983,12 +1994,10 @@ void forestryTree::reconstruct_tree(
     std::vector<double> split_vals,
     std::vector<int> naLeftCounts,
     std::vector<int> naRightCounts,
-    std::vector<size_t> leafAveidxs,
-    std::vector<size_t> leafSplidxs,
     std::vector<size_t> averagingSampleIndex,
-    std::vector<size_t> splittingSampleIndex
-
-  ){
+    std::vector<size_t> splittingSampleIndex,
+    std::vector<double> predictWeights
+    ){
   // Setting all the parameters:
   _mtry = mtry;
   _minNodeSizeSpt = minNodeSizeSpt;
@@ -2024,10 +2033,9 @@ void forestryTree::reconstruct_tree(
     _root.get(),
     &var_ids,
     &split_vals,
-    &leafAveidxs,
-    &leafSplidxs,
     &naLeftCounts,
-    &naRightCounts
+    &naRightCounts,
+    &predictWeights
   );
 
   return ;
@@ -2038,10 +2046,9 @@ void forestryTree::recursive_reconstruction(
   RFNode* currentNode,
   std::vector<int> * var_ids,
   std::vector<double> * split_vals,
-  std::vector<size_t> * leafAveidxs,
-  std::vector<size_t> * leafSplidxs,
   std::vector<int> * naLeftCounts,
-  std::vector<int> * naRightCounts
+  std::vector<int> * naRightCounts,
+  std::vector<double> * weights
 ) {
   int var_id = (*var_ids)[0];
     (*var_ids).erase((*var_ids).begin());
@@ -2053,78 +2060,55 @@ void forestryTree::recursive_reconstruction(
     size_t naRightCount = (*naRightCounts)[0];
     (*naRightCounts).erase((*naRightCounts).begin());
 
-
   if(var_id < 0){
     // This is a terminal node
     int nAve = std::abs((int) var_id);
+    // Pull second entry in var_ids if it is a leaf node
     int nSpl = std::abs((int) (*var_ids)[0]);
     (*var_ids).erase((*var_ids).begin());
 
-    std::unique_ptr<std::vector<size_t> > averagingSampleIndex_(
-        new std::vector<size_t>
-    );
-    std::unique_ptr<std::vector<size_t> > splittingSampleIndex_(
-        new std::vector<size_t>
-    );
+    // Pull the prediction weight for the node
+    double predictionWeight = (*weights)[0];
+    weights->erase(weights->begin());
 
-    for(int i=0; i<nAve; i++){
-      averagingSampleIndex_->push_back((*leafAveidxs)[0] - 1);
-      (*leafAveidxs).erase((*leafAveidxs).begin());
-    }
-
-    for(int i=0; i<nSpl; i++){
-      splittingSampleIndex_->push_back((*leafSplidxs)[0] - 1);
-      (*leafSplidxs).erase((*leafSplidxs).begin());
-    }
     size_t node_id;
     std::vector<double> wts;
     assignNodeId(node_id);
     (*currentNode).setLeafNode(
-        std::move(averagingSampleIndex_),
-        std::move(splittingSampleIndex_),
+        nAve,
+        nSpl,
         node_id,
         false,
-        wts
+        wts,
+        predictionWeight
     );
     return;
   } else {
     // This is a normal splitting node
     std::unique_ptr< RFNode > leftChild ( new RFNode() );
     std::unique_ptr< RFNode > rightChild ( new RFNode() );
-    std::unique_ptr< RFNode > centerChild ( new RFNode() );
 
     // We need to populate the current node averaging index
     // before we recurse the reconstruction. This is due to the fact that we
     // delete indices when we get to leaf nodes, so we want to copy them all
     // before we hit any leaf nodes.
 
-    std::unique_ptr<std::vector<size_t> > averagingSampleIndex_(
-        new std::vector<size_t>
-    );
-
-    for(size_t i=0; i < leafAveidxs->size(); i++){
-      averagingSampleIndex_->push_back((*leafAveidxs)[i] - 1);
-    }
-
-
     recursive_reconstruction(
       leftChild.get(),
       var_ids,
       split_vals,
-      leafAveidxs,
-      leafSplidxs,
       naLeftCounts,
-      naRightCounts
+      naRightCounts,
+      weights
       );
 
     recursive_reconstruction(
       rightChild.get(),
       var_ids,
       split_vals,
-      leafAveidxs,
-      leafSplidxs,
       naLeftCounts,
-      naRightCounts
+      naRightCounts,
+      weights
     );
 
     (*currentNode).setSplitNode(

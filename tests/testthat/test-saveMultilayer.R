@@ -36,6 +36,7 @@ test_that("Tests that saving multilayerForestry and loading it works", {
                            y = iris[,1],
                            ntree = 2,
                            nrounds = 2,
+                           scale=FALSE,
                            nthread = 2,
                            maxDepth = 3)
 

@@ -17,11 +17,12 @@ public:
   virtual ~RFNode();
 
   void setLeafNode(
-    std::unique_ptr< std::vector<size_t> > averagingSampleIndex,
-    std::unique_ptr< std::vector<size_t> > splittingSampleIndex,
-    size_t nodeId,
-    bool trinary,
-    std::vector<double> weights
+          size_t averagingSampleIndexSize,
+          size_t splittingSampleIndexSize,
+          size_t nodeId,
+          bool trinary,
+          std::vector<double> weights,
+          double predictWeight
   );
 
   void setSplitNode(
@@ -34,6 +35,13 @@ public:
       size_t naCenterCount,
       size_t naRightCount
   );
+
+  void setRidgeCoefficients(
+          std::vector<size_t>* averagingIndices,
+          DataFrame* trainingData,
+          double lambda
+  );
+
 
   void ridgePredict(
       std::vector<double> &outputPrediction,
@@ -49,6 +57,7 @@ public:
     std::vector<int>* terminalNodes,
     std::vector< std::vector<double> > &outputCoefficients,
     std::vector<size_t>* updateIndex,
+    std::vector<size_t>* predictionAveragingIndices,
     std::vector< std::vector<double> >* xNew,
     DataFrame* trainingData,
     arma::Mat<double>* weightMatrix,
@@ -138,12 +147,23 @@ public:
     return _splittingSampleIndex.get();
   }
 
+  double getPredictWeight() {
+      return _predictWeight;
+  }
+
+  arma::Mat<double> getRidgeCoefficients() {
+      return _ridgeCoefficients;
+  }
+
+
 private:
   std::unique_ptr< std::vector<size_t> > _averagingSampleIndex;
   std::unique_ptr< std::vector<size_t> > _splittingSampleIndex;
   size_t _splitFeature;
   double _splitValue;
   bool _trinary;
+  double _predictWeight;
+  arma::Mat<double> _ridgeCoefficients;
   std::vector<double> _weights;
   std::unique_ptr< RFNode > _leftChild;
   std::unique_ptr< RFNode > _rightChild;
