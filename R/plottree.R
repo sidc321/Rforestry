@@ -215,6 +215,7 @@ plot.forestry <- function(x, tree.id = 1, print.meta_dta = FALSE,
 
 
   if (forestry_tree@linear) {
+    plm = this_ds = y_leaf_unique = NULL
     # ridge forest
     for (leaf_id in node_info$node_id[node_info$is_leaf]) {
       # leaf_id = 5
