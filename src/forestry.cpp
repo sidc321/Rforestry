@@ -2,6 +2,7 @@
 // [[Rcpp::plugins(cpp11)]]
 #include "forestry.h"
 #include "utils.h"
+#include "sampling.h"
 #include <RcppThread.h>
 #include <random>
 #include <thread>
@@ -82,7 +83,7 @@ forestry::forestry(
   this->_symmetric = symmetric;
 
   if (splitRatio > 1 || splitRatio < 0) {
-    throw std::runtime_error("splitRatio shoule be between 0 and 1.");
+    throw std::runtime_error("splitRatio should be between 0 and 1.");
   }
 
   size_t splitSampleSize = (size_t) (getSplitRatio() * sampSize);
@@ -198,196 +199,55 @@ void forestry::addTrees(size_t ntree) {
           std::mt19937_64 random_number_generator;
           random_number_generator.seed(myseed);
 
-          // Generate a sample index for each tree
-          std::vector<size_t> sampleIndex;
 
-          // If the forest is to be constructed with minTreesPerGroup, we want to
-          // use that sampling method instead of the sampling methods we have
-          size_t currentGroup;
-          if ((getMinTreesPerGroup() > 0) && (i < groupToGrow)) {
 
-            // Get the current group
-            currentGroup = (((size_t) i) / ((size_t) getMinTreesPerGroup())) + 1;
+          // Make the vectors of indices
 
-            //RcppThread::Rcout << currentGroup;
+          std::vector<size_t> splitSampleIndexVec;
+          std::vector<size_t> averageSampleIndexVec;
+          std::vector<size_t> splitSampleIndex2Vec;
+          std::vector<size_t> averageSampleIndex2Vec;
 
-            // Populate sampleIndex with the leave group out function
-            group_out_sample(
-              currentGroup,
-              (*getTrainingData()->getGroups()),
-              sampleIndex,
-              random_number_generator
-            );
+          tree_sampling_helper(
+                  getTrainingData(),
+                  splitSampleSize,
+                  getMinTreesPerGroup(),
+                  groupToGrow,
+                  i,
+                  splitSampleIndexVec,
+                  averageSampleIndexVec,
+                  splitSampleIndex2Vec,
+                  averageSampleIndex2Vec,
+                  random_number_generator,
+                  _doubleTree,
+                  isReplacement(),
+                  getSampleSize(),
+                  getSplitRatio(),
+                  getOOBhonest(),
+                  getDoubleBootstrap()
+                  );
 
-          } else if (isReplacement()) {
+          std::unique_ptr<std::vector<size_t> > splitSampleIndex(
+                  new std::vector<size_t>(
+                          splitSampleIndexVec
+                  )
+                  );
+          std::unique_ptr<std::vector<size_t> > averageSampleIndex(
+                  new std::vector<size_t>(
+                          averageSampleIndexVec
+                  )
+          );
+          std::unique_ptr<std::vector<size_t> > splitSampleIndex2(
+                  new std::vector<size_t>(
+                          splitSampleIndex2Vec
+                  )
+          );
+          std::unique_ptr<std::vector<size_t> > averageSampleIndex2(
+                  new std::vector<size_t>(
+                          averageSampleIndex2Vec
+                  )
+          );
 
-            // Now we generate a weighted distribution using observationWeights
-            std::vector<double>* sampleWeights = (this->getTrainingData()->getobservationWeights());
-            std::discrete_distribution<size_t> sample_dist(
-                sampleWeights->begin(), sampleWeights->end()
-            );
-
-            // Generate index with replacement
-            while (sampleIndex.size() < getSampleSize()) {
-              size_t randomIndex = sample_dist(random_number_generator);
-              sampleIndex.push_back(randomIndex);
-            }
-          } else {
-            // In this case, when we have no replacement, we disregard
-            // observationWeights and use a uniform distribution
-            std::uniform_int_distribution<size_t> unif_dist(
-                0, (size_t) (*getTrainingData()).getNumRows() - 1
-            );
-
-            // Generate index without replacement
-            while (sampleIndex.size() < getSampleSize()) {
-              size_t randomIndex = unif_dist(random_number_generator);
-
-              if (
-                  sampleIndex.size() == 0 ||
-                    std::find(
-                      sampleIndex.begin(),
-                      sampleIndex.end(),
-                      randomIndex
-                    ) == sampleIndex.end()
-              ) {
-                sampleIndex.push_back(randomIndex);
-              }
-            }
-          }
-
-          std::unique_ptr<std::vector<size_t> > splitSampleIndex;
-          std::unique_ptr<std::vector<size_t> > averageSampleIndex;
-
-          std::unique_ptr<std::vector<size_t> > splitSampleIndex2;
-          std::unique_ptr<std::vector<size_t> > averageSampleIndex2;
-
-          // If OOBhonest is true, we generate the averaging set based
-          // on the OOB set.
-          if (getOOBhonest()) {
-
-            std::vector<size_t> splitSampleIndex_;
-            std::vector<size_t> averageSampleIndex_;
-
-            std::sort(
-              sampleIndex.begin(),
-              sampleIndex.end()
-            );
-
-            std::vector<size_t> allIndex;
-            for (size_t i = 0; i < getSampleSize(); i++) {
-              // If we are doing leave a group out sampling, we make sure the
-              // allIndex vector doesn't include observations in the currently
-              // left out group
-              if (getMinTreesPerGroup() == 0) {
-                allIndex.push_back(i);
-              } else if ((*(getTrainingData()->getGroups()))[i]
-                           != currentGroup) {
-                allIndex.push_back(i);
-              }
-            }
-
-            std::vector<size_t> OOBIndex(getSampleSize());
-
-            // First we get the set of all possible
-            // OOB index is the set difference between sampleIndex and all_idx
-            std::vector<size_t>::iterator it = std::set_difference (
-              allIndex.begin(),
-              allIndex.end(),
-              sampleIndex.begin(),
-              sampleIndex.end(),
-              OOBIndex.begin()
-            );
-
-            // resize OOB index
-            OOBIndex.resize((unsigned long) (it - OOBIndex.begin()));
-            std::vector< size_t > AvgIndices;
-
-            // Check the double bootstrap, if true, we take another sample
-            // from the OOB indices, otherwise we just take the OOB index
-            // set with standard (uniform) weightings
-            if (getDoubleBootstrap()) {
-              // Now in new version, of OOB honesty
-              // we want to sample with replacement from
-              // the OOB index vector, so that our averaging vector
-              // is also bagged.
-              std::uniform_int_distribution<size_t> uniform_dist(
-                  0, (size_t) (OOBIndex.size() - 1)
-              );
-
-              // Sample with replacement
-              while (AvgIndices.size() < OOBIndex.size()) {
-                size_t randomIndex = uniform_dist(random_number_generator);
-                AvgIndices.push_back(
-                  OOBIndex[randomIndex]
-                );
-              }
-
-            } else {
-              AvgIndices = OOBIndex;
-            }
-
-            // Now set the splitting indices and averaging indices
-            splitSampleIndex_ = sampleIndex;
-            averageSampleIndex_ = AvgIndices;
-
-            // Give split and avg sample indices the right indices
-            splitSampleIndex.reset(
-              new std::vector<size_t>(splitSampleIndex_)
-            );
-            averageSampleIndex.reset(
-              new std::vector<size_t>(averageSampleIndex_)
-            );
-
-            // If we are doing doubleTree, swap the indices and make two trees
-            if (_doubleTree) {
-              splitSampleIndex2.reset(
-                new std::vector<size_t>(splitSampleIndex_)
-              );
-              averageSampleIndex2.reset(
-                new std::vector<size_t>(averageSampleIndex_)
-              );
-            }
-          } else if (getSplitRatio() == 1 || getSplitRatio() == 0) {
-
-            // Treat it as normal RF
-            splitSampleIndex.reset(new std::vector<size_t>(sampleIndex));
-            averageSampleIndex.reset(new std::vector<size_t>(sampleIndex));
-
-          } else {
-
-            // Generate sample index based on the split ratio
-            std::vector<size_t> splitSampleIndex_;
-            std::vector<size_t> averageSampleIndex_;
-            for (
-                std::vector<size_t>::iterator it = sampleIndex.begin();
-                it != sampleIndex.end();
-                ++it
-            ) {
-              if (splitSampleIndex_.size() < splitSampleSize) {
-                splitSampleIndex_.push_back(*it);
-              } else {
-                averageSampleIndex_.push_back(*it);
-              }
-            }
-
-            splitSampleIndex.reset(
-              new std::vector<size_t>(splitSampleIndex_)
-            );
-            averageSampleIndex.reset(
-              new std::vector<size_t>(averageSampleIndex_)
-            );
-
-            // If we are doing doubleTree, swap the indices and make two trees
-            if (_doubleTree) {
-              splitSampleIndex2.reset(
-                new std::vector<size_t>(splitSampleIndex_)
-              );
-              averageSampleIndex2.reset(
-                new std::vector<size_t>(averageSampleIndex_)
-              );
-            }
-          }
 
           try{
 

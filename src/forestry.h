@@ -5,6 +5,7 @@
 #include "DataFrame.h"
 #include "forestryTree.h"
 #include "utils.h"
+#include "sampling.h"
 #include <RcppArmadillo.h>
 #include <iostream>
 #include <vector>
