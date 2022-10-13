@@ -252,11 +252,13 @@ void predict_forest(
         size_t nthread,
         bool exact,
         bool returnWeightMatrix,
+        bool linear,
         bool use_weights,
         size_t* tree_weights,
         size_t num_test_rows,
         double (&predictions)[],
-        double (&weight_matrix)[]
+        double (&weight_matrix)[],
+        double (&coefs)[]
 ){   
 
 
@@ -291,9 +293,10 @@ void predict_forest(
     for (size_t i = 0; i < forest->getNtree(); i++){
         weights->at(i) = tree_weights[i];
     }
+ 
 
-    
     if (returnWeightMatrix) {
+
         weightMatrix.zeros(num_test_rows, dta_frame->getNumRows());                
         forest->predict_forestry(
                 predi_data,
@@ -316,9 +319,32 @@ void predict_forest(
             }
         }
         
-    }
+    } else if (linear) {
 
-    else {
+        coefficients.zeros(dta_frame->getNumRows(), dta_frame->getLinCols()->size() + 1);
+        forest->predict_forestry(
+                predi_data,
+                predictions,
+                nullptr,
+                &coefficients,
+                nullptr,
+                seed,
+                nthread,
+                exact,
+                false,
+                nullptr
+        );
+
+        size_t idx = 0;
+        for (size_t i = 0; i < dta_frame->getNumRows(); i++){
+            for (size_t j = 0; j < dta_frame->getLinCols()->size() + 1; j++){
+                coefs[idx] = coefficients(i,j);
+                idx++;
+            }
+        }
+
+    } else {
+
         forest->predict_forestry(
             predi_data,
             predictions,
@@ -476,6 +502,46 @@ std::vector<double>* get_tree_info(void* forest_ptr,
 
     return treeInfo;
     
+
+}
+
+void fill_tree_info(void* forest_ptr,
+                    int tree_idx,
+                    double (&treeInfo)[]) {
+
+    forestry* forest = reinterpret_cast<forestry *>(forest_ptr);
+
+    std::unique_ptr<tree_info> info_holder;
+
+    info_holder = forest->getForest()->at(tree_idx)->getTreeInfo(forest->getTrainingData());
+    int num_nodes = forest->getForest()->at(tree_idx)->getNodeCount();
+    
+    for (int i = 0; i < num_nodes; i++) {
+        treeInfo[i] = (double)info_holder->left_child_id.at(i);
+        treeInfo[num_nodes+i] = (double)info_holder->right_child_id.at(i);
+        treeInfo[num_nodes*2+i] = (double)info_holder->var_id.at(i);
+        treeInfo[num_nodes*3+i] = (double)info_holder->num_avg_samples.at(i);
+        treeInfo[num_nodes*4+i] = info_holder->split_val.at(i);
+        treeInfo[num_nodes*5+i] = info_holder->values.at(i);
+        treeInfo[num_nodes*6+i] = info_holder->naLeftCount.at(i);
+        treeInfo[num_nodes*7+i] = info_holder->naLeftCount.at(i);
+    }
+
+    size_t splitSize = info_holder->splittingSampleIndex.size();
+    size_t avSize = info_holder->averagingSampleIndex.size();
+    size_t idx = num_nodes*8;
+    for (size_t i = 0; i < splitSize; i++){
+        treeInfo[idx] = info_holder->splittingSampleIndex.at(i);
+        idx++;
+    }
+
+    for (size_t i = 0; i < avSize; i++){
+        treeInfo[idx] = info_holder->averagingSampleIndex.at(i);
+        idx++;
+    }
+
+    treeInfo[idx] = info_holder->seed;
+
 
 }
 
