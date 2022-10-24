@@ -9,18 +9,17 @@ from random import randrange
 import ctypes
 from sklearn.model_selection import LeaveOneOut
 import statsmodels.api as sm
+import pickle
 
-from . import lib_setup
-
-from . import Py_preprocessing
+import lib_setup
+import Py_preprocessing
 
 
 # --- Loading the dynamic library -----------------
 if platform.system() == "Linux":
-  lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "libforestryCpp.so")))
-# elif platform.system() == "Darwin":
-else:
-  lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "libforestryCpp.dylib")))
+    lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), "libforestryCpp.so")))
+elif platform.system() == "Darwin":
+    lib = (ctypes.CDLL(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), "libforestryCpp.dylib")))
 lib_setup.setup_lib(lib)
 
 
@@ -273,34 +272,9 @@ class RandomForest:
 
 
         # Call the forest_parameter_checker function
-        # haven't checking splitrule
+        # haven't checking splitrule - not fully implemented
 
-        (ntree,
-        replace,
-        sampsize,
-        sample_fraction,
-        mtry,
-        nodesizeSpl,
-        nodesizeAvg,
-        nodesizeStrictSpl,
-        nodesizeStrictAvg,
-        minSplitGain,
-        maxDepth,
-        interactionDepth,
-        splitratio,
-        OOBhonest,
-        doubleBootstrap,
-        seed,
-        verbose, 
-        nthread,
-        middleSplit,
-        maxObs,
-        linear,
-        minTreesPerGroup,
-        monotoneAvg,
-        overfitPenalty,
-        scale,
-        doubleTree) = Py_preprocessing.forest_parameter_checker(
+        splitratio, replace, doubleTree, interactionDepth = Py_preprocessing.forest_parameter_checker(
             ntree,
             replace,
             sampsize,
@@ -329,7 +303,7 @@ class RandomForest:
             doubleTree)
             
         cppDataFrame = None  #Cpp pointer
-        cppForest = None  #Cpp 
+        cppForest = None  #Cpp pointer
         
         processed_dta = {
             'processed_x': None,
@@ -354,7 +328,7 @@ class RandomForest:
             'featNames': None
         }
 
-        Py_forest = [dict() for _ in range(ntree)]  # for accessing the tree structure
+        Py_forest = None  # for accessing the tree structure
 
         #Data Fields
         self.forest = cppForest
@@ -469,7 +443,7 @@ class RandomForest:
             raise AttributeError('x must be a Pandas DataFrame, a numpy array, a Pandas Series, or a regular list')
 
         x = (pd.DataFrame(x)).copy()
-        y = (np.array(y)).copy()
+        y = (np.array(y, dtype=np.double)).copy()
         
         nrow, ncol = x.shape
             
@@ -482,7 +456,9 @@ class RandomForest:
 
         # make linFeats unique
         if linFeats == None:
-            linFeats = np.arange(ncol)
+            linFeats = np.arange(ncol, dtype=np.ulonglong)
+        else:
+            linFeats = np.array(linFeats, dtype=np.ulonglong)
         linFeats = pd.unique(linFeats)
 
         # Preprocess the data
@@ -492,15 +468,24 @@ class RandomForest:
         colMeans = np.repeat(0.0, ncol+1)
         colSd = np.repeat(0.0, ncol+1)
 
-
         # Translating interactionVariables to featureWeights syntax
         if featureWeights is None:
-            featureWeights = np.repeat(1, ncol)
-            featureWeights[interactionVariables] = 0
+            featureWeights = np.repeat(1.0, ncol)
+            featureWeights[interactionVariables] = 0.0
+        else:
+            featureWeights = np.array(featureWeights, dtype=np.double)
+
         if deepFeatureWeights is None:
-            deepFeatureWeights = np.repeat(1, ncol)
-        if observationWeights is None:
-            observationWeights = np.repeat(1, nrow)
+            deepFeatureWeights = np.repeat(1.0, ncol)
+        else:
+            deepFeatureWeights = np.array(deepFeatureWeights, dtype=np.double)
+
+        if not self.replace:
+            observationWeights = np.zeros(nrow, dtype=np.double)
+        elif observationWeights is None:
+            observationWeights = np.repeat(1.0, nrow)
+        else:
+            observationWeights = np.array(observationWeights, dtype=np.double)
 
         # Giving default values
         if self.mtry is None:
@@ -516,10 +501,14 @@ class RandomForest:
             self.maxObs = y.size
 
         if symmetric is None:
-            symmetric = np.repeat(0, ncol)
+            symmetric = np.zeros(ncol, dtype=np.ulonglong)
+        else:
+            symmetric = np.array(symmetric, dtype=np.ulonglong)
 
         if monotonicConstraints is None:
-            monotonicConstraints = np.repeat(0, ncol)
+            monotonicConstraints = np.zeros(ncol, dtype=np.intc)
+        else:
+            monotonicConstraints = np.array(monotonicConstraints, dtype=np.intc)
 
         if seed is None:
             seed = self.seed
@@ -528,16 +517,10 @@ class RandomForest:
                 raise ValueError('seed must be a nonnegative integer.')
         
         
-        (x,
-        y,
-        linFeats,
-        monotonicConstraints,
-        groups,
-        observationWeights,
-        symmetric,
-        hasNas) = Py_preprocessing.training_data_checker(
+        Py_preprocessing.training_data_checker(
             self,
-            x,
+            nrow,
+            ncol,
             y,
             linFeats,
             monotonicConstraints,
@@ -546,11 +529,18 @@ class RandomForest:
             symmetric,
             hasNas)
 
-        (featureWeightsVariables, featureWeights) = Py_preprocessing.sample_weights_checker(featureWeights, self.mtry, ncol)
-        (deepFeatureWeightsVariables, deepFeatureWeights) = Py_preprocessing.sample_weights_checker(deepFeatureWeights, self.mtry, ncol)    
+        featureWeightsVariables = Py_preprocessing.sample_weights_checker(featureWeights, self.mtry, ncol)
+        deepFeatureWeightsVariables = Py_preprocessing.sample_weights_checker(deepFeatureWeights, self.mtry, ncol)
+
+        featureWeights /= np.sum(featureWeights)    
+        deepFeatureWeights /= np.sum(deepFeatureWeights)
+        if self.replace:
+            observationWeights /= np.sum(observationWeights)
         
         groupsMapping = dict()
         if groups is not None:
+            groups = pd.Series(groups, dtype='category')
+
             groupsMapping['groupValue'] = groups.cat.categories
             groupsMapping['groupNumericValue'] = np.arange(len(groups.cat.categories))
 
@@ -561,7 +551,7 @@ class RandomForest:
                 warnings.warn('Using ' + str(len(groups.cat.categories)) + ' groups with ' + str(self.minTreesPerGroup) + ' trees per group will train ' + str(len(groups.cat.categories) * self.minTreesPerGroup) + ' trees in the forest')
         
         else:
-            groupVector = np.repeat(0, nrow)
+            groupVector = np.zeros(nrow, dtype=np.ulonglong)
 
 
         (processed_x, categoricalFeatureCols, categoricalFeatureMapping) =  Py_preprocessing.preprocess_training(x, y)
@@ -606,6 +596,8 @@ class RandomForest:
             lib_setup.get_array_pointer(linFeats, dtype=np.ulonglong), linFeats.size,
             lib_setup.get_array_pointer(featureWeights, dtype=np.double),
             lib_setup.get_array_pointer(featureWeightsVariables, dtype=np.ulonglong), featureWeightsVariables.size,
+            lib_setup.get_array_pointer(deepFeatureWeights, dtype=np.double),
+            lib_setup.get_array_pointer(deepFeatureWeightsVariables, dtype=np.ulonglong), deepFeatureWeightsVariables.size,
             lib_setup.get_array_pointer(observationWeights, dtype=np.double),
             lib_setup.get_array_pointer(monotonicConstraints, dtype=np.intc),
             lib_setup.get_array_pointer(groupVector, dtype=np.ulonglong),
@@ -756,15 +748,20 @@ class RandomForest:
         # Preprocess the data. We only run the data checker if ridge is turned on,
         # because even in the case where there were no NAs in train, we still want to predict.
 
-        if newdata is not None:
-            Py_preprocessing.forest_checker(self)
+        Py_preprocessing.forest_checker(self)
 
+        if newdata is not None:
             if not (isinstance(newdata, pd.DataFrame) or type(newdata).__module__ == np.__name__ or isinstance(newdata, list) or isinstance(newdata, pd.Series)):
                 raise AttributeError('newdata must be a Pandas DataFrame, a numpy array, a Pandas Series, or a regular list')
 
             newdata = (pd.DataFrame(newdata)).copy()
             newdata.reset_index(drop=True, inplace=True)
-            newdata = Py_preprocessing.testing_data_checker(self, newdata, self.processed_dta['hasNas'])
+            Py_preprocessing.testing_data_checker(self, newdata, self.processed_dta['hasNas'])
+
+            if self.processed_dta['featNames'] is not None:
+                if not all(newdata.columns == self.processed_dta['featNames']):
+                    warnings.warn('newdata columns have been reordered so that they match the training feature matrix')
+                    newdata = newdata[self.processed_dta['featNames']]
             
             processed_x = Py_preprocessing.preprocess_testing(newdata, self.processed_dta['categoricalFeatureCols'], self.processed_dta['categoricalFeatureMapping'])
 
@@ -783,9 +780,9 @@ class RandomForest:
 
           if any((not isinstance(i, (int, np.integer))) or (i < -self.ntree) or (i >= self.ntree) for i in trees):
               raise ValueError('trees must contain indices which are integers between -ntree and ntree-1')
-
+    
         # If trees are being used, we need to convert them into a weight vector
-        tree_weights = np.repeat(0, self.ntree)
+        tree_weights = np.zeros(self.ntree, dtype=np.ulonglong)
         if trees is not None:
             for i in range(len(trees)):
                 tree_weights[trees[i]] += 1
@@ -794,12 +791,32 @@ class RandomForest:
             use_weights = False
 
         nPreds = len(processed_x.index) if newdata is not None else self.processed_dta['nObservations']
+
+        # Initialize the final prediction array
+        n_arr = ctypes.c_double * nPreds
+        res = n_arr()
+
+        weight_arr = ctypes.c_double * (nPreds * self.processed_dta['nObservations'])
+        if weightMatrix:
+            weight_matrix = weight_arr()
+
+        
         # If option set to terminalNodes, we need to make matrix of ID's
         if aggregation == 'oob':
 
             if (newdata is not None) and (self.processed_dta['nObservations'] != len(newdata.index)):
                 warnings.warn('Attempting to do OOB predictions on a dataset which doesn\'t match the training data!')
                 return None
+
+            lib.predictOOB_forest.argtypes = [ctypes.c_void_p, ctypes.c_void_p, 
+                                        ctypes.POINTER(ctypes.c_double), 
+                                        ctypes.c_bool,
+                                        ctypes.c_bool,
+                                        ctypes.c_bool,
+                                        ctypes.c_bool,
+                                        ctypes.POINTER(n_arr),
+                                        ctypes.POINTER(weight_arr)
+                                        ]
 
             if newdata is None:
                 forest_preds = ctypes.c_void_p(lib.predictOOB_forest(
@@ -808,8 +825,10 @@ class RandomForest:
                     lib_setup.get_data_pointer(self.processed_dta['processed_x']),
                     False,
                     exact,
-                    nPreds,
-                    self.verbose
+                    weightMatrix,
+                    self.verbose,
+                    ctypes.byref(res),
+                    None if not weightMatrix else ctypes.byref(weight_matrix)
                 ))
 
             else:
@@ -819,8 +838,10 @@ class RandomForest:
                     lib_setup.get_data_pointer(processed_x),
                     False,
                     exact,
-                    nPreds,
-                    self.verbose
+                    weightMatrix,
+                    self.verbose,
+                    ctypes.byref(res),
+                    None if not weightMatrix else ctypes.byref(weight_matrix)
                 ))
 
         elif aggregation == 'doubleOOB':
@@ -831,6 +852,16 @@ class RandomForest:
             if not self.doubleBootstrap:
                 raise ValueError('Attempting to do double OOB predictions with a forest that was not trained with doubleBootstrap = True')
 
+            lib.predictOOB_forest.argtypes = [ctypes.c_void_p, ctypes.c_void_p, 
+                                        ctypes.POINTER(ctypes.c_double), 
+                                        ctypes.c_bool,
+                                        ctypes.c_bool,
+                                        ctypes.c_bool,
+                                        ctypes.c_bool,
+                                        ctypes.POINTER(n_arr),
+                                        ctypes.POINTER(weight_arr)
+                                        ]
+
             if newdata is None:
                 forest_preds = ctypes.c_void_p(lib.predictOOB_forest(
                     self.forest,
@@ -838,8 +869,10 @@ class RandomForest:
                     lib_setup.get_data_pointer(self.processed_dta['processed_x']),
                     True,
                     exact,
-                    nPreds,
-                    self.verbose
+                    weightMatrix,
+                    self.verbose,
+                    ctypes.byref(res),
+                    None if not weightMatrix else ctypes.byref(weight_matrix)
                 ))
 
             else:
@@ -849,13 +882,28 @@ class RandomForest:
                     lib_setup.get_data_pointer(processed_x),
                     False,
                     exact,
-                    len(processed_x.index),
-                    self.verbose
+                    weightMatrix,
+                    self.verbose,
+                    ctypes.byref(res),
+                    None if not weightMatrix else ctypes.byref(weight_matrix)
                 ))
 
         
         else:
-            forest_preds = ctypes.c_void_p(lib.predict_forest(
+            lib.predict_forest.argtypes = [ctypes.c_void_p, ctypes.c_void_p, 
+                                        ctypes.POINTER(ctypes.c_double), 
+                                        ctypes.c_uint,
+                                        ctypes.c_size_t,
+                                        ctypes.c_bool,
+                                        ctypes.c_bool,
+                                        ctypes.c_bool,
+                                        ctypes.c_void_p,
+                                        ctypes.c_size_t,
+                                        ctypes.POINTER(n_arr),
+                                        ctypes.POINTER(weight_arr)
+                                        ]
+
+            lib.predict_forest(
                 self.forest,
                 self.dataframe,
                 lib_setup.get_data_pointer(processed_x),
@@ -865,15 +913,15 @@ class RandomForest:
                 weightMatrix,
                 use_weights,
                 lib_setup.get_array_pointer(tree_weights, dtype=np.ulonglong),
-                len(processed_x.index)
-            ))
-
-
-        res = np.empty(nPreds)
-        for i in range(nPreds):
-            res[i] = lib.vector_get(forest_preds, i)
+                len(processed_x.index),
+                ctypes.byref(res),
+                None if not weightMatrix else ctypes.byref(weight_matrix)
+            )
         
-        return res
+        if weightMatrix:
+            weight_matrix = np.array(weight_matrix)
+            return {'predictions': np.array(res), 'weightMatrix': np.lib.stride_tricks.as_strided(weight_matrix, shape=(nPreds, self.processed_dta['nObservations']), strides=(weight_matrix.itemsize*self.processed_dta['nObservations'],weight_matrix.itemsize))}
+        return np.array(res)
 
 
     def get_oob(self, noWarning = False):
@@ -907,7 +955,8 @@ class RandomForest:
         
         return np.mean((y_true - preds)**2)
 
-
+    ##### TODO: CHANGE get_vi after weightmatrix!!!!!!!!!!!!!!!!!!!#######
+    ##### TODO: Check out Bottleneck for faster numpy!!!!!!!!!!!!!!!!!!!!!!!!!
     def get_vi(self, noWarning=False):
         """
         Calculate the percentage increase in OOB error of the forest
@@ -985,12 +1034,12 @@ class RandomForest:
             raise ValueError('We cannot do local-conformal intervals unless OOBhonest is True')
 
         #Check the RandomForest object
-        Py_preprocessing.forest_checker(self)
+        # Py_preprocessing.forest_checker(self)
 
-        #Check the newdata
-        newdata = Py_preprocessing.testing_data_checker(self, newdata, self.processed_dta['hasNas'])
-        newdata = pd.DataFrame(newdata)
-        processed_x = Py_preprocessing.preprocess_testing(newdata, self.processed_dta['categoricalFeatureCols'], self.processed_dta['categoricalFeatureMapping'])
+        # #Check the newdata
+        # newdata = Py_preprocessing.testing_data_checker(self, newdata, self.processed_dta['hasNas'])
+        # newdata = pd.DataFrame(newdata)
+        # processed_x = Py_preprocessing.preprocess_testing(newdata, self.processed_dta['categoricalFeatureCols'], self.processed_dta['categoricalFeatureMapping'])
 
         
         if method == 'OOB-bootstrap':
@@ -1151,6 +1200,9 @@ class RandomForest:
         :rtype: None
         """
 
+        if self.Py_forest is None:
+            self.Py_forest = [dict() for _ in range(self.ntree)]
+
         if tree_ids is None:
             idx = np.arange(self.ntree)
         
@@ -1176,12 +1228,16 @@ class RandomForest:
                 cur_id
             ))
 
+            ind = numNodes*8
+
             self.Py_forest[cur_id]['children_right'] = np.empty(numNodes, dtype=np.intc)
             self.Py_forest[cur_id]['children_left'] = np.empty(numNodes, dtype=np.intc)
             self.Py_forest[cur_id]['feature'] = np.empty(numNodes, dtype=np.intc)
             self.Py_forest[cur_id]['n_node_samples'] = np.empty(numNodes, dtype=np.intc)
             self.Py_forest[cur_id]['threshold'] = np.empty(numNodes, dtype=np.double)
             self.Py_forest[cur_id]['values'] = np.empty(numNodes, dtype=np.double)
+            self.Py_forest[cur_id]['na_left_count'] = np.empty(numNodes, dtype=np.intc)
+            self.Py_forest[cur_id]['na_right_count'] = np.empty(numNodes, dtype=np.intc)
 
             for i in range(numNodes):
                 self.Py_forest[cur_id]['children_right'][i] = int(lib.vector_get(tree_info, i))
@@ -1190,6 +1246,23 @@ class RandomForest:
                 self.Py_forest[cur_id]['n_node_samples'][i] = int(lib.vector_get(tree_info, numNodes*3 + i))
                 self.Py_forest[cur_id]['threshold'][i] = lib.vector_get(tree_info, numNodes*4 + i)
                 self.Py_forest[cur_id]['values'][i] = lib.vector_get(tree_info, numNodes*5 + i)
+                self.Py_forest[cur_id]['na_left_count'][i] = int(lib.vector_get(tree_info, numNodes*6 + i))
+                self.Py_forest[cur_id]['na_right_count'][i] = int(lib.vector_get(tree_info, numNodes*7 + i))
+
+            self.Py_forest[cur_id]['splitting_sample_idx'] = np.empty(int(lib.vector_get(tree_info, ind)), dtype=np.intc)
+            ind += 1
+            for i in range(self.Py_forest[cur_id]['splitting_sample_idx'].size):
+                self.Py_forest[cur_id]['splitting_sample_idx'][i] = int(lib.vector_get(tree_info, ind))
+                ind += 1
+
+            self.Py_forest[cur_id]['averaging_sample_idx'] = np.empty(int(lib.vector_get(tree_info, ind)), dtype=np.intc)
+            ind+=1
+            for i in range(self.Py_forest[cur_id]['averaging_sample_idx'].size):
+                self.Py_forest[cur_id]['averaging_sample_idx'][i] = int(lib.vector_get(tree_info, ind))
+                ind+=1
+
+            
+            self.Py_forest[cur_id]['seed'] = int(lib.vector_get(tree_info, ind))
 
         return
 
@@ -1550,6 +1623,133 @@ class RandomForest:
         self.__init__(**valid_params)
         return self
 
+
+
+    # Saving and loading
+    def save_forestry(self, filename):
+        self.translate_tree_python()
+
+        with open(filename, 'wb') as outp:  # Overwrites any existing file.
+            # Set the ctypes pointers to None before saving (required by pickle)
+            temp_df = self.dataframe
+            temp_forest = self.forest
+            self.dataframe = None
+            self.forest = None
+
+            pickle.dump(self, outp, pickle.HIGHEST_PROTOCOL)
+
+            # Reset the pointers
+            self.dataframe = temp_df
+            self.forest = temp_forest
+
+
+    def load_forestry(self, filename):
+        with open(filename, 'rb') as inp:
+            rf = pickle.load(inp)
+                
+            groupVector = pd.to_numeric(rf.processed_dta['groups']) if rf.processed_dta['groups'] is not None else np.repeat(0, rf.processed_dta['nObservations'])
+            rf.dataframe = ctypes.c_void_p(lib.get_data(
+                lib_setup.get_data_pointer(pd.concat([rf.processed_dta['processed_x'], pd.Series(rf.processed_dta['y'])], axis=1)),
+                lib_setup.get_array_pointer(rf.processed_dta['categoricalFeatureCols'], dtype=np.ulonglong), rf.processed_dta['categoricalFeatureCols'].size,
+                lib_setup.get_array_pointer(rf.processed_dta['linearFeatureCols'], dtype=np.ulonglong), rf.processed_dta['linearFeatureCols'].size,
+                lib_setup.get_array_pointer(rf.processed_dta['featureWeights'], dtype=np.double),
+                lib_setup.get_array_pointer(rf.processed_dta['featureWeightsVariables'], dtype=np.ulonglong), rf.processed_dta['featureWeightsVariables'].size,
+                lib_setup.get_array_pointer(rf.processed_dta['deepFeatureWeights'], dtype=np.double),
+                lib_setup.get_array_pointer(rf.processed_dta['deepFeatureWeightsVariables'], dtype=np.ulonglong), rf.processed_dta['deepFeatureWeightsVariables'].size,
+                lib_setup.get_array_pointer(rf.processed_dta['observationWeights'], dtype=np.double),
+                lib_setup.get_array_pointer(rf.processed_dta['monotonicConstraints'], dtype=np.intc),
+                lib_setup.get_array_pointer(groupVector, dtype=np.ulonglong),
+                rf.monotoneAvg,
+                lib_setup.get_array_pointer(rf.processed_dta['symmetric'], dtype=np.ulonglong), rf.processed_dta['symmetric'].size,
+                rf.processed_dta['nObservations'], rf.processed_dta['numColumns']+1,
+                rf.seed
+            ))
+
+            tree_info = np.empty(rf.ntree*3, dtype=np.intc)
+            total_nodes, total_split_idx, total_av_idx = 0, 0, 0
+            for i in range(rf.ntree): 
+                tree_info[3*i] = rf.Py_forest[i]['children_right'].size
+                total_nodes += tree_info[3*i]
+
+                tree_info[3*i+1] = rf.Py_forest[i]['splitting_sample_idx'].size
+                total_split_idx += tree_info[3*i+1]
+
+                tree_info[3*i+2] = rf.Py_forest[i]['averaging_sample_idx'].size
+                total_av_idx += tree_info[3*i+2]
+                
+            thresholds = np.empty(total_nodes, dtype=np.double)
+            features = np.empty(total_nodes, dtype=np.intc)
+            na_left_counts = np.empty(total_nodes, dtype=np.intc)
+            na_right_counts = np.empty(total_nodes, dtype=np.intc)
+            sample_split_idx = np.empty(total_split_idx, dtype=np.intc)
+            sample_av_idx = np.empty(total_av_idx, dtype=np.intc)
+            predict_weights = np.empty(total_nodes, dtype=np.double)
+            tree_seeds = np.empty(rf.ntree, dtype=np.uintc)
+
+            ind, ind_s, ind_a = 0, 0, 0
+            for i in range(rf.ntree):
+                for j in range(tree_info[3*i]):
+                    thresholds[ind] = rf.Py_forest[i]['threshold'][j]
+                    features[ind] = rf.Py_forest[i]['feature'][j]
+                    na_left_counts[ind] = rf.Py_forest[i]['na_left_count'][j]
+                    na_right_counts[ind] = rf.Py_forest[i]['na_right_count'][j]
+                    predict_weights[ind] = rf.Py_forest[i]['values'][j]
+
+                    ind += 1
+
+                for j in range(tree_info[3*i+1]):
+                    sample_split_idx[ind_s] = rf.Py_forest[i]['splitting_sample_idx'][j]
+                    ind_s += 1
+                
+                for j in range(tree_info[3*i+2]):
+                    sample_av_idx[ind_a] = rf.Py_forest[i]['averaging_sample_idx'][j]
+                    ind_a += 1
+
+                tree_seeds[i] = rf.Py_forest[i]['seed']
+
+            rf.forest = ctypes.c_void_p(lib.py_reconstructree(
+                rf.dataframe,
+                rf.ntree,
+                rf.replace,
+                rf.sampsize,
+                rf.splitratio,
+                rf.OOBhonest,
+                rf.doubleBootstrap,
+                rf.mtry,
+                rf.nodesizeSpl,
+                rf.nodesizeAvg,
+                rf.nodesizeStrictSpl,
+                rf.nodesizeStrictAvg,
+                rf.minSplitGain,
+                rf.maxDepth,
+                rf.interactionDepth,
+                rf.seed,
+                rf.nthread,
+                rf.verbose,
+                rf.middleSplit,
+                rf.maxObs,
+                rf.minTreesPerGroup,
+                rf.processed_dta['hasNas'],
+                rf.linear,
+                not np.any(rf.processed_dta['symmetric']),
+                rf.overfitPenalty,
+                rf.doubleTree,
+                lib_setup.get_array_pointer(tree_info, dtype=np.ulonglong),
+                lib_setup.get_array_pointer(thresholds, dtype=np.double),
+                lib_setup.get_array_pointer(features, dtype=np.intc),
+                lib_setup.get_array_pointer(na_left_counts, dtype=np.intc),
+                lib_setup.get_array_pointer(na_right_counts, dtype=np.intc),
+                lib_setup.get_array_pointer(sample_split_idx, dtype=np.ulonglong),
+                lib_setup.get_array_pointer(sample_av_idx, dtype=np.ulonglong),
+                lib_setup.get_array_pointer(predict_weights, dtype=np.double),
+                lib_setup.get_array_pointer(tree_seeds, dtype=np.uintc),
+            ))
+            
+            return rf
+
+    def __del__(self):
+        # Free the pointers to foretsry and dataframe
+        lib.delete_forestry(self.forest, self.dataframe)
 
 # make linFeats same as symmetric...
 
