@@ -736,6 +736,11 @@ class RandomForest:
         if (not self.linear) and aggregation == 'coefs':
             raise ValueError('Aggregation can only be linear with setting the parameter linear = True.')
 
+        # NOTE:Add this check for now:
+        if weightMatrix and aggregation == 'coefs':
+            warnings.warn('Can\'t return the weightmatrix with linear aggregations. Setting weightMatrix to False') 
+            weightMatrix = False
+
         if seed is None:
             seed = self.seed
         else:
@@ -797,8 +802,11 @@ class RandomForest:
         res = n_arr()
 
         weight_arr = ctypes.c_double * (nPreds * self.processed_dta['nObservations'])
+        coef_arr = ctypes.c_double * (self.processed_dta['nObservations'] * (self.processed_dta['linearFeatureCols'].size+1))
         if weightMatrix:
             weight_matrix = weight_arr()
+        if aggregation == 'coefs':
+            coefficients = coef_arr()
 
         
         # If option set to terminalNodes, we need to make matrix of ID's
@@ -888,7 +896,39 @@ class RandomForest:
                     None if not weightMatrix else ctypes.byref(weight_matrix)
                 ))
 
-        
+        elif aggregation == 'coefs':
+            lib.predict_forest.argtypes = [ctypes.c_void_p, ctypes.c_void_p, 
+                                        ctypes.POINTER(ctypes.c_double), 
+                                        ctypes.c_uint,
+                                        ctypes.c_size_t,
+                                        ctypes.c_bool,
+                                        ctypes.c_bool,
+                                        ctypes.c_bool,
+                                        ctypes.c_bool,
+                                        ctypes.c_void_p,
+                                        ctypes.c_size_t,
+                                        ctypes.POINTER(n_arr),
+                                        ctypes.POINTER(weight_arr),
+                                        ctypes.POINTER(coef_arr)
+                                        ]
+
+            lib.predict_forest(
+                self.forest,
+                self.dataframe,
+                lib_setup.get_data_pointer(processed_x),
+                seed,
+                nthread,
+                exact,
+                False,
+                True,
+                use_weights,
+                lib_setup.get_array_pointer(tree_weights, dtype=np.ulonglong),
+                len(processed_x.index),
+                ctypes.byref(res),
+                None,
+                ctypes.byref(coefficients)
+            )
+
         else:
             lib.predict_forest.argtypes = [ctypes.c_void_p, ctypes.c_void_p, 
                                         ctypes.POINTER(ctypes.c_double), 
@@ -897,10 +937,12 @@ class RandomForest:
                                         ctypes.c_bool,
                                         ctypes.c_bool,
                                         ctypes.c_bool,
+                                        ctypes.c_bool,
                                         ctypes.c_void_p,
                                         ctypes.c_size_t,
                                         ctypes.POINTER(n_arr),
-                                        ctypes.POINTER(weight_arr)
+                                        ctypes.POINTER(weight_arr),
+                                        ctypes.POINTER(coef_arr)
                                         ]
 
             lib.predict_forest(
@@ -911,16 +953,23 @@ class RandomForest:
                 nthread,
                 exact,
                 weightMatrix,
+                False,
                 use_weights,
                 lib_setup.get_array_pointer(tree_weights, dtype=np.ulonglong),
                 len(processed_x.index),
                 ctypes.byref(res),
-                None if not weightMatrix else ctypes.byref(weight_matrix)
+                None if not weightMatrix else ctypes.byref(weight_matrix),
+                None
             )
         
         if weightMatrix:
             weight_matrix = np.array(weight_matrix)
-            return {'predictions': np.array(res), 'weightMatrix': np.lib.stride_tricks.as_strided(weight_matrix, shape=(nPreds, self.processed_dta['nObservations']), strides=(weight_matrix.itemsize*self.processed_dta['nObservations'],weight_matrix.itemsize))}
+            return {'predictions': np.array(res), 'weightMatrix': np.lib.stride_tricks.as_strided(weight_matrix, shape=(nPreds, self.processed_dta['nObservations']), strides=(weight_matrix.itemsize*self.processed_dta['nObservations'], weight_matrix.itemsize))}
+        
+        elif aggregation == 'coefs':
+            coefficients = np.array(coefficients)
+            return {'predictions': np.array(res), 'coef': np.lib.stride_tricks.as_strided(coefficients, shape=(self.processed_dta['nObservations'], self.processed_dta['linearFeatureCols'].size+1), strides=(coefficients.itemsize*(self.processed_dta['linearFeatureCols'].size+1), coefficients.itemsize))}
+
         return np.array(res)
 
 
@@ -1222,6 +1271,7 @@ class RandomForest:
                 cur_id
             )
 
+
             tree_info = ctypes.c_void_p(lib.get_tree_info(
                 self.forest,
                 self.dataframe,
@@ -1230,8 +1280,8 @@ class RandomForest:
 
             ind = numNodes*8
 
-            self.Py_forest[cur_id]['children_right'] = np.empty(numNodes, dtype=np.intc)
             self.Py_forest[cur_id]['children_left'] = np.empty(numNodes, dtype=np.intc)
+            self.Py_forest[cur_id]['children_right'] = np.empty(numNodes, dtype=np.intc)
             self.Py_forest[cur_id]['feature'] = np.empty(numNodes, dtype=np.intc)
             self.Py_forest[cur_id]['n_node_samples'] = np.empty(numNodes, dtype=np.intc)
             self.Py_forest[cur_id]['threshold'] = np.empty(numNodes, dtype=np.double)
@@ -1240,8 +1290,8 @@ class RandomForest:
             self.Py_forest[cur_id]['na_right_count'] = np.empty(numNodes, dtype=np.intc)
 
             for i in range(numNodes):
-                self.Py_forest[cur_id]['children_right'][i] = int(lib.vector_get(tree_info, i))
-                self.Py_forest[cur_id]['children_left'][i] = int(lib.vector_get(tree_info, numNodes + i))
+                self.Py_forest[cur_id]['children_left'][i] = int(lib.vector_get(tree_info, i))
+                self.Py_forest[cur_id]['children_right'][i] = int(lib.vector_get(tree_info, numNodes + i))
                 self.Py_forest[cur_id]['feature'][i] = int(lib.vector_get(tree_info, numNodes*2 + i))
                 self.Py_forest[cur_id]['n_node_samples'][i] = int(lib.vector_get(tree_info, numNodes*3 + i))
                 self.Py_forest[cur_id]['threshold'][i] = lib.vector_get(tree_info, numNodes*4 + i)
@@ -1263,6 +1313,97 @@ class RandomForest:
 
             
             self.Py_forest[cur_id]['seed'] = int(lib.vector_get(tree_info, ind))
+
+        return
+
+
+    # STILL WORKING ON THIS ONE
+    def translate_tree_python_versiontwo(self, tree_ids = None):
+        """
+        Given a trained forest, translates the selected trees by allowing access to its undelying structure. 
+        After translating tree *i*, its structure will be stored as a dictionary in :ref:`Py_forest <translate-label>` and can be accessed 
+        by ``[RandomForest object].Py_forest[i]``. Check out the :ref:`Py_forest <translate-label>` attribute for more
+        details about its structure.
+
+        :param tree_ids: The indices of the trees to be translated. By default, all the trees in the forest
+         are translated.
+        :type tree_ids: *int/array_like, optional*
+        :rtype: None
+        """
+
+        if self.Py_forest is None:
+            self.Py_forest = [dict() for _ in range(self.ntree)]
+
+        if tree_ids is None:
+            idx = np.arange(self.ntree)
+        
+        else:
+            if isinstance(tree_ids, (int, np.integer)):
+                idx = np.array([tree_ids])
+            else:
+                idx = np.array(tree_ids)
+
+        for cur_id in idx:
+
+            if self.Py_forest[cur_id]:
+                continue
+
+            numNodes = lib.getTreeNodeCount(
+                self.forest,
+                cur_id
+            )
+
+            # Initialize arrays to pass to C
+            sample_arr = ctypes.c_int * (self.sampsize + 1)
+            split_info = sample_arr()
+            averaging_info = sample_arr()
+
+            info_arr = ctypes.c_double * (numNodes*8 + 1)
+            tree_info = info_arr()
+
+            lib.fill_tree_info.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.POINTER(info_arr), ctypes.POINTER(sample_arr), ctypes.POINTER(sample_arr)]
+
+            lib.fill_tree_info(
+                self.forest,
+                cur_id,
+                ctypes.byref(tree_info),
+                ctypes.byref(split_info),
+                ctypes.byref(averaging_info)
+            )
+
+
+            self.Py_forest[cur_id]['children_right'] = np.empty(numNodes, dtype=np.intc)
+            self.Py_forest[cur_id]['children_left'] = np.empty(numNodes, dtype=np.intc)
+            self.Py_forest[cur_id]['feature'] = np.empty(numNodes, dtype=np.intc)
+            self.Py_forest[cur_id]['n_node_samples'] = np.empty(numNodes, dtype=np.intc)
+            self.Py_forest[cur_id]['threshold'] = np.empty(numNodes, dtype=np.double)
+            self.Py_forest[cur_id]['values'] = np.empty(numNodes, dtype=np.double)
+            self.Py_forest[cur_id]['na_left_count'] = np.empty(numNodes, dtype=np.intc)
+            self.Py_forest[cur_id]['na_right_count'] = np.empty(numNodes, dtype=np.intc)
+
+
+            for i in range(numNodes):
+                self.Py_forest[cur_id]['children_right'][i] = int(tree_info[i])
+                self.Py_forest[cur_id]['children_left'][i] = int(tree_info[numNodes + i])
+                self.Py_forest[cur_id]['feature'][i] = int(tree_info[numNodes*2 + i])
+                self.Py_forest[cur_id]['n_node_samples'][i] = int(tree_info[numNodes*3 + i])
+                self.Py_forest[cur_id]['threshold'][i] = tree_info[numNodes*4 + i]
+                self.Py_forest[cur_id]['values'][i] = tree_info[numNodes*5 + i]
+                self.Py_forest[cur_id]['na_left_count'][i] = int(tree_info[numNodes*6 + i])
+                self.Py_forest[cur_id]['na_right_count'][i] = int(tree_info[numNodes*7 + i])
+
+
+            numSplitidx = int(split_info[0])
+            self.Py_forest[cur_id]['splitting_sample_idx'] = np.empty(numSplitidx, dtype=np.intc)
+            for i in range(numSplitidx):
+                self.Py_forest[cur_id]['splitting_sample_idx'][i] = int(split_info[i+1])
+
+            numAvidx = int(averaging_info[0])
+            self.Py_forest[cur_id]['averaging_sample_idx'] = np.empty(numAvidx, dtype=np.intc)
+            for i in range(numAvidx):
+                self.Py_forest[cur_id]['averaging_sample_idx'][i] = int(averaging_info[i+1])
+
+            self.Py_forest[cur_id]['seed'] = int(tree_info[numNodes*8])
 
         return
 

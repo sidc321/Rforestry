@@ -128,7 +128,7 @@ void RFNode::ridgePredict(
     size_t dimension = (trainingData->getLinObsData(0)).size();
 
     // Pull the ridge regression coefficients
-    arma::Mat<double> coefficients = getRidgeCoefficients();
+    arma::Mat<double> coefficients = getRidgeCoefficients(); 
 
 
   //Map xNew into Eigen matrix
@@ -160,13 +160,16 @@ void RFNode::ridgePredict(
   // Want coefficients vector
   std::vector<double> c_vector =
     arma::conv_to< std::vector<double> >::from(coefficients.col(0));
+  
 
   // If we want to update coefficients, update the vector as well
   if (!(outputCoefficients.empty())) {
     for (size_t k = 0; k < updateIndex->size(); k++) {
       outputCoefficients[(*updateIndex)[k]] = c_vector;
+      
     }
   }
+   
 }
 
 
@@ -329,7 +332,7 @@ void RFNode::predict(
   unsigned int seed,
   size_t nodesizeStrictAvg,
   std::vector<size_t>* OOBIndex
-) {
+) {  
 
   // If the node is a leaf, aggregate all its averaging data samples
   if (is_leaf()) {

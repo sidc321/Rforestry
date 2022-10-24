@@ -168,8 +168,8 @@ def forest_parameter_checker(
         warnings.warn('Trees cannot be doubled if splitratio is 1. We have set doubleTree to False.')
         doubleTree = False
 
-    if (interactionDepth is not None) and (maxDepth is not None) and (interactionDepth < maxDepth):
-        warnings.warn('interactionDepth cannot be less than maxDepth. We have set interactionDepth to maxDepth.')
+    if (interactionDepth is not None) and (maxDepth is not None) and (interactionDepth > maxDepth):
+        warnings.warn('interactionDepth cannot be greater than maxDepth. We have set interactionDepth to maxDepth.')
         interactionDepth = maxDepth
 
     

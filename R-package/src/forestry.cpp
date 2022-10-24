@@ -730,6 +730,7 @@ void forestry::addTrees(size_t ntree) {
     }
   }
 
+
   return prediction_;
 }
 
@@ -746,6 +747,7 @@ void forestry::predict_forestry(
   bool use_weights,
   std::vector<size_t>* tree_weights
 ){
+  
 
   //return new std::vector<double> ((*xNew)[0]);
 
@@ -862,6 +864,14 @@ void forestry::predict_forestry(
               tree_preds.push_back(currentTreePrediction);
               tree_nodes.push_back(currentTreeTerminalNodes);
               tree_total_nodes.push_back(currentTree->getNodeCount());
+              if (coefficients) {
+                for (size_t k = 0; k < numObservations; k++) {
+                  for (size_t l = 0; l < coefficients->n_cols; l++) {
+                    (*coefficients)(k,l) += currentTreeCoefficients[k][l];
+                  }
+                }
+
+              }
             } else {
               for (size_t j = 0; j < numObservations; j++) {
                 prediction[j] += currentTreePrediction[j];
@@ -870,9 +880,11 @@ void forestry::predict_forestry(
               if (coefficients) {
                 for (size_t k = 0; k < numObservations; k++) {
                   for (size_t l = 0; l < coefficients->n_cols; l++) {
+                    std::cout << currentTreeCoefficients[k][l] << " "; 
                     (*coefficients)(k,l) += currentTreeCoefficients[k][l];
                   }
                 }
+
               }
 
               if (terminalNodes) {
