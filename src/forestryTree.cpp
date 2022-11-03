@@ -266,7 +266,8 @@ void forestryTree::predict(
     bool linear,
     unsigned int seed,
     size_t nodesizeStrictAvg,
-    std::vector<size_t>* OOBIndex
+    std::vector<size_t>* OOBIndex,
+    bool fillRidgeCoefs
 ){
   // If we are estimating the average in each leaf:
   struct rangeGenerator {
@@ -282,7 +283,7 @@ void forestryTree::predict(
                        terminalNodes,
                        outputCoefficients,
                        &updateIndex,
-                       weightMatrix ? getAveragingIndex() : nullptr,
+                       (weightMatrix || fillRidgeCoefs) ? getAveragingIndex() : nullptr,
                        xNew,
                        trainingData,
                        weightMatrix,
@@ -290,7 +291,8 @@ void forestryTree::predict(
                        getOverfitPenalty(),
                        seed,
                        nodesizeStrictAvg,
-                       OOBIndex);
+                       OOBIndex,
+                       fillRidgeCoefs);
   //Rcpp::Rcout << "Seed is" << seed << ".\n";
 }
 

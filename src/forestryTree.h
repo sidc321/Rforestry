@@ -64,7 +64,8 @@ public:
     bool linear = false,
     unsigned int seed = 44,
     size_t nodesizeStrictAvg = 1,
-    std::vector<size_t>* OOBIndex = NULL
+    std::vector<size_t>* OOBIndex = NULL,
+    bool fillRidgeCoefs = false
   );
 
   std::unique_ptr<tree_info> getTreeInfo(

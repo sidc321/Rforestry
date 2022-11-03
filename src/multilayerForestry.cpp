@@ -186,7 +186,8 @@ void multilayerForestry::addForests(size_t ntree) {
                               1,
                               false,
                               false,
-                              NULL);
+                              NULL,
+                              false);
 
     // Calculate and store best gamma value
     // std::vector<double> bestPredictedResiduals(trainingData->getNumRows());
@@ -260,7 +261,8 @@ std::unique_ptr< std::vector<double> > multilayerForestry::predict(
                                   nthread,
                                   exact,
                                   false,
-                                  NULL);
+                                  NULL,
+                                  false);
 
   std::vector<double> prediction(initialPrediction->size(), getMeanOutcome());
 
@@ -281,7 +283,8 @@ std::unique_ptr< std::vector<double> > multilayerForestry::predict(
                                     nthread,
                                     exact,
                                     false,
-                                    NULL);
+                                    NULL,
+                                    false);
 
     std::transform(predictedResiduals->begin(), predictedResiduals->end(),
                    predictedResiduals->begin(), std::bind(std::multiplies<double>(), gammas[i], std::placeholders::_1));

@@ -104,9 +104,12 @@ void RFNode::setRidgeCoefficients(
     arma::Mat<double> y(outcomePoints.size(),
                         1);
     y.col(0) = arma::conv_to<arma::Col<double> >::from(outcomePoints);
+
     //Compute XtX + lambda * I * Y = C
     arma::Mat<double> coefficients = (x.t() * x +
                                       identity * lambda).i() * x.t() * y;
+
+
 
     this->_ridgeCoefficients = coefficients;
 }
@@ -176,7 +179,8 @@ void RFNode::predict(
   double lambda,
   unsigned int seed,
   size_t nodesizeStrictAvg,
-  std::vector<size_t>* OOBIndex
+  std::vector<size_t>* OOBIndex,
+  bool fillRidgeCoefs
 ) {
 
   // If the node is a leaf, aggregate all its averaging data samples
@@ -184,13 +188,19 @@ void RFNode::predict(
 
       if (linear) {
 
-        //Use ridgePredict (fit linear model on leaf avging obs + evaluate it)
-        ridgePredict(outputPrediction,
-                     outputCoefficients,
-                     updateIndex,
-                     xNew,
-                     trainingData,
-                     lambda);
+        if (fillRidgeCoefs) {
+            this->setRidgeCoefficients(predictionAveragingIndices,
+                                 trainingData,
+                                 lambda);
+        } else {
+            //Use ridgePredict (fit linear model on leaf avging obs + evaluate it)
+            ridgePredict(outputPrediction,
+                         outputCoefficients,
+                         updateIndex,
+                         xNew,
+                         trainingData,
+                         lambda);
+        }
 
       } else {
 
@@ -436,7 +446,7 @@ void RFNode::predict(
       // If we need to return the weightmatrix, do the same thing for the training data
       std::vector<size_t>* leftPartitionAveragingIndex = nullptr;
       std::vector<size_t>* rightPartitionAveragingIndex = nullptr;
-      if (weightMatrix) {
+      if (weightMatrix || fillRidgeCoefs) {
 
           leftPartitionAveragingIndex = new std::vector<size_t>();
           rightPartitionAveragingIndex = new std::vector<size_t>();
@@ -574,7 +584,8 @@ void RFNode::predict(
           lambda,
           seed,
           nodesizeStrictAvg,
-          OOBIndex
+          OOBIndex,
+          fillRidgeCoefs
       );
     }
 
@@ -592,13 +603,14 @@ void RFNode::predict(
           lambda,
           seed,
           nodesizeStrictAvg,
-          OOBIndex
+          OOBIndex,
+          fillRidgeCoefs
         );
     }
 
     delete(leftPartitionIndex);
     delete(rightPartitionIndex);
-    if (weightMatrix) {
+    if (weightMatrix || fillRidgeCoefs) {
         delete(leftPartitionAveragingIndex);
         delete(rightPartitionAveragingIndex);
     }

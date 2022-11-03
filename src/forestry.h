@@ -56,7 +56,8 @@ public:
     size_t nthread,
     bool exact,
     bool use_weights,
-    std::vector<size_t>* tree_weights
+    std::vector<size_t>* tree_weights,
+    bool fillRidgeCoefs
   );
 
   std::vector<double> predictOOB(

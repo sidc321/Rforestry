@@ -497,7 +497,8 @@ std::unique_ptr< std::vector<double> > forestry::predict(
   size_t nthread,
   bool exact,
   bool use_weights,
-  std::vector<size_t>* tree_weights
+  std::vector<size_t>* tree_weights,
+  bool fillRidgeCoefs
 ){
 
   size_t numObservations = (*xNew)[0].size();
@@ -594,7 +595,9 @@ std::unique_ptr< std::vector<double> > forestry::predict(
                   weightMatrix,
                   getlinear(),
                   seed + i,
-                  getMinNodeSizeToSplitAvg()
+                  getMinNodeSizeToSplitAvg(),
+                  nullptr,
+                  fillRidgeCoefs
               );
 
             } else {
@@ -607,7 +610,9 @@ std::unique_ptr< std::vector<double> > forestry::predict(
                   weightMatrix,
                   getlinear(),
                   seed + i,
-                  getMinNodeSizeToSplitAvg()
+                  getMinNodeSizeToSplitAvg(),
+                  nullptr,
+                  fillRidgeCoefs
               );
 
             }

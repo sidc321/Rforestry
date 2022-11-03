@@ -13,8 +13,8 @@ rcpp_cppMultilayerBuildInterface <- function(x, y, catCols, linCols, numRows, nu
     .Call(`_Rforestry_rcpp_cppMultilayerBuildInterface`, x, y, catCols, linCols, numRows, numColumns, ntree, nrounds, eta, replace, sampsize, mtry, splitratio, OOBhonest, doubleBootstrap, nodesizeSpl, nodesizeAvg, nodesizeStrictSpl, nodesizeStrictAvg, minSplitGain, maxDepth, seed, nthread, verbose, middleSplit, maxObs, featureWeights, featureWeightsVariables, deepFeatureWeights, deepFeatureWeightsVariables, observationWeights, monotonicConstraints, linear, overfitPenalty, doubleTree, existing_dataframe_flag, existing_dataframe)
 }
 
-rcpp_cppPredictInterface <- function(forest, x, aggregation, seed, nthread, exact, returnWeightMatrix, use_weights, use_hold_out_idx, tree_weights, hold_out_idx) {
-    .Call(`_Rforestry_rcpp_cppPredictInterface`, forest, x, aggregation, seed, nthread, exact, returnWeightMatrix, use_weights, use_hold_out_idx, tree_weights, hold_out_idx)
+rcpp_cppPredictInterface <- function(forest, x, aggregation, seed, nthread, exact, returnWeightMatrix, use_weights, use_hold_out_idx, tree_weights, hold_out_idx, fillRidgeCoefficients) {
+    .Call(`_Rforestry_rcpp_cppPredictInterface`, forest, x, aggregation, seed, nthread, exact, returnWeightMatrix, use_weights, use_hold_out_idx, tree_weights, hold_out_idx, fillRidgeCoefficients)
 }
 
 rcpp_cppMultilayerPredictInterface <- function(multilayerForest, x, aggregation, seed, nthread, exact) {

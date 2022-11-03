@@ -75,6 +75,13 @@ test_that("Tests if ridgeRF works", {
   # Test predict
   y_pred <- predict(forest, x)
 
+  saveForestry(forest, filename = "~/Desktop/my_for.Rda")
+  rm(forest)
+  forest_after <- loadForestry("~/Desktop/my_for.Rda")
+
+  y_pred_after <- predict(forest_after, x)
+
+
   # Mean Square Error
   mean((y_pred - y) ^ 2)
 

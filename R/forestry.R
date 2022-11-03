@@ -1853,7 +1853,8 @@ predict.forestry <- function(object,
                                use_weights = use_weights,
                                use_hold_out_idx = TRUE,
                                tree_weights = tree_weights,
-                               hold_out_idx = (holdOutIdx-1)) # Change to 0 indexed for C++
+                               hold_out_idx = (holdOutIdx-1),# Change to 0 indexed for C++
+                               fillRidgeCoefficients = FALSE)
     }, error = function(err) {
       print(err)
       return(NULL)
@@ -1937,7 +1938,8 @@ predict.forestry <- function(object,
                                use_weights = use_weights,
                                use_hold_out_idx = FALSE,
                                tree_weights = tree_weights,
-                               hold_out_idx = c(-1))
+                               hold_out_idx = c(-1),
+                               fillRidgeCoefficients = FALSE)
     }, error = function(err) {
       print(err)
       return(NULL)
@@ -3016,6 +3018,25 @@ loadForestry <- function(filename){
     rf@symmetric <- rep(0,rf@processed_dta$numColumns)
   }
   rf <- relinkCPP_prt(rf)
+
+  if (rf@linear) {
+    # Add change to populate coefficient vectors when loading a linear forest
+
+    tree_weights <- rep(1, rf@ntree)
+    p <- rcpp_cppPredictInterface(rf@forest,
+                                  rf@processed_dta$processed_x,
+                                  aggregation = "average",
+                                  seed = 1,
+                                  nthread = 0,
+                                  exact = FALSE,
+                                  returnWeightMatrix = FALSE,
+                                  use_weights = FALSE,
+                                  use_hold_out_idx = FALSE,
+                                  tree_weights = tree_weights,
+                                  hold_out_idx = c(-1),
+                                  fillRidgeCoefficients = TRUE)
+    rm(p)
+  }
   return(rf)
 }
 

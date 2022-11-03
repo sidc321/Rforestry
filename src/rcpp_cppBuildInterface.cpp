@@ -493,83 +493,94 @@ Rcpp::List rcpp_cppPredictInterface(
   bool use_weights,
   bool use_hold_out_idx,
   Rcpp::NumericVector tree_weights,
-  Rcpp::IntegerVector hold_out_idx
+  Rcpp::IntegerVector hold_out_idx,
+  bool fillRidgeCoefficients
 ){
   try {
 
-    Rcpp::XPtr< forestry > testFullForest(forest) ;
+      Rcpp::XPtr <forestry> testFullForest(forest);
 
-    std::vector< std::vector<double> > featureData =
-      Rcpp::as< std::vector< std::vector<double> > >(x);
+      std::vector <std::vector<double>> featureData =
+              Rcpp::as < std::vector < std::vector < double > > > (x);
 
-    std::unique_ptr< std::vector<double> > testForestPrediction;
-    // We always initialize the weightMatrix. If the aggregation is weightMatrix
-    // then we inialize the empty weight matrix
-    arma::Mat<double> weightMatrix;
-    arma::Mat<int> terminalNodes;
-    arma::Mat<double> coefficients;
+      std::unique_ptr <std::vector<double>> testForestPrediction;
+      // We always initialize the weightMatrix. If the aggregation is weightMatrix
+      // then we inialize the empty weight matrix
+      arma::Mat<double> weightMatrix;
+      arma::Mat<int> terminalNodes;
+      arma::Mat<double> coefficients;
 
-    if (returnWeightMatrix) {
-      size_t nrow = featureData[0].size(); // number of features to be predicted
-      size_t ncol = (*testFullForest).getNtrain(); // number of train data
-      weightMatrix.resize(nrow, ncol); // initialize the space for the matrix
-      weightMatrix.zeros(nrow, ncol);  // set it all to 0
-    }
-
-
-    // Have to keep track of tree_weights
-    std::vector<size_t>* testForestTreeWeights;
-    std::vector<size_t> weights;
-
-    // If using predict indices, set weights according to them
-    if (use_hold_out_idx) {
-      std::vector<size_t> holdOutIdxCpp = Rcpp::as< std::vector<size_t> >(hold_out_idx);
-
-      for (auto &tree : *(testFullForest->getForest())) {
-        bool discard_tree = false;
-        std::unordered_set<size_t> hold_out_set(holdOutIdxCpp.begin(), holdOutIdxCpp.end());
-        for (const auto &averaging_index : *(tree->getAveragingIndex()) ) {
-          if (hold_out_set.count(averaging_index)) {
-            discard_tree = true;
-            break;
-          }
-        }
-        // if Still haven't found any of them, search splitting set
-        if (!discard_tree) {
-          for (const auto &splitting_index : *(tree->getSplittingIndex()) ) {
-            if (hold_out_set.count(splitting_index)) {
-              discard_tree = true;
-              break;
-            }
-          }
-        }
-        if (discard_tree) {
-          weights.push_back(0);
-        } else {
-          weights.push_back(1);
-        }
-      } // End tree loop
-      // Tell forest to use the weights
-      use_weights = true;
-    } else {
-      // If we have weights we want to initialize them.
-      weights = Rcpp::as< std::vector<size_t> >(tree_weights);
-    }
-
-    // Make ptr to weights
-    testForestTreeWeights =
-      new std::vector<size_t> (weights);
+      if (returnWeightMatrix) {
+          size_t nrow = featureData[0].size(); // number of features to be predicted
+          size_t ncol = (*testFullForest).getNtrain(); // number of train data
+          weightMatrix.resize(nrow, ncol); // initialize the space for the matrix
+          weightMatrix.zeros(nrow, ncol);  // set it all to 0
+      }
 
 
+      // Have to keep track of tree_weights
+      std::vector <size_t> *testForestTreeWeights;
+      std::vector <size_t> weights;
 
-    size_t threads_to_use;
-    if (nthread == 0) {
-      threads_to_use = testFullForest->getNthread();
-    } else {
-      threads_to_use = (size_t) nthread;
-    }
+      // If using predict indices, set weights according to them
+      if (use_hold_out_idx) {
+          std::vector <size_t> holdOutIdxCpp = Rcpp::as < std::vector < size_t > > (hold_out_idx);
 
-    if (aggregation == "coefs") {
+          for (auto &tree: *(testFullForest->getForest())) {
+              bool discard_tree = false;
+              std::unordered_set <size_t> hold_out_set(holdOutIdxCpp.begin(), holdOutIdxCpp.end());
+              for (const auto &averaging_index: *(tree->getAveragingIndex())) {
+                  if (hold_out_set.count(averaging_index)) {
+                      discard_tree = true;
+                      break;
+                  }
+              }
+              // if Still haven't found any of them, search splitting set
+              if (!discard_tree) {
+                  for (const auto &splitting_index: *(tree->getSplittingIndex())) {
+                      if (hold_out_set.count(splitting_index)) {
+                          discard_tree = true;
+                          break;
+                      }
+                  }
+              }
+              if (discard_tree) {
+                  weights.push_back(0);
+              } else {
+                  weights.push_back(1);
+              }
+          } // End tree loop
+          // Tell forest to use the weights
+          use_weights = true;
+      } else {
+          // If we have weights we want to initialize them.
+          weights = Rcpp::as < std::vector < size_t > > (tree_weights);
+      }
+
+      // Make ptr to weights
+      testForestTreeWeights =
+              new std::vector<size_t>(weights);
+
+
+      size_t threads_to_use;
+      if (nthread == 0) {
+          threads_to_use = testFullForest->getNthread();
+      } else {
+          threads_to_use = (size_t) nthread;
+      }
+
+      if (fillRidgeCoefficients) {
+          testForestPrediction = (*testFullForest).predict(&featureData,
+                                                           returnWeightMatrix ? &weightMatrix : NULL,
+                                                           NULL,
+                                                           NULL,
+                                                           seed,
+                                                           threads_to_use,
+                                                           exact,
+                                                           use_weights,
+                                                           use_weights ? testForestTreeWeights : NULL,
+                                                           true);
+      } else if (aggregation == "coefs") {
       size_t nrow = featureData[0].size();
       // Now we need the number of linear features + 1 for the intercept
       size_t ncol = (*testFullForest).getTrainingData()->getLinObsData(0).size() + 1;
@@ -585,7 +596,8 @@ Rcpp::List rcpp_cppPredictInterface(
                                                        threads_to_use,
                                                        false,
                                                        false,
-                                                       NULL);
+                                                       NULL,
+                                                       false);
 
     } else if (aggregation == "terminalNodes") {
       // In this case, we return both the terminal nodes, and the weightMatrix
@@ -614,7 +626,8 @@ Rcpp::List rcpp_cppPredictInterface(
                                                        threads_to_use,
                                                        exact,
                                                        false,
-                                                       NULL);
+                                                       NULL,
+                                                       false);
     } else {
       // If the weights are zero, we just return NaN's
       if (use_weights &&
@@ -632,7 +645,8 @@ Rcpp::List rcpp_cppPredictInterface(
                                 threads_to_use,
                                 exact,
                                 use_weights,
-                                use_weights ? testForestTreeWeights : NULL);
+                                use_weights ? testForestTreeWeights : NULL,
+                                false);
       }
     }
 
@@ -1346,6 +1360,7 @@ Rcpp::List rcpp_reconstructree(
                                    predictWeights
                                    );
 
+
   // delete(testFullForest);
   Rcpp::XPtr<forestry> ptr(testFullForest, true);
   R_RegisterCFinalizerEx(
@@ -1832,7 +1847,8 @@ std::vector< std::vector<double> > rcpp_cppImputeInterface(
                                                    testFullForest->getNthread(),
                                                    false,
                                                    false,
-                                                   NULL);
+                                                   NULL,
+                                                   false);
 
   std::vector<double>* testForestPrediction_ =
     new std::vector<double>(*testForestPrediction.get());

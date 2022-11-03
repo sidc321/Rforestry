@@ -65,7 +65,8 @@ public:
     double lambda,
     unsigned int seed,
     size_t nodesizeStrictAvg,
-    std::vector<size_t>* OOBIndex = NULL
+    std::vector<size_t>* OOBIndex = NULL,
+    bool fillRidgeCoefs = false
   );
 
   void write_node_info(
@@ -155,6 +156,7 @@ public:
       return _ridgeCoefficients;
   }
 
+  arma::Mat<double> _ridgeCoefficients;
 
 private:
   std::unique_ptr< std::vector<size_t> > _averagingSampleIndex;
@@ -163,7 +165,6 @@ private:
   double _splitValue;
   bool _trinary;
   double _predictWeight;
-  arma::Mat<double> _ridgeCoefficients;
   std::vector<double> _weights;
   std::unique_ptr< RFNode > _leftChild;
   std::unique_ptr< RFNode > _rightChild;
