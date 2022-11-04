@@ -3,6 +3,8 @@
 #include <string>
 #include <iostream>
 #include <random>
+#include <algorithm>
+#include <cmath>
 
 void print_vector(
     std::vector<size_t> v
@@ -63,10 +65,52 @@ double square(
   return (x*x);
 }
 
+// Given a number of groups, we assign each group to a
+// fold of size foldSize (if numGroups % foldSize != 0, one
+// fold may have a smaller number of groups).
+// Returns a vector of vectors where the ith vector holds the
+// indices of the groups in the ith fold.
+void assign_groups_to_folds(
+        size_t numGroups,
+        size_t foldSize,
+        std::vector< std::vector<size_t> >& foldMemberships,
+        std::mt19937_64& random_number_generator
+) {
+    // Create vector of group indices
+    std::vector<size_t> group_vector(numGroups);
+    std::iota(group_vector.begin(), group_vector.end(), 1);
+
+    // Shuffle the groups, now we can partition by foldSize to get a random partition
+    std::shuffle(group_vector.begin(), group_vector.end(), random_number_generator);
+
+    // Get number of folds we need
+    size_t numFolds = (size_t) std::ceil((double) numGroups / (double) foldSize);
+
+    // Populate foldMemberships with the partitioned shuffled values
+    foldMemberships.reserve(numFolds);
+    for (size_t iter = 0; iter < numFolds-1; iter++) {
+        std::vector<size_t> row_vec(foldSize);
+
+        // Copy over the slice of the group vector to the appropriate vector in foldMemberships
+        std::copy(group_vector.begin() + iter*foldSize,
+                  group_vector.begin() + (iter+1)*foldSize - 1,
+                  row_vec.begin());
+
+        // Give vector to the foldMemberships
+        foldMemberships[iter] = row_vec;
+    }
+
+
+    // Now last fold might be smaller than foldsize.
+    for (size_t index = (numFolds-1)*foldSize; index < group_vector.size(); index++) {
+        foldMemberships[numFolds-1].push_back(group_vector[index]);
+    }
+}
+
 // Does a bootstrap sample from the observations which do not fall into
 // the groupIdx group, this puts the resulting sample into outputIdx
 void group_out_sample(
-    size_t groupIdx,
+    std::vector<size_t>& removedGroupIdx,
     std::vector<size_t>& groupMemberships,
     std::vector<size_t>& outputIdx,
     std::mt19937_64& random_number_generator
@@ -76,7 +120,7 @@ void group_out_sample(
 
   // First get all observations not in groupIdx
   for (size_t i = 0; i < groupMemberships.size(); i++) {
-    if (groupMemberships[i] != groupIdx) {
+    if (std::find(removedGroupIdx.begin(), removedGroupIdx.end(), groupMemberships[i]) == removedGroupIdx.end()) {
       out_of_group_indices.push_back(i);
     }
   }

@@ -165,7 +165,6 @@ void forestry::addTrees(size_t ntree) {
 
   size_t splitSampleSize = (size_t) (getSplitRatio() * getSampleSize());
 
-
   #if DOPARELLEL
   if (isVerbose()) {
     RcppThread::Rcout << "Training parallel using " << nthreadToUse << " threads"
@@ -212,8 +211,10 @@ void forestry::addTrees(size_t ntree) {
             //RcppThread::Rcout << currentGroup;
 
             // Populate sampleIndex with the leave group out function
+            std::vector<size_t> groups_to_remove;
+            groups_to_remove.push_back(currentGroup);
             group_out_sample(
-              currentGroup,
+              groups_to_remove,
               (*getTrainingData()->getGroups()),
               sampleIndex,
               random_number_generator
