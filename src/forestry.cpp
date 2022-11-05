@@ -48,6 +48,7 @@ forestry::forestry(
   bool splitMiddle,
   size_t maxObs,
   size_t minTreesPerGroup,
+  size_t foldSize,
   bool hasNas,
   bool linear,
   bool symmetric,
@@ -79,6 +80,7 @@ forestry::forestry(
   this->_overfitPenalty = overfitPenalty;
   this->_doubleTree = doubleTree;
   this->_minTreesPerGroup = minTreesPerGroup;
+  this->_foldSize = foldSize;
   this->_symmetric = symmetric;
 
   if (splitRatio > 1 || splitRatio < 0) {
@@ -139,21 +141,46 @@ void forestry::addTrees(size_t ntree) {
   unsigned int newEndingTreeNumber;
   size_t numToGrow, groupToGrow;
 
+
+  std::vector< std::vector<size_t> > foldMemberships(1);
+
   // This is called with ntree = 0 only when loading a saved forest.
   // When minTreesPerGroup takes precedence over ntree, we need to make sure to
   // train 0 trees when ntree = 0, otherwise this messes up the reconstruction of the forest
   if ((ntree != 0) && (getMinTreesPerGroup() > 0)) {
-    numToGrow =
-      (unsigned int) getMinTreesPerGroup() * ((*std::max_element(getTrainingData()->getGroups()->begin(),
-                                                                 getTrainingData()->getGroups()->end())));
+    size_t numGroups = (*std::max_element(getTrainingData()->getGroups()->begin(),
+                                          getTrainingData()->getGroups()->end()));
+
+    size_t numFolds = ((size_t) std::ceil((double) numGroups / (double) getFoldSize()));
+
+    numToGrow = (unsigned int) getMinTreesPerGroup() * (numFolds);
     // Want to grow max(ntree, |groups|*minTreePerGroup) total trees
     groupToGrow = numToGrow;
     numToGrow = std::max(numToGrow, ntree);
+
+    std::mt19937_64 group_assign_rng;
+    group_assign_rng.seed(getSeed());
+
+    foldMemberships.resize(numFolds);
+    for (size_t fold_i = 0; fold_i < numFolds; fold_i++) {
+        foldMemberships[fold_i] = std::vector<size_t>(getFoldSize());
+    }
+    // Assign the groups to different folds. When the foldsize is 1, this is equivalent
+    // to the previous minTreesPerGroup implementation
+    assign_groups_to_folds(
+            numGroups,
+            getFoldSize(),
+            foldMemberships,
+            group_assign_rng
+    );
   } else {
     numToGrow = ntree;
   }
   newEndingTreeNumber = newStartingTreeNumber + (unsigned int) numToGrow;
-
+  //for (size_t i = 0; i < foldMemberships.size(); i++) {
+  //    std::cout << "Fold " << i << std::endl;
+  //    print_vector(foldMemberships[i]);
+  //}
   //RcppThread::Rcout << newEndingTreeNumber;
 
   unsigned int nthreadToUse = (unsigned int) getNthread();
@@ -202,17 +229,21 @@ void forestry::addTrees(size_t ntree) {
 
           // If the forest is to be constructed with minTreesPerGroup, we want to
           // use that sampling method instead of the sampling methods we have
-          size_t currentGroup;
+          size_t currentFold;
+          std::vector<size_t> groups_to_remove;
           if ((getMinTreesPerGroup() > 0) && (i < groupToGrow)) {
 
-            // Get the current group
-            currentGroup = (((size_t) i) / ((size_t) getMinTreesPerGroup())) + 1;
+            // Get the current fold
+            currentFold = (size_t) std::floor((double) i / (double) getMinTreesPerGroup());
 
             //RcppThread::Rcout << currentGroup;
 
             // Populate sampleIndex with the leave group out function
-            std::vector<size_t> groups_to_remove;
-            groups_to_remove.push_back(currentGroup);
+
+            if (currentFold >= foldMemberships.size()) {
+                currentFold = 0;
+            }
+            groups_to_remove = std::vector<size_t> {1};//(foldMemberships[currentFold]);
             group_out_sample(
               groups_to_remove,
               (*getTrainingData()->getGroups()),
@@ -282,8 +313,8 @@ void forestry::addTrees(size_t ntree) {
               // left out group
               if (getMinTreesPerGroup() == 0) {
                 allIndex.push_back(i);
-              } else if ((*(getTrainingData()->getGroups()))[i]
-                           != currentGroup) {
+              } else if (std::find(groups_to_remove.begin(), groups_to_remove.end(), (*(getTrainingData()->getGroups()))[i])
+                           == groups_to_remove.end()) {
                 allIndex.push_back(i);
               }
             }

@@ -10,7 +10,8 @@ test_that("Tests sampling with groups", {
                  y = y,
                  groups = iris$Species,
                  ntree = 500,
-                 minTreesPerGroup = 1)
+                 minTreesPerGroup = 1
+                 )
 
   rf <- make_savable(rf)
 

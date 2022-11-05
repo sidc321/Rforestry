@@ -40,6 +40,7 @@ public:
     bool splitMiddle,
     size_t maxObs,
     size_t minTreesPerGroup,
+    size_t foldSize,
     bool hasNas,
     bool linear,
     bool symmetric,
@@ -210,6 +211,10 @@ public:
     return _minTreesPerGroup;
   }
 
+  size_t getFoldSize() {
+      return _foldSize;
+  }
+
   bool gethasNas() {
     return _hasNas;
   }
@@ -256,6 +261,7 @@ private:
   bool _splitMiddle;
   size_t _maxObs;
   size_t _minTreesPerGroup;
+  size_t _foldSize;
   bool _hasNas;
   bool _linear;
   bool _symmetric;

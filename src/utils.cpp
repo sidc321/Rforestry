@@ -89,22 +89,20 @@ void assign_groups_to_folds(
     // Populate foldMemberships with the partitioned shuffled values
     foldMemberships.reserve(numFolds);
     for (size_t iter = 0; iter < numFolds-1; iter++) {
-        std::vector<size_t> row_vec(foldSize);
 
         // Copy over the slice of the group vector to the appropriate vector in foldMemberships
         std::copy(group_vector.begin() + iter*foldSize,
-                  group_vector.begin() + (iter+1)*foldSize - 1,
-                  row_vec.begin());
+                  group_vector.begin() + (iter+1)*foldSize,
+                  foldMemberships[iter].begin());
 
-        // Give vector to the foldMemberships
-        foldMemberships[iter] = row_vec;
+
     }
 
-
-    // Now last fold might be smaller than foldsize.
-    for (size_t index = (numFolds-1)*foldSize; index < group_vector.size(); index++) {
-        foldMemberships[numFolds-1].push_back(group_vector[index]);
-    }
+    // Last fold might be a bit smaller so copy based on group_vector.end()
+    std::copy(group_vector.begin() + (numFolds-1)*foldSize,
+              group_vector.end(),
+              foldMemberships[numFolds-1].begin());
+    foldMemberships[numFolds-1].resize(group_vector.size() - (numFolds-1)*foldSize);
 }
 
 // Does a bootstrap sample from the observations which do not fall into
