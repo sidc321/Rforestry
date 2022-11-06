@@ -968,7 +968,7 @@ forestry <- function(x,
           categoricalFeatureMapping = categoricalFeatureMapping,
           ntree = ifelse(minTreesPerGroup == 0,
                          ntree * (doubleTree + 1), max(ntree * (doubleTree + 1),
-                         length(levels(groups))*minTreesPerGroup)),
+                         ceiling(length(levels(groups)) / foldSize)*minTreesPerGroup)),
           replace = replace,
           sampsize = sampsize,
           mtry = mtry,
@@ -1002,7 +1002,8 @@ forestry <- function(x,
           colMeans = colMeans,
           colSd = colSd,
           scale = scale,
-          minTreesPerGroup = minTreesPerGroup
+          minTreesPerGroup = minTreesPerGroup,
+          foldSize = foldSize
         )
       )
     },
