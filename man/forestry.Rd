@@ -38,6 +38,7 @@ forestry(
   monotonicConstraints = rep(0, ncol(x)),
   groups = NULL,
   minTreesPerGroup = 0,
+  foldSize = 1,
   monotoneAvg = FALSE,
   overfitPenalty = 1,
   scale = TRUE,
@@ -193,6 +194,13 @@ trees for the forest. If ntree > # groups * minTreesPerGroup, we create
 max(# groups * minTreesPerGroup,ntree) total trees, in which at least minTreesPerGroup
 are created leaving out each group. For debugging purposes, these group sampling
 trees are stored at the end of the R forest, in blocks based on the left out group.}
+
+\item{foldSize}{The number of groups that are selected randomly for each fold to be
+left out when using minTreesPerGroup. When minTreesPerGroup is set and foldSize is
+set, the groups will be partitioned into folds, each containing foldSize unique groups
+(if foldSize doesn't evenly divide the number of groups, a single fold will be smaller,
+as it will contain the remaining groups). Then minTreesPerGroup are grown with each
+entire fold of groups left out.}
 
 \item{monotoneAvg}{This is a boolean flag that indicates whether or not monotonic
 constraints should be enforced on the averaging set in addition to the splitting set.
