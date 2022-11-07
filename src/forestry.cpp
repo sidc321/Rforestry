@@ -4,6 +4,7 @@
 #include "utils.h"
 #include <RcppThread.h>
 #include <random>
+#include <algorithm>
 #include <thread>
 #include <mutex>
 #include <RcppArmadillo.h>
@@ -394,7 +395,7 @@ void forestry::addTrees(size_t ntree) {
             if (getminTreesPerFold() > 0) {
                 std::sort(sampleIndex.begin(), sampleIndex.end());
                 sampleIndex.erase(std::unique(sampleIndex.begin(), sampleIndex.end()), sampleIndex.end());
-                std::shuffle(sampleIndex);
+                std::shuffle(sampleIndex.begin(), sampleIndex.end(), random_number_generator);
                 splitSampleSize = (size_t) (getSplitRatio() * sampleIndex.size());
             }
 
