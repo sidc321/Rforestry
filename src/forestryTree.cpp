@@ -1765,18 +1765,22 @@ void forestryTree::getOOBPrediction(
       std::iota(allIndex.begin(), allIndex.end(), 0);
   } else {
       allIndex = training_idx;
-      //std::cout << "All Index (size) "<< allIndex.size()  << std::endl;
-      //print_vector(allIndex);
   }
-    //std::cout << "tree avging indices" << std::endl;
-    //print_vector(*getAveragingIndex());
 
   if (trainingData->getGroups()->at(0) != 0) {
     std::vector<size_t> group_membership_vector = *(trainingData->getGroups());
-    getOOGIndex(OOBIndex,
-                group_membership_vector,
-                allIndex,
-                OOBhonest ? doubleOOB : false);
+    if (OOBhonest) {
+        getOOGIndex(OOBIndex,
+                    group_membership_vector,
+                    allIndex,
+                    doubleOOB);
+    } else {
+        getOOGIndex(OOBIndex,
+                    group_membership_vector,
+                    allIndex,
+                    true);
+    }
+
   } else {
     if (OOBhonest) {
       if (doubleOOB) {

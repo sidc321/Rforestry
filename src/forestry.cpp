@@ -388,6 +388,16 @@ void forestry::addTrees(size_t ntree) {
             // Generate sample index based on the split ratio
             std::vector<size_t> splitSampleIndex_;
             std::vector<size_t> averageSampleIndex_;
+
+            // If we have groups, want to remove duplicates since sample index
+            // was sampled with replacement
+            if (getminTreesPerFold() > 0) {
+                std::sort(sampleIndex.begin(), sampleIndex.end());
+                sampleIndex.erase(std::unique(sampleIndex.begin(), sampleIndex.end()), sampleIndex.end());
+                std::shuffle(sampleIndex);
+                splitSampleSize = (size_t) (getSplitRatio() * sampleIndex.size());
+            }
+
             for (
                 std::vector<size_t>::iterator it = sampleIndex.begin();
                 it != sampleIndex.end();
