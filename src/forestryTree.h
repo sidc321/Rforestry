@@ -180,7 +180,8 @@ public:
   void getOOGIndex(
       std::vector<size_t> &outputOOBIndex,
       std::vector<size_t> groupMemberships,
-      std::vector<size_t> &allIndex
+      std::vector<size_t> &allIndex,
+      bool doubleOOB
   );
 
   void getOOBPrediction(
