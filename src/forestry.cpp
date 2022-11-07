@@ -239,11 +239,8 @@ void forestry::addTrees(size_t ntree) {
             //RcppThread::Rcout << currentGroup;
 
             // Populate sampleIndex with the leave group out function
-
-            if (currentFold >= foldMemberships.size()) {
-                currentFold = 0;
-            }
-            groups_to_remove = std::vector<size_t> {1};//(foldMemberships[currentFold]);
+            
+            groups_to_remove = (foldMemberships[currentFold]);
             group_out_sample(
               groups_to_remove,
               (*getTrainingData()->getGroups()),
