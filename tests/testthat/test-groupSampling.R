@@ -9,8 +9,10 @@ test_that("Tests sampling with groups", {
   rf <- forestry(x = x,
                  y = y,
                  groups = iris$Species,
-                 ntree = 500,
-                 minTreesPerGroup = 1
+                 ntree = 3,
+                 minTreesPerFold = 1,
+                 foldSize = 1,
+                 seed =  101
                  )
 
   rf <- make_savable(rf)
@@ -18,13 +20,13 @@ test_that("Tests sampling with groups", {
   # Test that a tree has been grown leaving out each species
   # Note that because we sort by seed after training the forest
   # so the first trees in R_forest have left out the last group etc
-  idx1 <- rf@R_forest[[498]]$splittingSampleIndex
+  idx1 <- rf@R_forest[[1]]$splittingSampleIndex
   expect_equal(all(!((101:150) %in% idx1)), TRUE)
 
-  idx2 <- rf@R_forest[[499]]$splittingSampleIndex
+  idx2 <- rf@R_forest[[2]]$splittingSampleIndex
   expect_equal(all(!((51:100) %in% idx2)), TRUE)
 
-  idx3 <- rf@R_forest[[500]]$splittingSampleIndex
+  idx3 <- rf@R_forest[[3]]$splittingSampleIndex
   expect_equal(all(!((1:50) %in% idx3)), TRUE)
 
 
@@ -33,7 +35,8 @@ test_that("Tests sampling with groups", {
                  y = y,
                  groups = iris$Species,
                  ntree = 30,
-                 minTreesPerGroup = 10)
+                 seed =  101,
+                 minTreesPerFold = 10)
 
   rf <- make_savable(rf)
 
@@ -43,13 +46,8 @@ test_that("Tests sampling with groups", {
   for ( i in 1:30) {
     idx <- rf@R_forest[[i]]$splittingSampleIndex
 
-    if (i %in% 1:10) {
-      expect_equal(all(!((101:150) %in% idx)), TRUE)
-    } else if (i %in% 11:20) {
-      expect_equal(all(!((51:100) %in% idx)), TRUE)
-    } else {
-      expect_equal(all(!((1:50) %in% idx)), TRUE)
-    }
+    # Expect all observations to fall into a single group
+    expect_equal(all(!((101:150) %in% idx)) || all(!((51:100) %in% idx)) || all(!((1:50) %in% idx)), TRUE)
   }
 
 
@@ -57,8 +55,9 @@ test_that("Tests sampling with groups", {
   rf <- forestry(x = x,
                  y = y,
                  groups = iris$Species,
-                 minTreesPerGroup = 1,
+                 minTreesPerFold = 1,
                  ntree=3,
+                 seed =  101,
                  OOBhonest = TRUE)
 
   rf <- make_savable(rf)
@@ -86,11 +85,12 @@ test_that("Tests sampling with groups", {
 
   context("Test that ntree parameter is specified correctly")
 
-  # Test that the forest ntree parameter is equal to max(minTreesPerGroup * |groups|, ntree)
+  # Test that the forest ntree parameter is equal to max(minTreesPerFold * # folds, ntree)
   rf <- forestry(x = x,
                  y = y,
                  ntree = 100,
-                 minTreesPerGroup = 10,
+                 minTreesPerFold = 10,
+                 seed =  101,
                  groups = iris$Species)
 
   expect_equal(rf@ntree, 100)
@@ -98,7 +98,8 @@ test_that("Tests sampling with groups", {
   rf <- forestry(x = x,
                  y = y,
                  ntree = 10,
-                 minTreesPerGroup = 10,
+                 seed =  101,
+                 minTreesPerFold = 10,
                  groups = iris$Species)
 
   expect_equal(rf@ntree, 30)
@@ -109,9 +110,9 @@ test_that("Tests sampling with groups", {
                    y = y,
                    ntree = 10,
                    seed = 83,
-                   minTreesPerGroup = 1000,
+                   minTreesPerFold = 1000,
                    groups = iris$Species),
-    "Using 3 groups with 1000 trees per group will train 3000 trees in the forest."
+    "Using 3 folds with 1000 trees per group will train 3000 trees in the forest."
   )
 
   context("Save and load with minTreePerGroup > ntree")
@@ -121,7 +122,7 @@ test_that("Tests sampling with groups", {
                  y = y,
                  ntree = 10,
                  seed = 83,
-                 minTreesPerGroup = 10,
+                 minTreesPerFold = 10,
                  groups = iris$Species)
 
 

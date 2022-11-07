@@ -128,16 +128,16 @@ void group_out_sample(
       0, (size_t) out_of_group_indices.size() - 1
   );
 
-  std::vector<size_t> sampleIndex;
+  std::vector<size_t> sampledIndices;
 
-  while (sampleIndex.size() < groupMemberships.size()) {
+  while (sampledIndices.size() < groupMemberships.size()) {
     size_t randomIndex = unif_dist(random_number_generator);
     // Push back the out of group index at that position
-    sampleIndex.push_back(out_of_group_indices[randomIndex]);
+      sampledIndices.push_back(out_of_group_indices[randomIndex]);
   }
 
-  for (size_t i = 0; i < sampleIndex.size(); i++) {
-    outputIdx.push_back(sampleIndex[i]);
+  for (size_t i = 0; i < sampledIndices.size(); i++) {
+    outputIdx.push_back(sampledIndices[i]);
   }
 }
 

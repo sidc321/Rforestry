@@ -85,7 +85,7 @@ test_that('Bias corrections', {
 
   params <- list(ntree = 1000,
                  groups=as.factor(c(rep(1,50), rep(2,50))),
-                 minTreesPerGroup = 400,
+                 minTreesPerFold = 400,
                  monotonicConstraints = c(rep(1,2),rep(0,3),1),
                  seed = 12312
                  )
@@ -111,7 +111,7 @@ test_that('Bias corrections', {
 
     # Make sure parameters are the same as in the params list
     expect_equal(rf_i@ntree, params$ntree)
-    expect_equal(rf_i@minTreesPerGroup, params$minTreesPerGroup)
+    expect_equal(rf_i@minTreesPerFold, params$minTreesPerFold)
     expect_equal(all.equal(rf_i@monotonicConstraints, params$monotonicConstraints),TRUE)
     expect_equal(all.equal(as.factor(rf_i@groups), params$groups),TRUE)
   }
