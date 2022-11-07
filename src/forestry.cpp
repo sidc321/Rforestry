@@ -15,7 +15,7 @@ forestry::forestry():
   _splitRatio(0),_OOBhonest(0),_mtry(0), _minNodeSizeSpt(0), _minNodeSizeAvg(0),
   _minNodeSizeToSplitSpt(0), _minNodeSizeToSplitAvg(0), _minSplitGain(0),
   _maxDepth(0), _interactionDepth(0), _forest(nullptr), _seed(0), _verbose(0),
-  _nthread(0), _OOBError(0), _splitMiddle(0),_minTreesPerGroup(0), _doubleTree(0){};
+  _nthread(0), _OOBError(0), _splitMiddle(0),_minTreesPerFold(0), _doubleTree(0){};
 
 forestry::~forestry(){
 //  for (std::vector<forestryTree*>::iterator it = (*_forest).begin();
@@ -47,7 +47,7 @@ forestry::forestry(
   bool verbose,
   bool splitMiddle,
   size_t maxObs,
-  size_t minTreesPerGroup,
+  size_t minTreesPerFold,
   size_t foldSize,
   bool hasNas,
   bool linear,
@@ -79,7 +79,7 @@ forestry::forestry(
   this->_linear = linear;
   this->_overfitPenalty = overfitPenalty;
   this->_doubleTree = doubleTree;
-  this->_minTreesPerGroup = minTreesPerGroup;
+  this->_minTreesPerFold = minTreesPerFold;
   this->_foldSize = foldSize;
   this->_symmetric = symmetric;
 
@@ -145,15 +145,15 @@ void forestry::addTrees(size_t ntree) {
   std::vector< std::vector<size_t> > foldMemberships(1);
 
   // This is called with ntree = 0 only when loading a saved forest.
-  // When minTreesPerGroup takes precedence over ntree, we need to make sure to
+  // When minTreesPerFold takes precedence over ntree, we need to make sure to
   // train 0 trees when ntree = 0, otherwise this messes up the reconstruction of the forest
-  if ((ntree != 0) && (getMinTreesPerGroup() > 0)) {
+  if ((ntree != 0) && (getminTreesPerFold() > 0)) {
     size_t numGroups = (*std::max_element(getTrainingData()->getGroups()->begin(),
                                           getTrainingData()->getGroups()->end()));
 
     size_t numFolds = ((size_t) std::ceil((double) numGroups / (double) getFoldSize()));
 
-    numToGrow = (unsigned int) getMinTreesPerGroup() * (numFolds);
+    numToGrow = (unsigned int) getminTreesPerFold() * (numFolds);
     // Want to grow max(ntree, |groups|*minTreePerGroup) total trees
     groupToGrow = numToGrow;
     numToGrow = std::max(numToGrow, ntree);
@@ -166,7 +166,7 @@ void forestry::addTrees(size_t ntree) {
         foldMemberships[fold_i] = std::vector<size_t>(getFoldSize());
     }
     // Assign the groups to different folds. When the foldsize is 1, this is equivalent
-    // to the previous minTreesPerGroup implementation
+    // to the previous minTreesPerFold implementation
     assign_groups_to_folds(
             numGroups,
             getFoldSize(),
@@ -227,14 +227,14 @@ void forestry::addTrees(size_t ntree) {
           // Generate a sample index for each tree
           std::vector<size_t> sampleIndex;
 
-          // If the forest is to be constructed with minTreesPerGroup, we want to
+          // If the forest is to be constructed with minTreesPerFold, we want to
           // use that sampling method instead of the sampling methods we have
           size_t currentFold;
           std::vector<size_t> groups_to_remove;
-          if ((getMinTreesPerGroup() > 0) && (i < groupToGrow)) {
+          if ((getminTreesPerFold() > 0) && (i < groupToGrow)) {
 
             // Get the current fold
-            currentFold = (size_t) std::floor((double) i / (double) getMinTreesPerGroup());
+            currentFold = (size_t) std::floor((double) i / (double) getminTreesPerFold());
 
             //RcppThread::Rcout << currentGroup;
 
@@ -311,7 +311,7 @@ void forestry::addTrees(size_t ntree) {
               // If we are doing leave a group out sampling, we make sure the
               // allIndex vector doesn't include observations in the currently
               // left out group
-              if (getMinTreesPerGroup() == 0) {
+              if (getminTreesPerFold() == 0) {
                 allIndex.push_back(i);
               } else if (std::find(groups_to_remove.begin(), groups_to_remove.end(), (*(getTrainingData()->getGroups()))[i])
                            == groups_to_remove.end()) {

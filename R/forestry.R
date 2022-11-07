@@ -408,7 +408,7 @@ setClass(
     scale = "logical",
     colMeans = "numeric",
     colSd = "numeric",
-    minTreesPerGroup = "numeric",
+    minTreesPerFold = "numeric",
     foldSize = "numeric"
   )
 )
@@ -460,7 +460,7 @@ setClass(
     scale = "logical",
     colMeans = "numeric",
     colSd = "numeric",
-    minTreesPerGroup = "numeric"
+    minTreesPerFold = "numeric"
   )
 )
 
@@ -579,22 +579,22 @@ setClass(
 #'   predictions which do not use any data from a common group to make predictions for
 #'   any observation in the group. This can be used to create general custom
 #'   resampling schemes, and provide predictions consistent with the Out-of-Group set.
-#' @param minTreesPerGroup The number of trees which we make sure have been created leaving
+#' @param minTreesPerFold The number of trees which we make sure have been created leaving
 #'   out each group. This is 0 by default, so we will not give any special treatment to
 #'   the groups when sampling, however if this is set to a positive integer, we
 #'   modify the bootstrap sampling scheme to ensure that exactly that many trees
-#'   have the group left out. We do this by, for each group, creating minTreesPerGroup
+#'   have the group left out. We do this by, for each group, creating minTreesPerFold
 #'   trees which are built on observations sampled from the set of training observations
-#'   which are not in the current group. This means we create at least # groups * minTreesPerGroup
-#'   trees for the forest. If ntree > # groups * minTreesPerGroup, we create
-#'   max(# groups * minTreesPerGroup,ntree) total trees, in which at least minTreesPerGroup
+#'   which are not in the current group. This means we create at least # folds * minTreesPerFold
+#'   trees for the forest. If ntree > # folds * minTreesPerFold, we create
+#'   max(# folds * minTreesPerFold,ntree) total trees, in which at least minTreesPerFold
 #'   are created leaving out each group. For debugging purposes, these group sampling
 #'   trees are stored at the end of the R forest, in blocks based on the left out group.
 #' @param foldSize The number of groups that are selected randomly for each fold to be
-#'   left out when using minTreesPerGroup. When minTreesPerGroup is set and foldSize is
+#'   left out when using minTreesPerFold. When minTreesPerFold is set and foldSize is
 #'   set, the groups will be partitioned into folds, each containing foldSize unique groups
 #'   (if foldSize doesn't evenly divide the number of groups, a single fold will be smaller,
-#'   as it will contain the remaining groups). Then minTreesPerGroup are grown with each
+#'   as it will contain the remaining groups). Then minTreesPerFold are grown with each
 #'   entire fold of groups left out.
 #' @param monotoneAvg This is a boolean flag that indicates whether or not monotonic
 #'   constraints should be enforced on the averaging set in addition to the splitting set.
@@ -688,7 +688,7 @@ forestry <- function(x,
                      linFeats = 0:(ncol(x)-1),
                      monotonicConstraints = rep(0, ncol(x)),
                      groups = NULL,
-                     minTreesPerGroup = 0,
+                     minTreesPerFold = 0,
                      foldSize = 1,
                      monotoneAvg = FALSE,
                      overfitPenalty = 1,
@@ -804,19 +804,19 @@ forestry <- function(x,
 
   }
 
-  if ((foldSize %% 1 != 0) || (foldSize < 1) || (foldSize > length(levels(groups)))) {
-    stop("foldSize must be an integer between 1 and the # of groups")
-  }
-
   if (!is.null(groups)) {
+    if ((foldSize %% 1 != 0) || (foldSize < 1) || (foldSize > length(levels(groups)))) {
+      stop("foldSize must be an integer between 1 and the # of groups")
+    }
+
     groupVector <- as.integer(groups)
 
-    # Print warning if the group number and minTreesPerGroup results in a large
+    # Print warning if the group number and minTreesPerFold results in a large
     # forest
-    if (minTreesPerGroup>0 && length(levels(groups))*minTreesPerGroup > 2000) {
-      print(paste0("Using ",length(levels(groups))," groups with ",
-                     minTreesPerGroup," trees per group will train ",
-                     length(levels(groups))*minTreesPerGroup," trees in the forest."))
+    if (minTreesPerFold>0 && (length(levels(groups)) / foldSize)*minTreesPerFold > 2000) {
+      print(paste0("Using ",(length(levels(groups)) / foldSize)," folds with ",
+                     minTreesPerFold," trees per group will train ",
+                   ceiling(length(levels(groups)) / foldSize)*minTreesPerFold," trees in the forest."))
     }
   } else {
     groupVector <- rep(0, nrow(x))
@@ -924,7 +924,7 @@ forestry <- function(x,
         monotonicConstraints,
         groupVector,
         symmetricIndex-1,
-        minTreesPerGroup,
+        minTreesPerFold,
         foldSize,
         monotoneAvg,
         hasNas,
@@ -966,9 +966,9 @@ forestry <- function(x,
           R_forest = R_forest,
           categoricalFeatureCols = categoricalFeatureCols,
           categoricalFeatureMapping = categoricalFeatureMapping,
-          ntree = ifelse(minTreesPerGroup == 0,
+          ntree = ifelse(minTreesPerFold == 0,
                          ntree * (doubleTree + 1), max(ntree * (doubleTree + 1),
-                         ceiling(length(levels(groups)) / foldSize)*minTreesPerGroup)),
+                         ceiling(length(levels(groups)) / foldSize)*minTreesPerFold)),
           replace = replace,
           sampsize = sampsize,
           mtry = mtry,
@@ -1002,7 +1002,7 @@ forestry <- function(x,
           colMeans = colMeans,
           colSd = colSd,
           scale = scale,
-          minTreesPerGroup = minTreesPerGroup,
+          minTreesPerFold = minTreesPerFold,
           foldSize = foldSize
         )
       )
@@ -1093,7 +1093,7 @@ forestry <- function(x,
         monotonicConstraints,
         groupVector,
         symmetricIndices = symmetricIndex-1,
-        minTreesPerGroup,
+        minTreesPerFold,
         foldSize,
         monotoneAvg,
         hasNas,
@@ -1114,9 +1114,9 @@ forestry <- function(x,
           R_forest = reuseforestry@R_forest,
           categoricalFeatureCols = reuseforestry@categoricalFeatureCols,
           categoricalFeatureMapping = categoricalFeatureMapping,
-          ntree = ifelse(minTreesPerGroup == 0,
+          ntree = ifelse(minTreesPerFold == 0,
                          ntree * (doubleTree + 1), max(ntree * (doubleTree + 1),
-                         length(levels(groups))*minTreesPerGroup)),
+                         length(levels(groups))*minTreesPerFold)),
           replace = replace,
           sampsize = sampsize,
           mtry = mtry,
@@ -1148,7 +1148,7 @@ forestry <- function(x,
           colMeans = colMeans,
           colSd = colSd,
           scale = scale,
-          minTreesPerGroup = minTreesPerGroup,
+          minTreesPerFold = minTreesPerFold,
           foldSize = foldSize
         )
       )
@@ -1206,7 +1206,7 @@ multilayerForestry <- function(x,
                      linFeats = 0:(ncol(x)-1),
                      monotonicConstraints = rep(0, ncol(x)),
                      groups = NULL,
-                     minTreesPerGroup = 0,
+                     minTreesPerFold = 0,
                      monotoneAvg = FALSE,
                      featureWeights = rep(1, ncol(x)),
                      deepFeatureWeights = featureWeights,
@@ -1489,7 +1489,7 @@ multilayerForestry <- function(x,
           colMeans = colMeans,
           colSd = colSd,
           scale = scale,
-          minTreesPerGroup = minTreesPerGroup
+          minTreesPerFold = minTreesPerFold
         )
       )
     },
@@ -1620,7 +1620,7 @@ multilayerForestry <- function(x,
           colMeans = colMeans,
           colSd = colSd,
           scale = scale,
-          minTreesPerGroup = minTreesPerGroup
+          minTreesPerFold = minTreesPerFold
         )
       )
     }, error = function(err) {
@@ -3117,7 +3117,7 @@ relinkCPP_prt <- function(object) {
           middleSplit = object@middleSplit,
           hasNas = object@hasNas,
           maxObs = object@maxObs,
-          minTreesPerGroup = object@minTreesPerGroup,
+          minTreesPerFold = object@minTreesPerFold,
           featureWeights = object@featureWeights,
           featureWeightsVariables = object@featureWeightsVariables,
           deepFeatureWeights = object@deepFeatureWeights,
@@ -3169,7 +3169,7 @@ relinkCPP_prt <- function(object) {
           verbose = FALSE,
           middleSplit = object@middleSplit,
           maxObs = object@maxObs,
-          minTreesPerGroup = object@minTreesPerGroup,
+          minTreesPerFold = object@minTreesPerFold,
           featureWeights = object@featureWeights,
           featureWeightsVariables = object@featureWeightsVariables,
           deepFeatureWeights = object@deepFeatureWeights,

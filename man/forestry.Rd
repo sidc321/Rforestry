@@ -37,7 +37,7 @@ forestry(
   linFeats = 0:(ncol(x) - 1),
   monotonicConstraints = rep(0, ncol(x)),
   groups = NULL,
-  minTreesPerGroup = 0,
+  minTreesPerFold = 0,
   foldSize = 1,
   monotoneAvg = FALSE,
   overfitPenalty = 1,
@@ -183,23 +183,23 @@ predictions which do not use any data from a common group to make predictions fo
 any observation in the group. This can be used to create general custom
 resampling schemes, and provide predictions consistent with the Out-of-Group set.}
 
-\item{minTreesPerGroup}{The number of trees which we make sure have been created leaving
+\item{minTreesPerFold}{The number of trees which we make sure have been created leaving
 out each group. This is 0 by default, so we will not give any special treatment to
 the groups when sampling, however if this is set to a positive integer, we
 modify the bootstrap sampling scheme to ensure that exactly that many trees
-have the group left out. We do this by, for each group, creating minTreesPerGroup
+have the group left out. We do this by, for each group, creating minTreesPerFold
 trees which are built on observations sampled from the set of training observations
-which are not in the current group. This means we create at least # groups * minTreesPerGroup
-trees for the forest. If ntree > # groups * minTreesPerGroup, we create
-max(# groups * minTreesPerGroup,ntree) total trees, in which at least minTreesPerGroup
+which are not in the current group. This means we create at least # folds * minTreesPerFold
+trees for the forest. If ntree > # folds * minTreesPerFold, we create
+max(# folds * minTreesPerFold,ntree) total trees, in which at least minTreesPerFold
 are created leaving out each group. For debugging purposes, these group sampling
 trees are stored at the end of the R forest, in blocks based on the left out group.}
 
 \item{foldSize}{The number of groups that are selected randomly for each fold to be
-left out when using minTreesPerGroup. When minTreesPerGroup is set and foldSize is
+left out when using minTreesPerFold. When minTreesPerFold is set and foldSize is
 set, the groups will be partitioned into folds, each containing foldSize unique groups
 (if foldSize doesn't evenly divide the number of groups, a single fold will be smaller,
-as it will contain the remaining groups). Then minTreesPerGroup are grown with each
+as it will contain the remaining groups). Then minTreesPerFold are grown with each
 entire fold of groups left out.}
 
 \item{monotoneAvg}{This is a boolean flag that indicates whether or not monotonic
