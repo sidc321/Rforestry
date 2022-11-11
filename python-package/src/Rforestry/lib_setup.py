@@ -84,8 +84,8 @@ def setup_lib(lib):
     lib.getVI.argtypes = [ctypes.c_void_p]
     lib.getVI.restype = ctypes.c_void_p
 
-    lib.get_tree_info.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int]
-    lib.get_tree_info.restype = ctypes.c_void_p 
+    # lib.get_tree_info.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int]
+    # lib.get_tree_info.restype = ctypes.c_void_p 
 
     lib.getTreeNodeCount.argtypes = [ctypes.c_void_p,ctypes.c_int]
     lib.getTreeNodeCount.restype = ctypes.c_int

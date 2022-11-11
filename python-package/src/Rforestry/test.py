@@ -23,7 +23,7 @@ print('translate the first tree')
 
 fr.translate_tree_python(0)
 print(fr.Py_forest[0]['children_left'].size)
-fr2.translate_tree_python_versiontwo(0)
+fr2.translate_tree_python(0)
 print(fr2.Py_forest[0])
 
 print('Making predictions')

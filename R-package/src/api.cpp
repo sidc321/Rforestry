@@ -461,49 +461,49 @@ int getTreeNodeCount(void* forest_ptr,
     return ((int) forest->getForest()->at(tree_idx)->getNodeCount());
 }
 
-std::vector<double>* get_tree_info(void* forest_ptr,
-                                void* dataframe_ptr,
-                                int tree_idx){
-    forestry* forest = reinterpret_cast<forestry *>(forest_ptr);
-    DataFrame* dta_frame = reinterpret_cast<DataFrame *>(dataframe_ptr);
-    forest->_trainingData = dta_frame;
+// std::vector<double>* get_tree_info(void* forest_ptr,
+//                                 void* dataframe_ptr,
+//                                 int tree_idx){
+//     forestry* forest = reinterpret_cast<forestry *>(forest_ptr);
+//     DataFrame* dta_frame = reinterpret_cast<DataFrame *>(dataframe_ptr);
+//     forest->_trainingData = dta_frame;
 
-    std::unique_ptr<tree_info> info_holder;
+//     std::unique_ptr<tree_info> info_holder;
 
-    info_holder = forest->getForest()->at(tree_idx)->getTreeInfo(forest->getTrainingData());
-    int num_nodes = forest->getForest()->at(tree_idx)->getNodeCount();
+//     info_holder = forest->getForest()->at(tree_idx)->getTreeInfo(forest->getTrainingData());
+//     int num_nodes = forest->getForest()->at(tree_idx)->getNodeCount();
     
-    std::vector<double>* treeInfo(
-            new std::vector<double>(num_nodes*8)
-    );
+//     std::vector<double>* treeInfo(
+//             new std::vector<double>(num_nodes*8)
+//     );
 
-    for (int i = 0; i < num_nodes; i++) {
-        treeInfo->at(i) = (double)info_holder->left_child_id.at(i);
-        treeInfo->at(num_nodes+i) = (double)info_holder->right_child_id.at(i);
-        treeInfo->at(num_nodes*2+i) = (double)info_holder->var_id.at(i);
-        treeInfo->at(num_nodes*3+i) = (double)info_holder->num_avg_samples.at(i);
-        treeInfo->at(num_nodes*4+i) = info_holder->split_val.at(i);
-        treeInfo->at(num_nodes*5+i) = info_holder->values.at(i);
-        treeInfo->at(num_nodes*6+i) = info_holder->naLeftCount.at(i);
-        treeInfo->at(num_nodes*7+i) = info_holder->naLeftCount.at(i);
-    }
+//     for (int i = 0; i < num_nodes; i++) {
+//         treeInfo->at(i) = (double)info_holder->left_child_id.at(i);
+//         treeInfo->at(num_nodes+i) = (double)info_holder->right_child_id.at(i);
+//         treeInfo->at(num_nodes*2+i) = (double)info_holder->var_id.at(i);
+//         treeInfo->at(num_nodes*3+i) = (double)info_holder->num_avg_samples.at(i);
+//         treeInfo->at(num_nodes*4+i) = info_holder->split_val.at(i);
+//         treeInfo->at(num_nodes*5+i) = info_holder->values.at(i);
+//         treeInfo->at(num_nodes*6+i) = info_holder->naLeftCount.at(i);
+//         treeInfo->at(num_nodes*7+i) = info_holder->naLeftCount.at(i);
+//     }
 
-    treeInfo->push_back((info_holder->splittingSampleIndex).size());
-    for (size_t i = 0; i < (info_holder->splittingSampleIndex).size(); i++){
-        treeInfo->push_back(info_holder->splittingSampleIndex.at(i));
-    }
+//     treeInfo->push_back((info_holder->splittingSampleIndex).size());
+//     for (size_t i = 0; i < (info_holder->splittingSampleIndex).size(); i++){
+//         treeInfo->push_back(info_holder->splittingSampleIndex.at(i));
+//     }
 
-    treeInfo->push_back((info_holder->averagingSampleIndex).size());
-    for (size_t i = 0; i < (info_holder->averagingSampleIndex).size(); i++){
-        treeInfo->push_back(info_holder->averagingSampleIndex.at(i));
-    }
+//     treeInfo->push_back((info_holder->averagingSampleIndex).size());
+//     for (size_t i = 0; i < (info_holder->averagingSampleIndex).size(); i++){
+//         treeInfo->push_back(info_holder->averagingSampleIndex.at(i));
+//     }
 
-    treeInfo->push_back(info_holder->seed);
+//     treeInfo->push_back(info_holder->seed);
 
-    return treeInfo;
+//     return treeInfo;
     
 
-}
+// }
 
 void fill_tree_info(void* forest_ptr,
                     int tree_idx,

@@ -1236,89 +1236,88 @@ class RandomForest:
         return r2_score(y, y_pred, sample_weight=sample_weight)
 
 
-    def translate_tree_python(self, tree_ids = None):
-        """
-        Given a trained forest, translates the selected trees by allowing access to its undelying structure. 
-        After translating tree *i*, its structure will be stored as a dictionary in :ref:`Py_forest <translate-label>` and can be accessed 
-        by ``[RandomForest object].Py_forest[i]``. Check out the :ref:`Py_forest <translate-label>` attribute for more
-        details about its structure.
+    # def translate_tree_python(self, tree_ids = None):
+    #     """
+    #     Given a trained forest, translates the selected trees by allowing access to its undelying structure. 
+    #     After translating tree *i*, its structure will be stored as a dictionary in :ref:`Py_forest <translate-label>` and can be accessed 
+    #     by ``[RandomForest object].Py_forest[i]``. Check out the :ref:`Py_forest <translate-label>` attribute for more
+    #     details about its structure.
 
-        :param tree_ids: The indices of the trees to be translated. By default, all the trees in the forest
-         are translated.
-        :type tree_ids: *int/array_like, optional*
-        :rtype: None
-        """
+    #     :param tree_ids: The indices of the trees to be translated. By default, all the trees in the forest
+    #      are translated.
+    #     :type tree_ids: *int/array_like, optional*
+    #     :rtype: None
+    #     """
 
-        if self.Py_forest is None:
-            self.Py_forest = [dict() for _ in range(self.ntree)]
+    #     if self.Py_forest is None:
+    #         self.Py_forest = [dict() for _ in range(self.ntree)]
 
-        if tree_ids is None:
-            idx = np.arange(self.ntree)
+    #     if tree_ids is None:
+    #         idx = np.arange(self.ntree)
         
-        else:
-            if isinstance(tree_ids, (int, np.integer)):
-                idx = np.array([tree_ids])
-            else:
-                idx = np.array(tree_ids)
+    #     else:
+    #         if isinstance(tree_ids, (int, np.integer)):
+    #             idx = np.array([tree_ids])
+    #         else:
+    #             idx = np.array(tree_ids)
 
-        for cur_id in idx:
+    #     for cur_id in idx:
 
-            if self.Py_forest[cur_id]:
-                continue
+    #         if self.Py_forest[cur_id]:
+    #             continue
 
-            numNodes = lib.getTreeNodeCount(
-                self.forest,
-                cur_id
-            )
+    #         numNodes = lib.getTreeNodeCount(
+    #             self.forest,
+    #             cur_id
+    #         )
 
 
-            tree_info = ctypes.c_void_p(lib.get_tree_info(
-                self.forest,
-                self.dataframe,
-                cur_id
-            ))
+    #         tree_info = ctypes.c_void_p(lib.get_tree_info(
+    #             self.forest,
+    #             self.dataframe,
+    #             cur_id
+    #         ))
 
-            ind = numNodes*8
+    #         ind = numNodes*8
 
-            self.Py_forest[cur_id]['children_left'] = np.empty(numNodes, dtype=np.intc)
-            self.Py_forest[cur_id]['children_right'] = np.empty(numNodes, dtype=np.intc)
-            self.Py_forest[cur_id]['feature'] = np.empty(numNodes, dtype=np.intc)
-            self.Py_forest[cur_id]['n_node_samples'] = np.empty(numNodes, dtype=np.intc)
-            self.Py_forest[cur_id]['threshold'] = np.empty(numNodes, dtype=np.double)
-            self.Py_forest[cur_id]['values'] = np.empty(numNodes, dtype=np.double)
-            self.Py_forest[cur_id]['na_left_count'] = np.empty(numNodes, dtype=np.intc)
-            self.Py_forest[cur_id]['na_right_count'] = np.empty(numNodes, dtype=np.intc)
+    #         self.Py_forest[cur_id]['children_left'] = np.empty(numNodes, dtype=np.intc)
+    #         self.Py_forest[cur_id]['children_right'] = np.empty(numNodes, dtype=np.intc)
+    #         self.Py_forest[cur_id]['feature'] = np.empty(numNodes, dtype=np.intc)
+    #         self.Py_forest[cur_id]['n_node_samples'] = np.empty(numNodes, dtype=np.intc)
+    #         self.Py_forest[cur_id]['threshold'] = np.empty(numNodes, dtype=np.double)
+    #         self.Py_forest[cur_id]['values'] = np.empty(numNodes, dtype=np.double)
+    #         self.Py_forest[cur_id]['na_left_count'] = np.empty(numNodes, dtype=np.intc)
+    #         self.Py_forest[cur_id]['na_right_count'] = np.empty(numNodes, dtype=np.intc)
 
-            for i in range(numNodes):
-                self.Py_forest[cur_id]['children_left'][i] = int(lib.vector_get(tree_info, i))
-                self.Py_forest[cur_id]['children_right'][i] = int(lib.vector_get(tree_info, numNodes + i))
-                self.Py_forest[cur_id]['feature'][i] = int(lib.vector_get(tree_info, numNodes*2 + i))
-                self.Py_forest[cur_id]['n_node_samples'][i] = int(lib.vector_get(tree_info, numNodes*3 + i))
-                self.Py_forest[cur_id]['threshold'][i] = lib.vector_get(tree_info, numNodes*4 + i)
-                self.Py_forest[cur_id]['values'][i] = lib.vector_get(tree_info, numNodes*5 + i)
-                self.Py_forest[cur_id]['na_left_count'][i] = int(lib.vector_get(tree_info, numNodes*6 + i))
-                self.Py_forest[cur_id]['na_right_count'][i] = int(lib.vector_get(tree_info, numNodes*7 + i))
+    #         for i in range(numNodes):
+    #             self.Py_forest[cur_id]['children_left'][i] = int(lib.vector_get(tree_info, i))
+    #             self.Py_forest[cur_id]['children_right'][i] = int(lib.vector_get(tree_info, numNodes + i))
+    #             self.Py_forest[cur_id]['feature'][i] = int(lib.vector_get(tree_info, numNodes*2 + i))
+    #             self.Py_forest[cur_id]['n_node_samples'][i] = int(lib.vector_get(tree_info, numNodes*3 + i))
+    #             self.Py_forest[cur_id]['threshold'][i] = lib.vector_get(tree_info, numNodes*4 + i)
+    #             self.Py_forest[cur_id]['values'][i] = lib.vector_get(tree_info, numNodes*5 + i)
+    #             self.Py_forest[cur_id]['na_left_count'][i] = int(lib.vector_get(tree_info, numNodes*6 + i))
+    #             self.Py_forest[cur_id]['na_right_count'][i] = int(lib.vector_get(tree_info, numNodes*7 + i))
 
-            self.Py_forest[cur_id]['splitting_sample_idx'] = np.empty(int(lib.vector_get(tree_info, ind)), dtype=np.intc)
-            ind += 1
-            for i in range(self.Py_forest[cur_id]['splitting_sample_idx'].size):
-                self.Py_forest[cur_id]['splitting_sample_idx'][i] = int(lib.vector_get(tree_info, ind))
-                ind += 1
+    #         self.Py_forest[cur_id]['splitting_sample_idx'] = np.empty(int(lib.vector_get(tree_info, ind)), dtype=np.intc)
+    #         ind += 1
+    #         for i in range(self.Py_forest[cur_id]['splitting_sample_idx'].size):
+    #             self.Py_forest[cur_id]['splitting_sample_idx'][i] = int(lib.vector_get(tree_info, ind))
+    #             ind += 1
 
-            self.Py_forest[cur_id]['averaging_sample_idx'] = np.empty(int(lib.vector_get(tree_info, ind)), dtype=np.intc)
-            ind+=1
-            for i in range(self.Py_forest[cur_id]['averaging_sample_idx'].size):
-                self.Py_forest[cur_id]['averaging_sample_idx'][i] = int(lib.vector_get(tree_info, ind))
-                ind+=1
+    #         self.Py_forest[cur_id]['averaging_sample_idx'] = np.empty(int(lib.vector_get(tree_info, ind)), dtype=np.intc)
+    #         ind+=1
+    #         for i in range(self.Py_forest[cur_id]['averaging_sample_idx'].size):
+    #             self.Py_forest[cur_id]['averaging_sample_idx'][i] = int(lib.vector_get(tree_info, ind))
+    #             ind+=1
 
             
-            self.Py_forest[cur_id]['seed'] = int(lib.vector_get(tree_info, ind))
+    #         self.Py_forest[cur_id]['seed'] = int(lib.vector_get(tree_info, ind))
 
-        return
+    #     return
 
 
-    # STILL WORKING ON THIS ONE
-    def translate_tree_python_versiontwo(self, tree_ids = None):
+    def translate_tree_python(self, tree_ids = None):
         """
         Given a trained forest, translates the selected trees by allowing access to its undelying structure. 
         After translating tree *i*, its structure will be stored as a dictionary in :ref:`Py_forest <translate-label>` and can be accessed 
