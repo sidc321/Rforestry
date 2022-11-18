@@ -138,4 +138,48 @@ test_that("Tests sampling with groups", {
   file.remove(file.path(wd, "forest.Rda"))
 
 
+  context("Test group sampling with observation weights")
+
+  x <- iris[,-1]
+  y <- iris[,1]
+
+  # Helper function for getting empirical observation weights across trained RF
+  get_weights <- function(object) {
+    total_p_1 <- 0
+    total_p_2 <- 0
+    total_p_3 <- 0
+    for (tree_i in 1:object@ntree) {
+      obs_i <- object@R_forest[[tree_i]]$splittingSampleIndex
+
+      p_1 <- (length(which(obs_i %in% 1:50)) / 150)
+      p_2 <- (length(which(obs_i %in% 51:100)) / 150)
+      p_3 <- (length(which(obs_i %in% 101:150)) / 150)
+      total_p_1 <- total_p_1 + p_1
+      total_p_2 <- total_p_2 + p_2
+      total_p_3 <- total_p_3 + p_3
+    }
+    return(list(p1 = total_p_1 / (object@ntree - object@minTreesPerFold),
+                p2 = total_p_2 / (object@ntree - object@minTreesPerFold),
+                p3 = total_p_3 / (object@ntree - object@minTreesPerFold)))
+  }
+
+  forest <- forestry(x = x, y = y,
+                     observationWeights = c(rep(2,50),rep(3,50),rep(5,50)),
+                     minTreesPerFold = 1,
+                     foldSize = 1,
+                     seed = 12312,
+                     groups = as.factor(iris$Species),
+                     ntree= 300)
+  forest <- make_savable(forest)
+
+
+  w <- get_weights(forest)
+  expect_lt(w$p1, .5)
+  expect_lt(w$p2, .5)
+  expect_gt(w$p3, .1)
+
+  # Run exact test of proportions on Mac
+  skip_if_not_mac()
+  expect_equal(all.equal(unname(unlist(w)), c(0.201716833891,0.300178372352,0.501449275362), tolerance = 1e-6), TRUE)
+
 })

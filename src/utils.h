@@ -1,10 +1,13 @@
 #ifndef FORESTRYCPP_UTILS_H
 #define FORESTRYCPP_UTILS_H
 
-#include <iostream>
+#include "DataFrame.h"
 #include <vector>
 #include <string>
 #include <iostream>
+#include <random>
+#include <algorithm>
+#include <cmath>
 
 void print_vector(
   std::vector<size_t> v
@@ -37,7 +40,8 @@ void group_out_sample(
     std::vector<size_t>& removedGroupIdx,
     std::vector<size_t>& groupMemberships,
     std::vector<size_t>& outputIdx,
-    std::mt19937_64& random_number_generator
+    std::mt19937_64& random_number_generator,
+    DataFrame* trainingData
 );
 
 size_t bin_to_idx(

@@ -1,3 +1,4 @@
+#include "utils.h"
 #include <Rcpp.h>
 #include <vector>
 #include <string>
@@ -111,21 +112,30 @@ void group_out_sample(
     std::vector<size_t>& removedGroupIdx,
     std::vector<size_t>& groupMemberships,
     std::vector<size_t>& outputIdx,
-    std::mt19937_64& random_number_generator
+    std::mt19937_64& random_number_generator,
+    DataFrame* trainingData
 ) {
 
+  // Holds all of the indices that are out of the current fold
   std::vector<size_t> out_of_group_indices;
+
+  // Gives the sampling weights for all indices that are out of the current fold
+  std::vector<double> index_sampling_weights;
+
+  // Get observation weights to use
+  std::vector<double>* sampleWeights = (trainingData->getobservationWeights());
 
   // First get all observations not in groupIdx
   for (size_t i = 0; i < groupMemberships.size(); i++) {
     if (std::find(removedGroupIdx.begin(), removedGroupIdx.end(), groupMemberships[i]) == removedGroupIdx.end()) {
       out_of_group_indices.push_back(i);
+      index_sampling_weights.push_back(sampleWeights->at(i));
     }
   }
 
   // Now sample the bootstrap sample from the out of group indices
-  std::uniform_int_distribution<size_t> unif_dist(
-      0, (size_t) out_of_group_indices.size() - 1
+  std::discrete_distribution<size_t> unif_dist(
+          index_sampling_weights.begin(), index_sampling_weights.end()
   );
 
   std::vector<size_t> sampledIndices;

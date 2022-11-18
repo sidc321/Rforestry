@@ -246,7 +246,8 @@ void forestry::addTrees(size_t ntree) {
               groups_to_remove,
               (*getTrainingData()->getGroups()),
               sampleIndex,
-              random_number_generator
+              random_number_generator,
+              getTrainingData()
             );
 
           } else if (isReplacement()) {
