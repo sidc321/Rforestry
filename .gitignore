@@ -39,8 +39,14 @@ CMakeFiles
 CMakeScripts
 Testing
 Makefile
-cmake_install.cmake
+cmake_*
 install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 _deps
+
+**/__pycache__
+**/.mypy_cache
+**/build
+**/*.egg-info
+**/dist
