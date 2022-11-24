@@ -256,9 +256,9 @@ void predict_forest(
         bool use_weights,
         size_t* tree_weights,
         size_t num_test_rows,
-        double (&predictions)[],
-        double (&weight_matrix)[],
-        double (&coefs)[]
+        std::vector<double>& predictions,
+        std::vector<double>& weight_matrix,
+        std::vector<double>& coefs
 ){   
 
 
@@ -382,8 +382,8 @@ void predictOOB_forest(
         bool exact,
         bool returnWeightMatrix,
         bool verbose,
-        double (&predictions)[],
-        double (&weight_matrix)[]
+        std::vector<double>& predictions,
+        std::vector<double>& weight_matrix
 ){
     if (verbose)
         std::cout << forest_pt << std::endl;
@@ -507,9 +507,9 @@ int getTreeNodeCount(void* forest_ptr,
 
 void fill_tree_info(void* forest_ptr,
                     int tree_idx,
-                    double (&treeInfo)[],
-                    int (&split_info)[],
-                    int (&av_info)[]) {
+                    std::vector<double>& treeInfo,
+                    std::vector<int>& split_info,
+                    std::vector<int>& av_info) {
 
     forestry* forest = reinterpret_cast<forestry *>(forest_ptr);
 

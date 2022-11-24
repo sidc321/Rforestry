@@ -1,30 +1,20 @@
-import os
-from re import T
-import sys
-
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'src', 'Rforestry'))
-
-from sklearn.datasets import load_iris
-from forestry import RandomForest
-
 import numpy as np
-import pandas as pd
 from sklearn.model_selection import train_test_split
 
+from Rforestry import RandomForest
+from helpers import get_data
 
-import pytest
 
 def test_bootstrap_intervals():
-    data = load_iris()
-    df = pd.DataFrame(data['data'], columns=data['feature_names'])
-    df['target'] = data['target']
-    X = df.loc[:, df.columns != 'target']
-    y = df['target']
-    
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    fr = RandomForest(seed=3242, OOBhonest=True)
-    fr.fit(X_train, y_train)
+    X, y = get_data()
 
-    preds = fr.get_ci(newdata=X_test, level=0.99, method='OOB-bootstrap')
-    assert np.sum((y_test < preds['CI.upper']) & (y_test > preds['CI.lower'])) != 0
-    
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+
+    forest = RandomForest(seed=3242, OOBhonest=True)
+    forest.fit(X_train, y_train)
+
+    predictions = forest.get_ci(newdata=X_test, level=0.99, method="OOB-bootstrap")
+    assert predictions
+    assert np.sum((y_test < predictions["CI.upper"]) & (y_test > predictions["CI.lower"])) != 0

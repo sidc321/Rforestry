@@ -18,6 +18,7 @@ dependencies = [
     "pandas >= 1.4.2",
     "scikit-learn >= 1.1.1",
     "statsmodels >= 0.13.2",
+    "dtreeviz >=1.4.0",
 ]
 requires-python = ">=3.8"
 

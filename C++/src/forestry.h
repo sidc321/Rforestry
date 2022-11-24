@@ -61,7 +61,7 @@ public:
 
   void predict_forestry(
     std::vector< std::vector<double> >* xNew,
-    double (&predictions)[],
+    std::vector<double>& predictions,
     arma::Mat<double>* weightMatrix,
     arma::Mat<double>* coefficients,
     arma::Mat<int>* terminalNodes,
@@ -81,7 +81,7 @@ public:
 
   void predictOOB_forestry(
     std::vector< std::vector<double> >* xNew,
-    double (&outputOOBPrediction)[],
+    std::vector<double>& outputOOBPrediction,
     arma::Mat<double>* weightMatrix,
     bool doubleOOB,
     bool exact

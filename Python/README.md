@@ -42,7 +42,7 @@ Then the python code can be called:
 import numpy as np
 import pandas as pd
 from random import randrange
-from forestry import forestry
+from Rforestry import RandomForest
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
 
@@ -54,7 +54,7 @@ y = df['sepal length (cm)']
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
 
-fr = forestry(ntree = 500)
+fr = RandomForest(ntree = 500)
 
 print("Fitting the forest")
 fr.fit(X_train, y_train)

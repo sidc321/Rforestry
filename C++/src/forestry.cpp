@@ -737,7 +737,7 @@ void forestry::addTrees(size_t ntree) {
 
 void forestry::predict_forestry(
   std::vector< std::vector<double> >* xNew,
-  double (&prediction)[],
+  std::vector<double>& prediction,
   arma::Mat<double>* weightMatrix,
   arma::Mat<double>* coefficients,
   arma::Mat<int>* terminalNodes,
@@ -1153,7 +1153,7 @@ std::vector<double> forestry::predictOOB(
 
 void forestry::predictOOB_forestry(
     std::vector< std::vector<double> >* xNew,
-    double (&outputOOBPrediction)[],
+    std::vector<double>& outputOOBPrediction,
     arma::Mat<double>* weightMatrix,
     bool doubleOOB,
     bool exact
