@@ -2,6 +2,7 @@
 // [[Rcpp::plugins(cpp11)]]
 #include "forestry.h"
 #include "utils.h"
+#include "sampling.h"
 #include <RcppThread.h>
 #include <random>
 #include <algorithm>

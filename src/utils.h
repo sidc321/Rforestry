@@ -29,20 +29,6 @@ double square(
     double x
 );
 
-void assign_groups_to_folds(
-        size_t numGroups,
-        size_t foldSize,
-        std::vector< std::vector<size_t> >& foldMemberships,
-        std::mt19937_64& random_number_generator
-);
-
-void group_out_sample(
-    std::vector<size_t>& removedGroupIdx,
-    std::vector<size_t>& groupMemberships,
-    std::vector<size_t>& outputIdx,
-    std::mt19937_64& random_number_generator,
-    DataFrame* trainingData
-);
 
 size_t bin_to_idx(
     std::vector<bool> binary

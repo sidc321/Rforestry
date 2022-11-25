@@ -1,0 +1,27 @@
+#ifndef SRC_SAMPLING_H
+#define SRC_SAMPLING_H
+
+#include "DataFrame.h"
+#include <vector>
+#include <string>
+#include <iostream>
+#include <random>
+#include <algorithm>
+#include <cmath>
+
+void assign_groups_to_folds(
+        size_t numGroups,
+        size_t foldSize,
+        std::vector< std::vector<size_t> >& foldMemberships,
+        std::mt19937_64& random_number_generator
+);
+
+void group_out_sample(
+        std::vector<size_t>& removedGroupIdx,
+        std::vector<size_t>& groupMemberships,
+        std::vector<size_t>& outputIdx,
+        std::mt19937_64& random_number_generator,
+        DataFrame* trainingData
+);
+
+#endif //SRC_SAMPLING_H
