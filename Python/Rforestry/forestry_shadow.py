@@ -1,11 +1,11 @@
-from collections import defaultdict
-from typing import List, Mapping
 import warnings
+from collections import defaultdict
+from typing import List, Mapping, Optional
+
 import numpy as np
 import pandas as pd
-from sklearn.utils import compute_class_weight
-
 from dtreeviz.models.shadow_decision_tree import ShadowDecTree
+from sklearn.utils import compute_class_weight
 
 
 class ShadowForestryTree(ShadowDecTree):
@@ -29,18 +29,23 @@ class ShadowForestryTree(ShadowDecTree):
     :param class_names: Class' names (in case of a classifier).
     :type class_names: *array_like, dict, optional, default=None*
     """
-    def __init__(self, 
-                 tree_model,
-                 x_data: (pd.DataFrame, np.ndarray),
-                 y_data: (pd.Series, np.ndarray),
-                 feature_names: List[str] = None,
-                 target_name: str = None,
-                 tree_id = 0,
-                 class_names: (List[str], Mapping[int, str]) = None):
+
+    def __init__(
+        self,
+        tree_model,
+        x_data: (pd.DataFrame, np.ndarray),
+        y_data: (pd.Series, np.ndarray),
+        feature_names: Optional[List[str]] = None,
+        target_name: Optional[str] = None,
+        tree_id=0,
+        class_names: (List[str], Mapping[int, str]) = None,
+    ):
 
         if feature_names is not None:
             if len(feature_names) != x_data.shape[1]:
-                raise ValueError('x_data and feature_names have different number of features')
+                raise ValueError(
+                    "x_data and feature_names have different number of features"
+                )
 
         if isinstance(x_data, pd.DataFrame):
             ft_names = x_data.columns.values
@@ -48,11 +53,15 @@ class ShadowForestryTree(ShadowDecTree):
                 feature_names = ft_names
             else:
                 if not np.array_equal(ft_names, feature_names):
-                    warnings.warn('The feature names provided are different from the column names of x_data')
+                    warnings.warn(
+                        "The feature names provided are different from the column names of x_data"
+                    )
 
         self.tree_id = tree_id
         tree_model.translate_tree_python(tree_id)
-        super().__init__(tree_model, x_data, y_data, feature_names, target_name, class_names)
+        super().__init__(
+            tree_model, x_data, y_data, feature_names, target_name, class_names
+        )
 
     def is_fit(self):
         """
@@ -62,7 +71,7 @@ class ShadowForestryTree(ShadowDecTree):
         :rtype: *bool*
 
         """
-        return getattr(self.tree_model, 'forest') is not None
+        return getattr(self.tree_model, "forest") is not None
 
     def is_classifier(self):
         """
@@ -72,7 +81,7 @@ class ShadowForestryTree(ShadowDecTree):
         :rtype: bool
 
         """
-        ## TODO: Change if we implement classification as a different method
+        # TODO: Change if we implement classification as a different method
         return False
 
     def get_class_weights(self):
@@ -84,8 +93,12 @@ class ShadowForestryTree(ShadowDecTree):
         """
         if self.is_classifier():
             unique_target_values = np.unique(self.y_data)
-            return compute_class_weight(self.tree_model.class_weight, classes=unique_target_values, y=self.y_data)
- 
+            return compute_class_weight(
+                self.tree_model.class_weight,
+                classes=unique_target_values,
+                y=self.y_data,
+            )
+
     def get_thresholds(self):
         """
         Gets the threshold values for each node in the tree.
@@ -109,13 +122,13 @@ class ShadowForestryTree(ShadowDecTree):
 
     def criterion(self):
         """
-        Gets the function to measure the quality of a split. 
+        Gets the function to measure the quality of a split.
         Ex. Gini, entropy, MSE, MAE.
 
         :return: the criterion used to measure the quality of a split.
         :rtype: str
         """
-        return 'SQUARED_ERROR'
+        return "SQUARED_ERROR"
 
     def get_class_weight(self):
         """
@@ -134,7 +147,6 @@ class ShadowForestryTree(ShadowDecTree):
         :return: The number of classes.
         :rtype: int
         """
-        pass
         return 1
 
     def classes(self):
@@ -176,11 +188,11 @@ class ShadowForestryTree(ShadowDecTree):
         :rtype: tuple(numpy.array, numpy.array)
         """
         samples = np.array(self.get_node_samples()[id])
-        node_X_data = self.x_data[samples, self.get_node_feature(id)]
+        node_x_data = self.x_data[samples, self.get_node_feature(id)]
         split = self.get_node_split(id)
 
-        left = np.nonzero(node_X_data <= split)[0]
-        right = np.nonzero(node_X_data > split)[0]
+        left = np.nonzero(node_x_data <= split)[0]
+        right = np.nonzero(node_x_data > split)[0]
 
         return left, right
 
@@ -309,9 +321,13 @@ class ShadowForestryTree(ShadowDecTree):
             if self.tree_model.tree_.children_left[node] != -1:
                 node_left = self.tree_model.tree_.children_left[node]
                 node_right = self.tree_model.tree_.children_right[node]
-                gini[tree_.feature[node]] += tree_.weighted_n_node_samples[node] * tree_.impurity[node] \
-                                             - tree_.weighted_n_node_samples[node_left] * tree_.impurity[node_left] \
-                                             - tree_.weighted_n_node_samples[node_right] * tree_.impurity[node_right]
+                gini[tree_.feature[node]] += (
+                    tree_.weighted_n_node_samples[node] * tree_.impurity[node]
+                    - tree_.weighted_n_node_samples[node_left]
+                    * tree_.impurity[node_left]
+                    - tree_.weighted_n_node_samples[node_right]
+                    * tree_.impurity[node_right]
+                )
         normalizer = np.sum(gini)
         if normalizer > 0.0:
             gini /= normalizer
@@ -329,8 +345,8 @@ class ShadowForestryTree(ShadowDecTree):
 
     def get_score(self):
         """
-        Scores the model. For a classification tree, gets the mean accuracy. For a regression tree, gets 
-        the coefficient of determination (R\ :sup:`2`).
+        Scores the model. For a classification tree, gets the mean accuracy. For a regression tree, gets
+        the coefficient of determination (R \ :sup:`2`).
 
         :return: The score of the model
         :rtype: float

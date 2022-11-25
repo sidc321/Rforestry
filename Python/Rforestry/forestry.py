@@ -792,7 +792,7 @@ class RandomForest:
         nPreds = len(processed_x.index) if newdata is not None else self.processed_dta['nObservations']
 
         # Initialize the final prediction array
-        res = np.empty(nPreds, dtype=np.double) 
+        res = np.zeros(nPreds, dtype=np.double)
 
         weight_matrix = np.empty(nPreds * self.processed_dta['nObservations'], dtype=np.double) if weightMatrix else np.empty(0, dtype=np.double)
         coefficients = np.empty(self.processed_dta['nObservations'] * (self.processed_dta['linearFeatureCols'].size+1), dtype=np.double) if aggregation == 'coefs' else np.empty(0, dtype=np.double) 
@@ -878,7 +878,7 @@ class RandomForest:
                 tree_weights, 
                 len(processed_x.index),
                 res,
-                None,
+                weight_matrix,
                 coefficients
             )
 
@@ -897,7 +897,7 @@ class RandomForest:
                 len(processed_x.index),
                 res,
                 weight_matrix,
-                None
+                coefficients
             )
 
         if weightMatrix:

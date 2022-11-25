@@ -179,6 +179,22 @@ void predictOOB_forest_wrapper(
     }
 }
 
+
+void show_array(double *ptr, size_t size) {
+    for(int i = 0; i < size; i++) {
+        std::cout << *ptr << " ";
+        ptr++;
+    }
+    std::cout << '\n' << '\n';
+}
+
+void show_array(std::vector<double> array) {
+    for (auto i: array) {
+        std::cout << i << ' ';
+    }
+    std::cout << '\n' << '\n';
+}
+
 void predict_forest_wrapper(
         void* forest_pt,
         void* dataframe_pt,
@@ -196,7 +212,7 @@ void predict_forest_wrapper(
         py::array_t<double> coefs
 ) {
     py::buffer_info predictions_info = predictions.request();
-    auto predictions_ptr = static_cast<double *>(predictions_info.ptr); 
+    double *predictions_ptr = static_cast<double *>(predictions_info.ptr); 
     size_t predictions_size = predictions_info.shape[0];
 
     std::vector<double> predictions_copy(predictions_size);
@@ -213,7 +229,7 @@ void predict_forest_wrapper(
         weight_matrix_copy[i] = weight_matrix_ptr[i];
     }
 
-    py::buffer_info coefs_info = predictions.request();
+    py::buffer_info coefs_info = coefs.request();
     auto coefs_ptr = static_cast<double *>(coefs_info.ptr); 
     size_t coefs_size = coefs_info.shape[0];
 
@@ -221,6 +237,7 @@ void predict_forest_wrapper(
     for (int i = 0; i < coefs_size; i++) {
         coefs_copy[i] = coefs_ptr[i];
     }
+
     predict_forest(
         forest_pt,
         dataframe_pt,
@@ -241,6 +258,7 @@ void predict_forest_wrapper(
     for (int i = 0; i < predictions_size; i++) {
         predictions_ptr[i] = predictions_copy[i];
     }
+
     for (int i = 0; i < weight_matrix_size; i++) {
         weight_matrix_ptr[i] = weight_matrix_copy[i];
     }
