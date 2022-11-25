@@ -232,16 +232,17 @@ void forestry::addTrees(size_t ntree) {
           // use that sampling method instead of the sampling methods we have
           size_t currentFold;
           std::vector<size_t> groups_to_remove;
+
+          // If sampling with groups or folds
           if ((getminTreesPerFold() > 0) && (i < groupToGrow)) {
 
             // Get the current fold
             currentFold = (size_t) std::floor((double) i / (double) getminTreesPerFold());
 
-            //RcppThread::Rcout << currentGroup;
-
-            // Populate sampleIndex with the leave group out function
-
+            // Leave out the groups in the current fold when sampling
             groups_to_remove = (foldMemberships[currentFold]);
+
+            // Populate sampleIndex with the group_out_sample function
             group_out_sample(
               groups_to_remove,
               (*getTrainingData()->getGroups()),
@@ -250,6 +251,7 @@ void forestry::addTrees(size_t ntree) {
               getTrainingData()
             );
 
+          // If sampling is done with replacement
           } else if (isReplacement()) {
 
             // Now we generate a weighted distribution using observationWeights
@@ -263,8 +265,9 @@ void forestry::addTrees(size_t ntree) {
               size_t randomIndex = sample_dist(random_number_generator);
               sampleIndex.push_back(randomIndex);
             }
+          // If sampling is done without replacement
           } else {
-            // In this case, when we have no replacement, we disregard
+            // When sampling without replacement, we disregard
             // observationWeights and use a uniform distribution
             std::uniform_int_distribution<size_t> unif_dist(
                 0, (size_t) (*getTrainingData()).getNumRows() - 1
@@ -287,6 +290,7 @@ void forestry::addTrees(size_t ntree) {
             }
           }
 
+          // Split sampled indices into averaging and splitting sets
           std::unique_ptr<std::vector<size_t> > splitSampleIndex;
           std::unique_ptr<std::vector<size_t> > averageSampleIndex;
 
@@ -312,8 +316,9 @@ void forestry::addTrees(size_t ntree) {
               // left out group
               if (getminTreesPerFold() == 0) {
                 allIndex.push_back(i);
-              } else if (std::find(groups_to_remove.begin(), groups_to_remove.end(), (*(getTrainingData()->getGroups()))[i])
-                           == groups_to_remove.end()) {
+              } else if (std::find(groups_to_remove.begin(),
+                                   groups_to_remove.end(),
+                                   (*(getTrainingData()->getGroups()))[i]) == groups_to_remove.end()) {
                 allIndex.push_back(i);
               }
             }
@@ -338,22 +343,17 @@ void forestry::addTrees(size_t ntree) {
             // from the OOB indices, otherwise we just take the OOB index
             // set with standard (uniform) weightings
             if (getDoubleBootstrap()) {
-              // Now in new version, of OOB honesty
-              // we want to sample with replacement from
-              // the OOB index vector, so that our averaging vector
-              // is also bagged.
               std::uniform_int_distribution<size_t> uniform_dist(
                   0, (size_t) (OOBIndex.size() - 1)
               );
 
-              // Sample with replacement
+              // Sample with replacement from OOB Indices for the averaging set
               while (AvgIndices.size() < OOBIndex.size()) {
                 size_t randomIndex = uniform_dist(random_number_generator);
                 AvgIndices.push_back(
                   OOBIndex[randomIndex]
                 );
               }
-
             } else {
               AvgIndices = OOBIndex;
             }
@@ -385,15 +385,16 @@ void forestry::addTrees(size_t ntree) {
             splitSampleIndex.reset(new std::vector<size_t>(sampleIndex));
             averageSampleIndex.reset(new std::vector<size_t>(sampleIndex));
 
+          // Standard Honesty - split the sampled indices into disjoint sets, splitting and averaging
           } else {
 
             // Generate sample index based on the split ratio
             std::vector<size_t> splitSampleIndex_;
             std::vector<size_t> averageSampleIndex_;
 
-            // If we have groups, want to remove duplicates since sample index
+            // If we have groups, want to remove duplicates since sampleIndex
             // was sampled with replacement
-            if (getminTreesPerFold() > 0) {
+            if (getminTreesPerFold() > 0 || isReplacement()) {
                 std::sort(sampleIndex.begin(), sampleIndex.end());
                 sampleIndex.erase(std::unique(sampleIndex.begin(), sampleIndex.end()), sampleIndex.end());
                 std::shuffle(sampleIndex.begin(), sampleIndex.end(), random_number_generator);
