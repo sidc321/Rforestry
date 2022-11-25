@@ -1,8 +1,10 @@
+# pylint: disable=redefined-outer-name
+
 import numpy as np
 import pytest
+from helpers import get_data
 
 from Rforestry import RandomForest
-from helpers import get_data
 
 
 @pytest.fixture
@@ -39,13 +41,13 @@ def test_set_params(forest):
     assert forest.get_params()["maxDepth"] == 5
 
     forest.fit(X, y)
-    y1 = forest.predict(X)
+    predictions_1 = forest.predict(X)
 
     forest.set_params(seed=1)
     assert forest.get_params()["ntree"] == 1000
     assert forest.get_params()["maxDepth"] == 5
 
     forest.fit(X, y)
-    y2 = forest.predict(X)
+    predictions_2 = forest.predict(X)
 
-    assert not np.array_equal(y1, y2)
+    assert not np.array_equal(predictions_1, predictions_2)

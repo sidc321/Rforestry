@@ -1,8 +1,10 @@
+# pylint: disable=redefined-outer-name
+
 import numpy as np
 import pytest
+from helpers import get_data
 
 from Rforestry import RandomForest
-from helpers import get_data
 
 
 @pytest.fixture
@@ -28,7 +30,7 @@ def forest():
 
 @pytest.fixture
 def predictions(forest):
-    X, y = get_data()
+    X, _ = get_data()
     return forest.predict(X)
 
 
@@ -49,10 +51,10 @@ def test_newdata_shuffled_warning(forest):
 
 def test_equal_predictions(forest):
     X, _ = get_data()
-    p1 = forest.predict(X)
-    p2 = forest.predict(X.iloc[:, ::-1])
+    predictions_1 = forest.predict(X)
+    predictions_2 = forest.predict(X.iloc[:, ::-1])
 
-    assert np.array_equal(p1, p2)
+    assert np.array_equal(predictions_1, predictions_2)
 
 
 def test_error(predictions):

@@ -1,8 +1,8 @@
 import numpy as np
+from helpers import get_data
 from sklearn.model_selection import train_test_split
 
 from Rforestry import RandomForest
-from helpers import get_data
 
 
 def test_conformal_intervals():
