@@ -35,9 +35,7 @@ def test_tree_features(forest):
         forest.predict(newdata=X, trees=[1, 2, 3, 4, 4, 499], aggregation="oob")
 
     with pytest.raises(ValueError):
-        forest.predict(
-            newdata=X, trees=[1, 2, 3, 4, 4, 499], aggregation="average", exact=False
-        )
+        forest.predict(newdata=X, trees=[1, 2, 3, 4, 4, 499], aggregation="average", exact=False)
 
 
 def test_predict_settings(forest):

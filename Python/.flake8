@@ -5,7 +5,9 @@ per-file-ignores =
 max-line-length = 120
 max-complexity = 10
 ignore =
-    # E501: line too long
+    # E501: line too long - pylint will take care of it
     E501,
-    # W291: trailing whitespace
-    W291
+    # W291: trailing whitespace - pylint will take care of it
+    W291,
+    # W503: line break before binary operator
+    W503

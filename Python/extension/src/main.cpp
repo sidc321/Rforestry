@@ -5,10 +5,45 @@
 #include "utils.cpp"
 #include "api.cpp"
 
+//fail
+
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
 
 namespace py = pybind11;
+
+template<typename T>
+void copy_vector_to_numpy_array(std::vector<T>& vector, py::array_t<T>& np) {
+    py::buffer_info np_info = np.request();
+    T *np_ptr = static_cast<T *>(np_info.ptr);
+
+    for (int i = 0; i < np_info.shape[0]; i++) {
+        np_ptr[i] = vector[i];
+    }
+}
+
+template<typename T>
+std::vector<T> create_vector_from_numpy_array(py::array_t<T> np) {
+    py::buffer_info np_info = np.request();
+    T *np_ptr = static_cast<T *>(np_info.ptr); 
+
+    std::vector<T> vector(np_info.shape[0]);
+    for (int i = 0; i < np_info.shape[0]; i++) {
+        vector[i] = np_ptr[i];
+    }
+    return vector;
+}
+
+py::array_t<double> create_numpy_array(unsigned int size) {
+    return py::array(py::buffer_info(
+        nullptr,                              /* Pointer to data (nullptr -> ask NumPy to allocate!) */
+        sizeof(double),                       /* Size of one item */
+        py::format_descriptor<double>::value, /* Buffer format */
+        1,                                    /* How many dimensions? */
+        { size },                             /* Number of elements for each dimension */
+        { sizeof(double) }                    /* Strides for each dimension */
+    ));
+}
 
 void* get_data_wrapper (
         py::array_t<double> arr,
@@ -130,7 +165,7 @@ void* py_reconstructree_wrapper(void* data_ptr,
     );
 }
 
-void predictOOB_forest_wrapper(
+py::tuple predictOOB_forest_wrapper(
         void* forest_pt,
         void* dataframe_pt,
         py::array_t<double> test_data,
@@ -138,26 +173,14 @@ void predictOOB_forest_wrapper(
         bool exact,
         bool returnWeightMatrix,
         bool verbose,
-        py::array_t<double> predictions,
-        py::array_t<double> weight_matrix
+        unsigned int n_preds,
+        unsigned int n_weight_matrix
 ) {
-    py::buffer_info predictions_info = predictions.request();
-    auto predictions_ptr = static_cast<double *>(predictions_info.ptr); 
-    size_t predictions_size = predictions_info.shape[0];
+    py::array_t<double> predictions = create_numpy_array(n_preds);
+    std::vector<double> predictions_vector(n_preds);
 
-    std::vector<double> predictions_copy(predictions_size);
-    for (int i = 0; i < predictions_size; i++) {
-        predictions_copy[i] = predictions_ptr[i];
-    }
-
-    py::buffer_info weight_matrix_info = weight_matrix.request();
-    auto weight_matrix_ptr = static_cast<double *>(weight_matrix_info.ptr); 
-    size_t weight_matrix_size = weight_matrix_info.shape[0];
-
-    std::vector<double> weight_matrix_copy(weight_matrix_size);
-    for (int i = 0; i < weight_matrix_size; i++) {
-        weight_matrix_copy[i] = weight_matrix_ptr[i];
-    }
+    py::array_t<double> weight_matrix = create_numpy_array(n_weight_matrix);
+    std::vector<double> weight_matrix_vector(n_weight_matrix);
 
     predictOOB_forest(
         forest_pt,
@@ -167,16 +190,14 @@ void predictOOB_forest_wrapper(
         exact,
         returnWeightMatrix,
         verbose,
-        predictions_copy,
-        weight_matrix_copy
+        predictions_vector,
+        weight_matrix_vector
     );
 
-    for (int i = 0; i < predictions_size; i++) {
-        predictions_ptr[i] = predictions_copy[i];
-    }
-    for (int i = 0; i < weight_matrix_size; i++) {
-        weight_matrix_ptr[i] = weight_matrix_copy[i];
-    }
+    copy_vector_to_numpy_array(predictions_vector, predictions);
+    copy_vector_to_numpy_array(weight_matrix_vector, weight_matrix);
+
+    return py::make_tuple(predictions, weight_matrix);
 }
 
 
@@ -195,7 +216,7 @@ void show_array(std::vector<double> array) {
     std::cout << '\n' << '\n';
 }
 
-void predict_forest_wrapper(
+py::tuple predict_forest_wrapper(
         void* forest_pt,
         void* dataframe_pt,
         py::array_t<double> test_data,
@@ -207,36 +228,18 @@ void predict_forest_wrapper(
         bool use_weights,
         py::array_t<size_t> tree_weights,
         size_t num_test_rows,
-        py::array_t<double> predictions,
-        py::array_t<double> weight_matrix,
-        py::array_t<double> coefs
+        unsigned int n_preds,
+        unsigned int n_weight_matrix,
+        unsigned int n_coefficients
 ) {
-    py::buffer_info predictions_info = predictions.request();
-    double *predictions_ptr = static_cast<double *>(predictions_info.ptr); 
-    size_t predictions_size = predictions_info.shape[0];
+    py::array_t<double> predictions = create_numpy_array(n_preds);
+    std::vector<double> predictions_vector(n_preds);
 
-    std::vector<double> predictions_copy(predictions_size);
-    for (int i = 0; i < predictions_size; i++) {
-        predictions_copy[i] = predictions_ptr[i];
-    }
+    py::array_t<double> weight_matrix = create_numpy_array(n_weight_matrix);
+    std::vector<double> weight_matrix_vector(n_weight_matrix);
 
-    py::buffer_info weight_matrix_info = weight_matrix.request();
-    auto weight_matrix_ptr = static_cast<double *>(weight_matrix_info.ptr); 
-    size_t weight_matrix_size = weight_matrix_info.shape[0];
-
-    std::vector<double> weight_matrix_copy(weight_matrix_size);
-    for (int i = 0; i < weight_matrix_size; i++) {
-        weight_matrix_copy[i] = weight_matrix_ptr[i];
-    }
-
-    py::buffer_info coefs_info = coefs.request();
-    auto coefs_ptr = static_cast<double *>(coefs_info.ptr); 
-    size_t coefs_size = coefs_info.shape[0];
-
-    std::vector<double> coefs_copy(coefs_size);
-    for (int i = 0; i < coefs_size; i++) {
-        coefs_copy[i] = coefs_ptr[i];
-    }
+    py::array_t<double> coefficients = create_numpy_array(n_coefficients);
+    std::vector<double> coefficients_vector(n_coefficients);
 
     predict_forest(
         forest_pt,
@@ -250,21 +253,16 @@ void predict_forest_wrapper(
         use_weights,
         static_cast<size_t *>(tree_weights.request().ptr),
         num_test_rows,
-        predictions_copy,
-        weight_matrix_copy,
-        coefs_copy
+        predictions_vector,
+        weight_matrix_vector,
+        coefficients_vector
     );
 
-    for (int i = 0; i < predictions_size; i++) {
-        predictions_ptr[i] = predictions_copy[i];
-    }
+    copy_vector_to_numpy_array(predictions_vector, predictions);
+    copy_vector_to_numpy_array(weight_matrix_vector, weight_matrix);
+    copy_vector_to_numpy_array(coefficients_vector, coefficients);
 
-    for (int i = 0; i < weight_matrix_size; i++) {
-        weight_matrix_ptr[i] = weight_matrix_copy[i];
-    }
-    for (int i = 0; i < coefs_size; i++) {
-        coefs_ptr[i] = coefs_copy[i];
-    }
+    return py::make_tuple(predictions, weight_matrix, coefficients);
 }
 
 
@@ -274,49 +272,20 @@ void fill_tree_info_wrapper(void* forest_ptr,
                     py::array_t<int> split_info,
                     py::array_t<int> av_info
 ) {
-    py::buffer_info treeInfo_info = treeInfo.request();
-    auto treeInfo_ptr = static_cast<double *>(treeInfo_info.ptr); 
-    size_t treeInfo_size = treeInfo_info.shape[0];
-
-    std::vector<double> treeInfo_copy(treeInfo_size);
-    for (int i = 0; i < treeInfo_size; i++) {
-        treeInfo_copy[i] = treeInfo_ptr[i];
-    }
-
-    py::buffer_info split_info_info = split_info.request();
-    auto split_info_ptr = static_cast<int *>(split_info_info.ptr); 
-    size_t split_info_size = split_info_info.shape[0];
-
-    std::vector<int> split_info_copy(split_info_size);
-    for (int i = 0; i < split_info_size; i++) {
-        split_info_copy[i] = split_info_ptr[i];
-    }
-
-    py::buffer_info av_info_info = av_info.request();
-    auto av_info_ptr = static_cast<int *>(av_info_info.ptr); 
-    size_t av_info_size = av_info_info.shape[0];
-
-    std::vector<int> av_info_copy(av_info_size);
-    for (int i = 0; i < av_info_size; i++) {
-        av_info_copy[i] = av_info_ptr[i];
-    }
+    auto treeInfo_vector = create_vector_from_numpy_array(treeInfo);
+    auto split_info_vector = create_vector_from_numpy_array(split_info);
+    auto av_info_vector = create_vector_from_numpy_array(av_info);
 
     fill_tree_info(forest_ptr,
                    tree_idx,
-                   treeInfo_copy,
-                   split_info_copy,
-                   av_info_copy
+                   treeInfo_vector,
+                   split_info_vector,
+                   av_info_vector
     );
 
-    for (int i = 0; i < treeInfo_size; i++) {
-        treeInfo_ptr[i] = treeInfo_copy[i];
-    }
-    for (int i = 0; i < split_info_size; i++) {
-        split_info_ptr[i] = split_info_copy[i];
-    }
-    for (int i = 0; i < av_info_size; i++) {
-        av_info_ptr[i] = av_info_copy[i];
-    }
+    copy_vector_to_numpy_array(treeInfo_vector, treeInfo);
+    copy_vector_to_numpy_array(split_info_vector, split_info);
+    copy_vector_to_numpy_array(av_info_vector, av_info);
 }
 
 
@@ -394,7 +363,7 @@ PYBIND11_MODULE(extension, m) {
 
         Some other explanation about the delete_forestry function.
     )pbdoc");
-    m.def("predictOOB_forest", &predictOOB_forest_wrapper, R"pbdoc(
+    m.def("predict_oob_forest", &predictOOB_forest_wrapper, R"pbdoc(
         Some help text here
 
         Some other explanation about the predictOOB_forest function.

@@ -46,3 +46,4 @@ CTestTestfile.cmake
 _deps
 .vscode
 !**/.gitignore
+!.gitmodules

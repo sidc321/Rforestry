@@ -32,7 +32,8 @@ dev = ["bumpver", "pip-tools", "pytest", "dtreeviz >= 1.3.3"]
 [project.urls]
 Homepage = "https://github.com/forestry-labs/Rforestry#readme"
 
-
+[tool.black]
+line-length = 120
 
 [tool.bumpver]
 current_version = "1.0.0"

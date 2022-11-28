@@ -7,7 +7,7 @@ from Rforestry import RandomForest
 def test_predict_error():
     X, y = get_data()
 
-    forest = RandomForest(OOBhonest=True)
+    forest = RandomForest(oob_honest=True)
     forest.fit(X, y)
 
     with pytest.raises(ValueError):

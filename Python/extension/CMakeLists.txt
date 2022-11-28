@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.6)
-project(forestryCpp)
+
+set(CMAKE_CXX_COMPILER clang++)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O3")
+
+project(forestry)
 
 
 
@@ -16,12 +21,6 @@ find_library(ARMADILLO_LIBRARY NAMES armadillo
 include_directories(${Armadillo_LIBRARY_DIR})
 include_directories(include)
 
-# Set up compiler and relevant files
-#set(CMAKE_CXX_STANDARD 11)
-#set(CMAKE_CXX_COMPILER clang++)
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O3")
-# Add framework Accelerate flag
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -framework Accelerate -install_name forestryCpp.so")
 
 add_subdirectory(pybind11)
 #pybind11_add_module(extension src/main.cpp include/forestry.cpp include/forestryTree.cpp include/DataFrame.cpp)

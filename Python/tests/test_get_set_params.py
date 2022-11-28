@@ -14,10 +14,10 @@ def forest():
         replace=True,
         sample_fraction=0.8,
         mtry=3,
-        nodesizeStrictSpl=5,
+        nodesize_strict_spl=5,
         splitrule="variance",
         splitratio=1,
-        nodesizeStrictAvg=5,
+        nodesize_strict_avg=5,
         seed=2,
     )
 
@@ -36,16 +36,16 @@ def test_get_params(forest):
 def test_set_params(forest):
     X, y = get_data()
 
-    forest.set_params(ntree=1000, maxDepth=5, seed=1729)
+    forest.set_params(ntree=1000, max_depth=5, seed=1729)
     assert forest.get_params()["ntree"] == 1000
-    assert forest.get_params()["maxDepth"] == 5
+    assert forest.get_params()["max_depth"] == 5
 
     forest.fit(X, y)
     predictions_1 = forest.predict(X)
 
     forest.set_params(seed=1)
     assert forest.get_params()["ntree"] == 1000
-    assert forest.get_params()["maxDepth"] == 5
+    assert forest.get_params()["max_depth"] == 5
 
     forest.fit(X, y)
     predictions_2 = forest.predict(X)

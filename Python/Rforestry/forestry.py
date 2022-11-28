@@ -1,16 +1,17 @@
+import ctypes
+import math
+import pickle  # nosec B403 - 'Consider possible security implications associated with pickle'
+import sys
+import warnings
+from random import randrange
+from typing import List
+
 import numpy as np
 import pandas as pd
-import warnings
-import math
-import sys
-from random import randrange
-import ctypes
-from sklearn.model_selection import LeaveOneOut
 import statsmodels.api as sm
-import pickle
+from sklearn.model_selection import LeaveOneOut
 
-from Rforestry import Py_preprocessing
-from Rforestry import extension
+from Rforestry import Py_preprocessing, extension
 
 
 class RandomForest:
@@ -22,7 +23,7 @@ class RandomForest:
     :param replace: An indicator of whether sampling of the training data is done with replacement.
     :type replace: *bool, optional, default=True*
     :param sampsize: The size of total samples to draw for the training data. If sampling with replacement, the default
-     value is the length of the training data. If sampling without replacement, the default value is two-thirds of the 
+     value is the length of the training data. If sampling without replacement, the default value is two-thirds of the
      length of the training data.
     :type sampsize: *int, optional*
     :param sample_fraction: If this is given, then sampsize is ignored and set to
@@ -130,7 +131,7 @@ class RandomForest:
      data can be exchanged to create decorrelated trees.
     :type doubleTree: *bool, optional, default=False*
 
-    :ivar processed_dta: A dictionary containing information about the data after it has been preprocessed. 
+    :ivar processed_dta: A dictionary containing information about the data after it has been preprocessed.
      *processed_dta* has the following entries:
 
      * processed_x (*pandas.DataFrame*) - The processed feature matrix.
@@ -141,15 +142,15 @@ class RandomForest:
 
       .. note::
         In order for the program to recognize a feature as categorical, it **must** be converted into a
-        `Pandas categorical data type <https://pandas.pydata.org/docs/user_guide/categorical.html#>`_. The 
+        `Pandas categorical data type <https://pandas.pydata.org/docs/user_guide/categorical.html#>`_. The
         simplest way to do it is to use::
 
             df['categorical'] = df['categorical'].astype('category')
 
         Check out the :ref:`Handling Categorical Data <categorical>` section for an example of how to use categorical features.
- 
+
      * categoricalFeatureMapping (*list[dict]*) - For each categorical feature, the data is encoded into numeric represetation. Those encodings are saved in *categoricalFeatureMapping*. *categoricalFeatureMapping[i]* has the following entries:
-      
+
         * categoricalFeatureCol (*int*) - The index of the current categorical feature column.
 
         * uniqueFeatureValues (*list*) - The categories of the current categorical feature.
@@ -173,7 +174,7 @@ class RandomForest:
      * linearFeatureCols (*numpy.array*) - An array containing the indices of which features to split linearly on when using linear penalized splits. Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
 
      * groupsMapping (*dict*) - Contains informtion about the groups of the training observations. Has the following entries:
-     
+
         * groupValue (*pandas.Index*) - The categories of the groups.
 
         * groupNumericValue (*numpy.array*) - The categories of the groups encoded into numeric represetation
@@ -195,7 +196,7 @@ class RandomForest:
      Note that **all** of the entries in processed_dta are set to ``None`` during initialization. They are only assigned a value after :meth:`fit() <forestry.RandomForest.fit>` is called.
 
     :vartype processed_dta: dict
-    
+
 
     .. _translate-label:
 
@@ -214,154 +215,158 @@ class RandomForest:
      * values (*numpy.array of shape[number of nodes in the tree,]*) - For a node with a given *id*, if that node is a leaf node, *values[id]* gives the prediction made by that node. Otherwise, *values[id]* is *0.0*.
 
      .. note::
-        When a *RandomForest* is initialized, *Py_forest* is set to a list of *ntree* empty dictionaries. 
+        When a *RandomForest* is initialized, *Py_forest* is set to a list of *ntree* empty dictionaries.
         In order to populate those dictionaries, one must use the :meth:`translate_tree_python() <forestry.RandomForest.translate_tree_python>` method.
 
-    :vartype Py_forest: list[dict] 
-    :ivar forest: A ctypes pointer to the *forestry* object in C++. It is initially set to *None* and updated only 
+    :vartype Py_forest: list[dict]
+    :ivar forest: A ctypes pointer to the *forestry* object in C++. It is initially set to *None* and updated only
      after :meth:`fit() <forestry.RandomForest.fit>` is called.
     :vartype forest: ctypes.c_void_p
-    :ivar dataframe: A ctypes pointer to the *DataFrame* object in C++. It is initially set to *None* and updated only 
+    :ivar dataframe: A ctypes pointer to the *DataFrame* object in C++. It is initially set to *None* and updated only
      after :meth:`fit() <forestry.RandomForest.fit>` is called.
     :vartype dataframe: ctypes.c_void_p
 
     """
+
     def __init__(
         self,
-        ntree=500,
-        replace=True,
+        ntree: int = 500,
+        replace: bool = True,
         sampsize=None,  # Add a default value.
         sample_fraction=None,
-        mtry=None,    # Add a default value.
-        nodesizeSpl=5,
-        nodesizeAvg=5,
-        nodesizeStrictSpl=1,
-        nodesizeStrictAvg=1,
-        minSplitGain=0,
-        maxDepth=None,  # Add a default value.
-        interactionDepth=None,   # Add a default value.
-        splitratio=1,
-        OOBhonest=False,
-        doubleBootstrap=None,  # Add a default value.
-        seed=randrange(1001),
-        verbose=False,
-        nthread=0,
-        splitrule='variance',
-        middleSplit=False,
-        maxObs=None,    # Add a default value.
-        linear=False,
-        minTreesPerGroup=0,
-        monotoneAvg=False,
-        overfitPenalty=1,
-        scale=False,
-        doubleTree=False
+        mtry=None,  # Add a default value.
+        nodesize_spl: int = 5,
+        nodesize_avg: int = 5,
+        nodesize_strict_spl: int = 1,
+        nodesize_strict_avg: int = 1,
+        min_split_gain: int = 0,
+        max_depth=None,  # Add a default value.
+        interaction_depth=None,  # Add a default value.
+        splitratio: int = 1,
+        oob_honest: bool = False,
+        double_bootstrap=None,  # Add a default value.
+        seed=randrange(
+            1001
+        ),  # nosec B311 - 'Standard pseudo-random generators are not suitable for security/cryptographic purposes'
+        verbose: bool = False,
+        nthread: int = 0,
+        splitrule: str = "variance",
+        middle_split: bool = False,
+        max_obs=None,  # Add a default value.
+        linear: bool = False,
+        min_trees_per_group: int = 0,
+        monotone_avg: bool = False,
+        overfit_penalty: int = 1,
+        scale: bool = False,
+        double_tree: bool = False,
     ):
 
-        if doubleBootstrap is None:
-            doubleBootstrap = OOBhonest
+        if double_bootstrap is None:
+            double_bootstrap = oob_honest
 
         # Call the forest_parameter_checker function
         # haven't checking splitrule - not fully implemented
 
-        splitratio, replace, doubleTree, interactionDepth = Py_preprocessing.forest_parameter_checker(
+        (splitratio, replace, double_tree, interaction_depth,) = Py_preprocessing.forest_parameter_checker(
             ntree,
             replace,
             sampsize,
             sample_fraction,
             mtry,
-            nodesizeSpl,
-            nodesizeAvg,
-            nodesizeStrictSpl,
-            nodesizeStrictAvg,
-            minSplitGain,
-            maxDepth,
-            interactionDepth,
+            nodesize_spl,
+            nodesize_avg,
+            nodesize_strict_spl,
+            nodesize_strict_avg,
+            min_split_gain,
+            max_depth,
+            interaction_depth,
             splitratio,
-            OOBhonest,
-            doubleBootstrap,
+            oob_honest,
+            double_bootstrap,
             seed,
             verbose,
             nthread,
-            middleSplit,
-            maxObs,
+            middle_split,
+            max_obs,
             linear,
-            minTreesPerGroup,
-            monotoneAvg,
-            overfitPenalty,
+            min_trees_per_group,
+            monotone_avg,
+            overfit_penalty,
             scale,
-            doubleTree)
-            
-        cppDataFrame = None  # Cpp pointer
-        cppForest = None  # Cpp pointer
-        
+            double_tree,
+        )
+
+        cpp_data_frame = None  # Cpp pointer
+        cpp_forest = None  # Cpp pointer
+
         processed_dta = {
-            'processed_x': None,
-            'y': None,
-            'categoricalFeatureCols': None,
-            'categoricalFeatureMapping': None,
-            'featureWeights': None,
-            'featureWeightsVariables': None,
-            'deepFeatureWeights': None,
-            'deepFeatureWeightsVariables': None,
-            'observationWeights': None,
-            'symmetric': None,
-            'monotonicConstraints': None,
-            'linearFeatureCols': None,
-            'groupsMapping': None,
-            'groups': None,
-            'colMeans': None,
-            'colSd': None,
-            'hasNas': None,
-            'nObservations': None,
-            'numColumns': None,
-            'featNames': None
+            "processed_x": None,
+            "y": None,
+            "categoricalFeatureCols": None,
+            "categoricalFeatureMapping": None,
+            "featureWeights": None,
+            "featureWeightsVariables": None,
+            "deepFeatureWeights": None,
+            "deepFeatureWeightsVariables": None,
+            "observationWeights": None,
+            "symmetric": None,
+            "monotonicConstraints": None,
+            "linearFeatureCols": None,
+            "groupsMapping": None,
+            "groups": None,
+            "colMeans": None,
+            "colSd": None,
+            "hasNas": None,
+            "nObservations": None,
+            "numColumns": None,
+            "featNames": None,
         }
 
-        Py_forest = None  # for accessing the tree structure
+        py_forest = None  # for accessing the tree structure
 
         # Data Fields
-        self.forest = cppForest
-        self.dataframe = cppDataFrame
+        self.forest = cpp_forest
+        self.dataframe = cpp_data_frame
         self.processed_dta = processed_dta
-        self.Py_forest = Py_forest
+        self.py_forest = py_forest
         self.ntree = ntree
         self.replace = replace
         self.sampsize = sampsize
         self.sample_fraction = sample_fraction
         self.mtry = mtry
-        self.nodesizeSpl = nodesizeSpl
-        self.nodesizeAvg = nodesizeAvg
-        self.nodesizeStrictSpl = nodesizeStrictSpl
-        self.nodesizeStrictAvg = nodesizeStrictAvg
-        self.minSplitGain = minSplitGain
-        self.maxDepth = maxDepth
-        self.interactionDepth = interactionDepth
+        self.nodesize_spl = nodesize_spl
+        self.nodesize_avg = nodesize_avg
+        self.nodesize_strict_spl = nodesize_strict_spl
+        self.nodesize_strict_avg = nodesize_strict_avg
+        self.min_split_gain = min_split_gain
+        self.max_depth = max_depth
+        self.interaction_depth = interaction_depth
         self.splitratio = splitratio
-        self.OOBhonest = OOBhonest
-        self.doubleBootstrap = doubleBootstrap
+        self.oob_honest = oob_honest
+        self.double_bootstrap = double_bootstrap
         self.seed = seed
         self.verbose = verbose
         self.nthread = nthread
-        self.middleSplit = middleSplit
-        self.maxObs = maxObs
+        self.middle_split = middle_split
+        self.max_obs = max_obs
         self.linear = linear
-        self.monotoneAvg = monotoneAvg
-        self.overfitPenalty = overfitPenalty
-        self.doubleTree = doubleTree
+        self.monotone_avg = monotone_avg
+        self.overfit_penalty = overfit_penalty
+        self.double_tree = double_tree
         self.scale = scale
-        self.minTreesPerGroup = minTreesPerGroup
+        self.min_trees_per_group = min_trees_per_group
 
     def fit(
         self,
         x,
         y,
-        interactionVariables=[],
-        featureWeights=None,
-        deepFeatureWeights=None,
-        observationWeights=None,
+        interaction_variables: List = [],
+        feature_weights=None,
+        deep_feature_weights=None,
+        observation_weights=None,
         symmetric=None,  # Add a default value.
-        linFeats=None,   # Add a default value.
-        monotonicConstraints=None,   # Add a default value.
+        lin_feats=None,  # Add a default value.
+        monotonic_constraints=None,  # Add a default value.
         groups=None,
         seed=None,
     ):
@@ -421,14 +426,17 @@ class RandomForest:
         # Make sure that all the parameters exist when passed to RandomForest
 
         if isinstance(x, pd.DataFrame):
-            featNames = x.columns.values
+            feat_names = x.columns.values
 
         elif type(x).__module__ == np.__name__ or isinstance(x, list) or isinstance(x, pd.Series):
-            featNames = None
-            print('x does not have column names. The check that columns are provided in the same order when training and predicting will be skipped', file=sys.stderr)
+            feat_names = None
+            print(
+                "x does not have column names. The check that columns are provided in the same order when training and predicting will be skipped",
+                file=sys.stderr,
+            )
 
         else:
-            raise AttributeError('x must be a Pandas DataFrame, a numpy array, a Pandas Series, or a regular list')
+            raise AttributeError("x must be a Pandas DataFrame, a numpy array, a Pandas Series, or a regular list")
 
         x = (pd.DataFrame(x)).copy()
         y = (np.array(y, dtype=np.double)).copy()
@@ -443,132 +451,145 @@ class RandomForest:
             self.sampsize = math.ceil(self.sample_fraction * nrow)
 
         # make linFeats unique
-        if linFeats == None:
-            linFeats = np.arange(ncol, dtype=np.ulonglong)
+        if lin_feats is None:
+            lin_feats = np.arange(ncol, dtype=np.ulonglong)
         else:
-            linFeats = np.array(linFeats, dtype=np.ulonglong)
-        linFeats = pd.unique(linFeats)
+            lin_feats = np.array(lin_feats, dtype=np.ulonglong)
+        lin_feats = pd.unique(lin_feats)
 
         # Preprocess the data
-        hasNas = x.isnull().values.any()
+        has_nas = x.isnull().values.any()
 
         # Create vectors with the column means and SD's for scaling
-        colMeans = np.repeat(0.0, ncol+1)
-        colSd = np.repeat(0.0, ncol+1)
+        col_means = np.repeat(0.0, ncol + 1)
+        col_sd = np.repeat(0.0, ncol + 1)
 
         # Translating interactionVariables to featureWeights syntax
-        if featureWeights is None:
-            featureWeights = np.repeat(1.0, ncol)
-            featureWeights[interactionVariables] = 0.0
+        if feature_weights is None:
+            feature_weights = np.repeat(1.0, ncol)
+            feature_weights[interaction_variables] = 0.0
         else:
-            featureWeights = np.array(featureWeights, dtype=np.double)
+            feature_weights = np.array(feature_weights, dtype=np.double)
 
-        if deepFeatureWeights is None:
-            deepFeatureWeights = np.repeat(1.0, ncol)
+        if deep_feature_weights is None:
+            deep_feature_weights = np.repeat(1.0, ncol)
         else:
-            deepFeatureWeights = np.array(deepFeatureWeights, dtype=np.double)
+            deep_feature_weights = np.array(deep_feature_weights, dtype=np.double)
 
         if not self.replace:
-            observationWeights = np.zeros(nrow, dtype=np.double)
-        elif observationWeights is None:
-            observationWeights = np.repeat(1.0, nrow)
+            observation_weights = np.zeros(nrow, dtype=np.double)
+        elif observation_weights is None:
+            observation_weights = np.repeat(1.0, nrow)
         else:
-            observationWeights = np.array(observationWeights, dtype=np.double)
+            observation_weights = np.array(observation_weights, dtype=np.double)
 
         # Giving default values
         if self.mtry is None:
             self.mtry = max((ncol // 3), 1)
 
-        if self.maxDepth is None:
-            self.maxDepth = round(nrow / 2) + 1
+        if self.max_depth is None:
+            self.max_depth = round(nrow / 2) + 1
 
-        if self.interactionDepth is None:
-            self.interactionDepth = self.maxDepth
+        if self.interaction_depth is None:
+            self.interaction_depth = self.max_depth
 
-        if self.maxObs is None:
-            self.maxObs = y.size
+        if self.max_obs is None:
+            self.max_obs = y.size
 
         if symmetric is None:
             symmetric = np.zeros(ncol, dtype=np.ulonglong)
         else:
             symmetric = np.array(symmetric, dtype=np.ulonglong)
 
-        if monotonicConstraints is None:
-            monotonicConstraints = np.zeros(ncol, dtype=np.intc)
+        if monotonic_constraints is None:
+            monotonic_constraints = np.zeros(ncol, dtype=np.intc)
         else:
-            monotonicConstraints = np.array(monotonicConstraints, dtype=np.intc)
+            monotonic_constraints = np.array(monotonic_constraints, dtype=np.intc)
 
         if seed is None:
             seed = self.seed
         else:
             if (not isinstance(seed, int)) or seed < 0:
-                raise ValueError('seed must be a nonnegative integer.')
-        
+                raise ValueError("seed must be a nonnegative integer.")
+
         Py_preprocessing.training_data_checker(
             self,
             nrow,
             ncol,
             y,
-            linFeats,
-            monotonicConstraints,
+            lin_feats,
+            monotonic_constraints,
             groups,
-            observationWeights,
+            observation_weights,
             symmetric,
-            hasNas)
+            has_nas,
+        )
 
-        featureWeightsVariables = Py_preprocessing.sample_weights_checker(featureWeights, self.mtry, ncol)
-        deepFeatureWeightsVariables = Py_preprocessing.sample_weights_checker(deepFeatureWeights, self.mtry, ncol)
+        feature_weights_variables = Py_preprocessing.sample_weights_checker(feature_weights, self.mtry, ncol)
+        deep_feature_weights_variables = Py_preprocessing.sample_weights_checker(deep_feature_weights, self.mtry, ncol)
 
-        featureWeights /= np.sum(featureWeights)    
-        deepFeatureWeights /= np.sum(deepFeatureWeights)
+        feature_weights /= np.sum(feature_weights)
+        deep_feature_weights /= np.sum(deep_feature_weights)
         if self.replace:
-            observationWeights /= np.sum(observationWeights)
-        
-        groupsMapping = dict()
+            observation_weights /= np.sum(observation_weights)
+
+        groups_mapping = dict()
         if groups is not None:
-            groups = pd.Series(groups, dtype='category')
+            groups = pd.Series(groups, dtype="category")
 
-            groupsMapping['groupValue'] = groups.cat.categories
-            groupsMapping['groupNumericValue'] = np.arange(len(groups.cat.categories))
+            groups_mapping["groupValue"] = groups.cat.categories
+            groups_mapping["groupNumericValue"] = np.arange(len(groups.cat.categories))
 
-            groupVector = pd.to_numeric(groups)
+            group_vector = pd.to_numeric(groups)
 
             # Print warning if the group number and minTreesPerGroup results in a large forest
-            if self.minTreesPerGroup > 0 and len(groups.cat.categories) * self.minTreesPerGroup > 2000:
-                warnings.warn('Using ' + str(len(groups.cat.categories)) + ' groups with ' + str(self.minTreesPerGroup) + ' trees per group will train ' + str(len(groups.cat.categories) * self.minTreesPerGroup) + ' trees in the forest')
-        
-        else:
-            groupVector = np.zeros(nrow, dtype=np.ulonglong)
+            if self.min_trees_per_group > 0 and len(groups.cat.categories) * self.min_trees_per_group > 2000:
+                warnings.warn(
+                    "Using "
+                    + str(len(groups.cat.categories))
+                    + " groups with "
+                    + str(self.min_trees_per_group)
+                    + " trees per group will train "
+                    + str(len(groups.cat.categories) * self.min_trees_per_group)
+                    + " trees in the forest"
+                )
 
-        (processed_x, categoricalFeatureCols, categoricalFeatureMapping) = Py_preprocessing.preprocess_training(x, y)
-        
-        if categoricalFeatureCols.size != 0:
-            monotonicConstraints[categoricalFeatureCols] = 0
-        
+        else:
+            group_vector = np.zeros(nrow, dtype=np.ulonglong)
+
+        (
+            processed_x,
+            categorical_feature_cols,
+            categorical_feature_mapping,
+        ) = Py_preprocessing.preprocess_training(x, y)
+
+        if categorical_feature_cols.size != 0:
+            monotonic_constraints[categorical_feature_cols] = 0
+
         if self.scale:
             for col_idx in range(ncol):
-                if col_idx not in categoricalFeatureCols:
-                    colMeans[col_idx] = np.nanmean(processed_x.iloc[:, col_idx])
-                    colSd[col_idx] = np.nanstd(processed_x.iloc[:, col_idx])
+                if col_idx not in categorical_feature_cols:
+                    col_means[col_idx] = np.nanmean(processed_x.iloc[:, col_idx])
+                    col_sd[col_idx] = np.nanstd(processed_x.iloc[:, col_idx])
 
             # Scale columns of X
-            processed_x = Py_preprocessing.scale_center(processed_x, categoricalFeatureCols, colMeans, colSd)
-                
+            processed_x = Py_preprocessing.scale_center(processed_x, categorical_feature_cols, col_means, col_sd)
+
             # Center and scale Y
-            colMeans[ncol] = np.nanmean(y)
-            colSd[ncol] = np.nanstd(y)
-            if colSd[ncol] != 0:
-                y = (y - colMeans[ncol]) / colSd[ncol]    
+            col_means[ncol] = np.nanmean(y)
+            col_sd[ncol] = np.nanstd(y)
+            if col_sd[ncol] != 0:
+                y = (y - col_means[ncol]) / col_sd[ncol]
             else:
-                y = y - colMeans[ncol]
+                y = y - col_means[ncol]
 
         # Get the symmetric feature if one is set
-        symmetricIndex = -1
+        symmetric_index = -1
         idxs = np.where(symmetric > 0)[0]
         if idxs.size != 0:
-            symmetricIndex = idxs[0]
+            symmetric_index = idxs[0]
 
-        isSymmetric = symmetricIndex != -1
+        is_symmetric = symmetric_index != -1
 
         # cpp linking
         processed_x.reset_index(drop=True, inplace=True)
@@ -576,25 +597,25 @@ class RandomForest:
 
         self.dataframe = extension.get_data(
             np.ascontiguousarray(X.values[:, :], np.double).ravel(),
-            categoricalFeatureCols,
-            categoricalFeatureCols.size,
-            linFeats,
-            linFeats.size,
-            featureWeights,
-            featureWeightsVariables,
-            featureWeightsVariables.size,
-            deepFeatureWeights,
-            deepFeatureWeightsVariables,
-            deepFeatureWeightsVariables.size,
-            observationWeights,
-            monotonicConstraints,
-            groupVector,
-            self.monotoneAvg,
+            categorical_feature_cols,
+            categorical_feature_cols.size,
+            lin_feats,
+            lin_feats.size,
+            feature_weights,
+            feature_weights_variables,
+            feature_weights_variables.size,
+            deep_feature_weights,
+            deep_feature_weights_variables,
+            deep_feature_weights_variables.size,
+            observation_weights,
+            monotonic_constraints,
+            group_vector,
+            self.monotone_avg,
             symmetric,
             symmetric.size,
             nrow,
-            ncol+1,
-            seed
+            ncol + 1,
+            seed,
         )
 
         self.forest = extension.train_forest(
@@ -603,59 +624,61 @@ class RandomForest:
             self.replace,
             self.sampsize,
             self.splitratio,
-            self.OOBhonest,
-            self.doubleBootstrap,
+            self.oob_honest,
+            self.double_bootstrap,
             self.mtry,
-            self.nodesizeSpl,
-            self.nodesizeAvg,
-            self.nodesizeStrictSpl,
-            self.nodesizeStrictAvg,
-            self.minSplitGain,
-            self.maxDepth,
-            self.interactionDepth,
+            self.nodesize_spl,
+            self.nodesize_avg,
+            self.nodesize_strict_spl,
+            self.nodesize_strict_avg,
+            self.min_split_gain,
+            self.max_depth,
+            self.interaction_depth,
             seed,
             self.nthread,
             self.verbose,
-            self.middleSplit,
-            self.maxObs,
-            self.minTreesPerGroup,
-            hasNas,
+            self.middle_split,
+            self.max_obs,
+            self.min_trees_per_group,
+            has_nas,
             self.linear,
-            isSymmetric,
-            self.overfitPenalty,
-            self.doubleTree
+            is_symmetric,
+            self.overfit_penalty,
+            self.double_tree,
         )
 
         # Update the fields
-        self.processed_dta['processed_x'] = processed_x
-        self.processed_dta['y'] = y
-        self.processed_dta['categoricalFeatureCols'] = categoricalFeatureCols
-        self.processed_dta['categoricalFeatureMapping'] = categoricalFeatureMapping
-        self.processed_dta['featureWeights'] = featureWeights
-        self.processed_dta['featureWeightsVariables'] = featureWeightsVariables
-        self.processed_dta['deepFeatureWeights'] = deepFeatureWeights
-        self.processed_dta['deepFeatureWeightsVariables'] = deepFeatureWeightsVariables
-        self.processed_dta['observationWeights'] = observationWeights
-        self.processed_dta['symmetric'] = symmetric
-        self.processed_dta['monotonicConstraints'] = monotonicConstraints
-        self.processed_dta['linearFeatureCols'] = linFeats
-        self.processed_dta['groupsMapping'] = groupsMapping
-        self.processed_dta['groups'] = groups
-        self.processed_dta['colMeans'] = colMeans
-        self.processed_dta['colSd'] = colSd
-        self.processed_dta['hasNas'] = hasNas
-        self.processed_dta['nObservations'] = nrow
-        self.processed_dta['numColumns'] = ncol
-        self.processed_dta['featNames'] = featNames
+        self.processed_dta["processed_x"] = processed_x
+        self.processed_dta["y"] = y
+        self.processed_dta["categoricalFeatureCols"] = categorical_feature_cols
+        self.processed_dta["categoricalFeatureMapping"] = categorical_feature_mapping
+        self.processed_dta["featureWeights"] = feature_weights
+        self.processed_dta["featureWeightsVariables"] = feature_weights_variables
+        self.processed_dta["deepFeatureWeights"] = deep_feature_weights
+        self.processed_dta["deepFeatureWeightsVariables"] = deep_feature_weights_variables
+        self.processed_dta["observationWeights"] = observation_weights
+        self.processed_dta["symmetric"] = symmetric
+        self.processed_dta["monotonicConstraints"] = monotonic_constraints
+        self.processed_dta["linearFeatureCols"] = lin_feats
+        self.processed_dta["groupsMapping"] = groups_mapping
+        self.processed_dta["groups"] = groups
+        self.processed_dta["colMeans"] = col_means
+        self.processed_dta["colSd"] = col_sd
+        self.processed_dta["hasNas"] = has_nas
+        self.processed_dta["nObservations"] = nrow
+        self.processed_dta["numColumns"] = ncol
+        self.processed_dta["featNames"] = feat_names
 
-    def predict(self,
-                newdata=None,
-                aggregation='average',
-                seed=None,
-                nthread=None,
-                exact=None,
-                trees=None,
-                weightMatrix=False):
+    def predict(
+        self,
+        newdata=None,
+        aggregation: str = "average",
+        seed=None,
+        nthread=None,
+        exact=None,
+        trees=None,
+        return_weight_matrix: bool = False,
+    ):
         """
         Return the prediction from the forest.
 
@@ -692,7 +715,7 @@ class RandomForest:
         :param seed: Random number generator seed. The default value is the *RandomForest* seed.
         :type seed: *int, optional*
         :param nthread: The number of threads with which to run the predictions with.
-         This will default to the number of threads with which the forest was trained 
+         This will default to the number of threads with which the forest was trained
          with.
         :type nthread: *int, optional*
         :param exact: This specifies whether the forest predictions should be aggregated
@@ -709,11 +732,11 @@ class RandomForest:
          with different weightings. Duplicate entries are allowed, so if ``trees = [0,1,1]``
          this will predict the weighted average prediction of only trees 0 and 1 weighted by::
 
-            predict(..., trees = [0,1,1]) = (predict(..., trees = [0]) + 
+            predict(..., trees = [0,1,1]) = (predict(..., trees = [0]) +
                                             2*predict(..., trees = [1])) / 3
 
          note we must have ``exact = True``, and ``aggregation = "average"`` to use tree indices. Defaults to using
-         all trees equally weighted. 
+         all trees equally weighted.
         :type trees: *array_like, optional*
         :param weightMatrix: An indicator of whether or not we should also return a
          matrix of the weights given to each training observation when making each
@@ -725,22 +748,22 @@ class RandomForest:
 
         """
 
-        if (newdata is None) and not (aggregation == 'oob' or aggregation == 'doubleOOB'):
-            raise ValueError('When using an aggregation that is not oob or doubleOOB, one must supply newdata')
+        if (newdata is None) and not (aggregation == "oob" or aggregation == "doubleOOB"):
+            raise ValueError("When using an aggregation that is not oob or doubleOOB, one must supply newdata")
 
-        if (not self.linear) and aggregation == 'coefs':
-            raise ValueError('Aggregation can only be linear with setting the parameter linear = True.')
+        if (not self.linear) and aggregation == "coefs":
+            raise ValueError("Aggregation can only be linear with setting the parameter linear = True.")
 
         # NOTE:Add this check for now:
-        if weightMatrix and aggregation == 'coefs':
-            warnings.warn('Can\'t return the weightmatrix with linear aggregations. Setting weightMatrix to False') 
-            weightMatrix = False
+        if return_weight_matrix and aggregation == "coefs":
+            warnings.warn("Can't return the weightmatrix with linear aggregations. Setting weightMatrix to False")
+            return_weight_matrix = False
 
         if seed is None:
             seed = self.seed
         else:
             if (not isinstance(seed, int)) or seed < 0:
-                raise ValueError('seed must be a nonnegative integer.')
+                raise ValueError("seed must be a nonnegative integer.")
 
         if nthread is None:
             nthread = self.nthread
@@ -751,19 +774,30 @@ class RandomForest:
         Py_preprocessing.forest_checker(self)
 
         if newdata is not None:
-            if not (isinstance(newdata, pd.DataFrame) or type(newdata).__module__ == np.__name__ or isinstance(newdata, list) or isinstance(newdata, pd.Series)):
-                raise AttributeError('newdata must be a Pandas DataFrame, a numpy array, a Pandas Series, or a regular list')
+            if not (
+                isinstance(newdata, pd.DataFrame)
+                or type(newdata).__module__ == np.__name__
+                or isinstance(newdata, list)
+                or isinstance(newdata, pd.Series)
+            ):
+                raise AttributeError(
+                    "newdata must be a Pandas DataFrame, a numpy array, a Pandas Series, or a regular list"
+                )
 
             newdata = (pd.DataFrame(newdata)).copy()
             newdata.reset_index(drop=True, inplace=True)
-            Py_preprocessing.testing_data_checker(self, newdata, self.processed_dta['hasNas'])
+            Py_preprocessing.testing_data_checker(self, newdata, self.processed_dta["hasNas"])
 
-            if self.processed_dta['featNames'] is not None:
-                if not all(newdata.columns == self.processed_dta['featNames']):
-                    warnings.warn('newdata columns have been reordered so that they match the training feature matrix')
-                    newdata = newdata[self.processed_dta['featNames']]
+            if self.processed_dta["featNames"] is not None:
+                if not all(newdata.columns == self.processed_dta["featNames"]):
+                    warnings.warn("newdata columns have been reordered so that they match the training feature matrix")
+                    newdata = newdata[self.processed_dta["featNames"]]
 
-            processed_x = Py_preprocessing.preprocess_testing(newdata, self.processed_dta['categoricalFeatureCols'], self.processed_dta['categoricalFeatureMapping'])
+            processed_x = Py_preprocessing.preprocess_testing(
+                newdata,
+                self.processed_dta["categoricalFeatureCols"],
+                self.processed_dta["categoricalFeatureMapping"],
+            )
 
         # Set exact aggregation method if nobs < 100,000 and average aggregation
         if exact is None:
@@ -774,11 +808,11 @@ class RandomForest:
 
         # We can only use tree aggregations if exact = True and aggregation = "average"
         if trees is not None:
-            if (not exact) or (aggregation != 'average'):
-                raise ValueError('When using tree indices, we must have exact = True and aggregation = \'average\' ')
+            if (not exact) or (aggregation != "average"):
+                raise ValueError("When using tree indices, we must have exact = True and aggregation = 'average' ")
 
             if any((not isinstance(i, (int, np.integer))) or (i < -self.ntree) or (i >= self.ntree) for i in trees):
-                raise ValueError('trees must contain indices which are integers between -ntree and ntree-1')
+                raise ValueError("trees must contain indices which are integers between -ntree and ntree-1")
 
         # If trees are being used, we need to convert them into a weight vector
         tree_weights = np.zeros(self.ntree, dtype=np.ulonglong)
@@ -789,83 +823,65 @@ class RandomForest:
         else:
             use_weights = False
 
-        nPreds = len(processed_x.index) if newdata is not None else self.processed_dta['nObservations']
+        n_preds = len(processed_x.index) if newdata is not None else self.processed_dta["nObservations"]
 
-        # Initialize the final prediction array
-        res = np.zeros(nPreds, dtype=np.double)
-
-        weight_matrix = np.empty(nPreds * self.processed_dta['nObservations'], dtype=np.double) if weightMatrix else np.empty(0, dtype=np.double)
-        coefficients = np.empty(self.processed_dta['nObservations'] * (self.processed_dta['linearFeatureCols'].size+1), dtype=np.double) if aggregation == 'coefs' else np.empty(0, dtype=np.double) 
+        n_weight_matrix = n_preds * self.processed_dta["nObservations"] if return_weight_matrix else 0
 
         # If option set to terminalNodes, we need to make matrix of ID's
-        if aggregation == 'oob':
+        if aggregation == "oob":
 
-            if (newdata is not None) and (self.processed_dta['nObservations'] != len(newdata.index)):
-                warnings.warn('Attempting to do OOB predictions on a dataset which doesn\'t match the training data!')
+            if (newdata is not None) and (self.processed_dta["nObservations"] != len(newdata.index)):
+                warnings.warn("Attempting to do OOB predictions on a dataset which doesn't match the training data!")
                 return None
 
             if newdata is None:
-                extension.predictOOB_forest(
-                    self.forest,
-                    self.dataframe,
-                    np.ascontiguousarray(self.processed_dta['processed_x'].values[:, :], np.double).ravel(),
-                    False,
-                    exact,
-                    weightMatrix,
-                    self.verbose,
-                    res,
-                    weight_matrix
-                )
-
+                test_data = np.ascontiguousarray(self.processed_dta["processed_x"].values[:, :], np.double).ravel()
             else:
-                extension.predictOOB_forest(
-                    self.forest,
-                    self.dataframe,
-                    np.ascontiguousarray(processed_x.values[: :], np.double).ravel(),
-                    False,
-                    exact,
-                    weightMatrix,
-                    self.verbose,
-                    res,
-                    weight_matrix
+                test_data = (np.ascontiguousarray(processed_x.values[:, :], np.double).ravel(),)
+
+            predictions, weight_matrix = extension.predict_oob_forest(
+                self.forest,
+                self.dataframe,
+                test_data,
+                False,
+                exact,
+                return_weight_matrix,
+                self.verbose,
+                n_preds,
+                n_weight_matrix,
+            )
+
+        elif aggregation == "doubleOOB":
+
+            if (newdata is not None) and (len(processed_x.index) != self.processed_dta["nObservations"]):
+                raise ValueError("Attempting to do OOB predictions on a dataset which doesn't match the training data!")
+
+            if not self.double_bootstrap:
+                raise ValueError(
+                    "Attempting to do double OOB predictions with a forest that was not trained with doubleBootstrap = True"
                 )
-
-        elif aggregation == 'doubleOOB':
-
-            if (newdata is not None) and (len(processed_x.index) != self.processed_dta['nObservations']):
-                raise ValueError('Attempting to do OOB predictions on a dataset which doesn\'t match the training data!')
-
-            if not self.doubleBootstrap:
-                raise ValueError('Attempting to do double OOB predictions with a forest that was not trained with doubleBootstrap = True')
 
             if newdata is None:
-                extension.predictOOB_forest(
-                    self.forest,
-                    self.dataframe,
-                    np.ascontiguousarray(self.processed_dta['processed_x'].values[:, :], np.double).ravel(),
-                    True,
-                    exact,
-                    weightMatrix,
-                    self.verbose,
-                    res,
-                    weight_matrix
-                )
-
+                test_data = np.ascontiguousarray(self.processed_dta["processed_x"].values[:, :], np.double).ravel()
+                double_oob = True
             else:
-                extension.predictOOB_forest(
-                    self.forest,
-                    self.dataframe,
-                    np.ascontiguousarray(processed_x.values[:, :], np.double).ravel(),
-                    False,
-                    exact,
-                    weightMatrix,
-                    self.verbose,
-                    res,
-                    weight_matrix
-                )
+                test_data = (np.ascontiguousarray(processed_x.values[:, :], np.double).ravel(),)
+                double_oob = False
 
-        elif aggregation == 'coefs':
-            extension.predict_forest(
+            predictions, weight_matrix = extension.predict_oob_forest(
+                self.forest,
+                self.dataframe,
+                test_data,
+                double_oob,
+                exact,
+                return_weight_matrix,
+                self.verbose,
+                n_preds,
+                n_weight_matrix,
+            )
+
+        elif aggregation == "coefs":
+            predictions, weight_matrix, coefficients = extension.predict_forest(
                 self.forest,
                 self.dataframe,
                 np.ascontiguousarray(processed_x.values[:, :], np.double).ravel(),
@@ -875,40 +891,63 @@ class RandomForest:
                 False,
                 True,
                 use_weights,
-                tree_weights, 
+                tree_weights,
                 len(processed_x.index),
-                res,
-                weight_matrix,
-                coefficients
+                n_preds,
+                n_weight_matrix,
+                self.processed_dta["nObservations"] * (self.processed_dta["linearFeatureCols"].size + 1),
             )
 
         else:
-            extension.predict_forest(
+            predictions, weight_matrix, _ = extension.predict_forest(
                 self.forest,
                 self.dataframe,
                 np.ascontiguousarray(processed_x.values[:, :], np.double).ravel(),
                 seed,
                 nthread,
                 exact,
-                weightMatrix,
+                return_weight_matrix,
                 False,
                 use_weights,
-                tree_weights, 
+                tree_weights,
                 len(processed_x.index),
-                res,
-                weight_matrix,
-                coefficients
+                n_preds,
+                n_weight_matrix,
+                0,
             )
 
-        if weightMatrix:
-            return {'predictions': res, 'weightMatrix': np.lib.stride_tricks.as_strided(weight_matrix, shape=(nPreds, self.processed_dta['nObservations']), strides=(weight_matrix.itemsize*self.processed_dta['nObservations'], weight_matrix.itemsize))}
+        if return_weight_matrix:
+            return {
+                "predictions": predictions,
+                "weightMatrix": np.lib.stride_tricks.as_strided(
+                    weight_matrix,
+                    shape=(n_preds, self.processed_dta["nObservations"]),
+                    strides=(
+                        weight_matrix.itemsize * self.processed_dta["nObservations"],
+                        weight_matrix.itemsize,
+                    ),
+                ),
+            }
 
-        elif aggregation == 'coefs':
-            return {'predictions': res, 'coef': np.lib.stride_tricks.as_strided(coefficients, shape=(self.processed_dta['nObservations'], self.processed_dta['linearFeatureCols'].size+1), strides=(coefficients.itemsize*(self.processed_dta['linearFeatureCols'].size+1), coefficients.itemsize))}
+        if aggregation == "coefs":
+            return {
+                "predictions": predictions,
+                "coef": np.lib.stride_tricks.as_strided(
+                    coefficients,
+                    shape=(
+                        self.processed_dta["nObservations"],
+                        self.processed_dta["linearFeatureCols"].size + 1,
+                    ),
+                    strides=(
+                        coefficients.itemsize * (self.processed_dta["linearFeatureCols"].size + 1),
+                        coefficients.itemsize,
+                    ),
+                ),
+            }
 
-        return res
+        return predictions
 
-    def get_oob(self, noWarning=False):
+    def get_oob(self, no_warning: bool = False):
         """
         Calculate the out-of-bag error of a given forest. This is done
         by using the out-of-bag predictions for each observation, and calculating the
@@ -922,26 +961,26 @@ class RandomForest:
         """
 
         Py_preprocessing.forest_checker(self)
-        if (not self.replace) and (self.ntree*(self.processed_dta['nObservations'] - self.sampsize)) < 10:
-            if not noWarning:
-                warnings.warn('Samples are drawn without replacement and sample size is too big!')
+        if (not self.replace) and (self.ntree * (self.processed_dta["nObservations"] - self.sampsize)) < 10:
+            if not no_warning:
+                warnings.warn("Samples are drawn without replacement and sample size is too big!")
             return None
 
-        preds = self.predict(newdata=None, aggregation='oob', exact=True)
+        preds = self.predict(newdata=None, aggregation="oob", exact=True)
         preds = preds[~np.isnan(preds)]
 
         # Only calc mse on non missing predictions
-        y_true = self.processed_dta['y']
+        y_true = self.processed_dta["y"]
         y_true = y_true[~np.isnan(y_true)]
 
         if self.scale:
-            y_true = y_true * self.processed_dta['colSd'][-1] + self.processed_dta['colMeans'][-1]
+            y_true = y_true * self.processed_dta["colSd"][-1] + self.processed_dta["colMeans"][-1]
 
-        return np.mean((y_true - preds)**2)
+        return np.mean((y_true - preds) ** 2)
 
     # TODO: CHANGE get_vi after weightmatrix!!!!!!!!!!!!!!!!!!!#######
     # TODO: Check out Bottleneck for faster numpy!!!!!!!!!!!!!!!!!!!!!!!!!
-    def get_vi(self, noWarning=False):
+    def get_vi(self, no_warning: bool = False) -> np.ndarray:
         """
         Calculate the percentage increase in OOB error of the forest
         when each feature is shuffled.
@@ -954,20 +993,22 @@ class RandomForest:
         """
 
         Py_preprocessing.forest_checker(self)
-        if (not self.replace) and (self.ntree*(self.processed_dta['nObservations'] - self.sampsize)) < 10:
-            if not noWarning:
-                warnings.warn('Samples are drawn without replacement and sample size is too big!')
+        if (not self.replace) and (self.ntree * (self.processed_dta["nObservations"] - self.sampsize)) < 10:
+            if not no_warning:
+                warnings.warn("Samples are drawn without replacement and sample size is too big!")
             return None
 
-        cppVI = ctypes.c_void_p(extension.getVI(self.forest))
+        cpp_vi = ctypes.c_void_p(extension.getVI(self.forest))
 
-        res = np.empty(self.processed_dta['numColumns'])
-        for i in range(self.processed_dta['numColumns']):
-            res[i] = extension.vector_get(cppVI, i)
+        res = np.empty(self.processed_dta["numColumns"])
+        for i in range(self.processed_dta["numColumns"]):
+            res[i] = extension.vector_get(cpp_vi, i)
 
         return res
 
-    def get_ci(self, newdata, level=.95, B=100, method='OOB-conformal', noWarning=False):
+    def get_ci(
+        self, newdata, level: float = 0.95, B: int = 100, method: str = "OOB-conformal", no_warning: bool = False
+    ):
 
         """
         For a new set of features, calculate the confidence intervals for each new observation.
@@ -983,7 +1024,7 @@ class RandomForest:
          Right now we have two ways of doing this. One is the 'OOB-bootstrap' flag which
          uses many bootstrap pulls from the set of OOB trees then with these different
          pulls, we use the set of trees to predict for the new feature and give the
-         confidence set over the many bootstrap draws. The other method - 'OOB-conformal' - 
+         confidence set over the many bootstrap draws. The other method - 'OOB-conformal' -
          creates intervals by taking the set of doubleOOB trees for each observation, and
          using the predictions of these trees to give conformal intervals. So for an
          observation obs_i, let S_i be the set of trees for which obs_i was in neither
@@ -1004,86 +1045,88 @@ class RandomForest:
 
         """
 
-        if method not in ['OOB-conformal', 'OOB-bootstrap', 'local-conformal']:
-            raise ValueError('Method must be one of OOB-conformal, OOB-bootstrap, or local-conformal')
+        if method not in ["OOB-conformal", "OOB-bootstrap", "local-conformal"]:
+            raise ValueError("Method must be one of OOB-conformal, OOB-bootstrap, or local-conformal")
 
-        if method == 'OOB-conformal' and not (self.OOBhonest and self.doubleBootstrap):
-            raise ValueError('We cannot do OOB-conformal intervals unless both OOBhonest and doubleBootstrap are True')
+        if method == "OOB-conformal" and not (self.oob_honest and self.double_bootstrap):
+            raise ValueError("We cannot do OOB-conformal intervals unless both OOBhonest and doubleBootstrap are True")
 
-        if method == 'OOB-bootstrap' and not self.OOBhonest:
-            raise ValueError('We cannot do OOB-bootstrap intervals unless OOBhonest is True')
+        if method == "OOB-bootstrap" and not self.oob_honest:
+            raise ValueError("We cannot do OOB-bootstrap intervals unless OOBhonest is True")
 
-        if method == 'local-conformal' and not self.OOBhonest:
-            raise ValueError('We cannot do local-conformal intervals unless OOBhonest is True')
+        if method == "local-conformal" and not self.oob_honest:
+            raise ValueError("We cannot do local-conformal intervals unless OOBhonest is True")
 
-        #Check the RandomForest object
+        # Check the RandomForest object
         # Py_preprocessing.forest_checker(self)
 
         # #Check the newdata
         # newdata = Py_preprocessing.testing_data_checker(self, newdata, self.processed_dta['hasNas'])
         # newdata = pd.DataFrame(newdata)
         # processed_x = Py_preprocessing.preprocess_testing(newdata, self.processed_dta['categoricalFeatureCols'], self.processed_dta['categoricalFeatureMapping'])
-        
-        if method == 'OOB-bootstrap':
-            
+
+        if method == "OOB-bootstrap":
+
             # Now we do B bootstrap pulls of the trees in order to do prediction
             # intervals for newdata
             prediction_array = pd.DataFrame(np.empty((len(newdata.index), B)))
 
             for i in range(B):
                 bootstrap_i = np.random.choice(self.ntree, size=self.ntree, replace=True, p=None)
-                
-                pred_i = self.predict(newdata=newdata, trees=bootstrap_i)
-                prediction_array.iloc[:,i] = pred_i
 
-            quantiles = np.quantile(prediction_array, [(1 - level)/2, 1 - (1 - level)/2], axis=1)
+                pred_i = self.predict(newdata=newdata, trees=bootstrap_i)
+                prediction_array.iloc[:, i] = pred_i
+
+            quantiles = np.quantile(prediction_array, [(1 - level) / 2, 1 - (1 - level) / 2], axis=1)
 
             predictions = {
-                'Predictions': self.predict(newdata=newdata),
-                'CI.upper':  quantiles[1, :],
-                'CI.lower':  quantiles[0, :],
-                'level':  level
+                "Predictions": self.predict(newdata=newdata),
+                "CI.upper": quantiles[1, :],
+                "CI.lower": quantiles[0, :],
+                "level": level,
             }
 
             return predictions
 
-        elif method == 'OOB-conformal':
+        elif method == "OOB-conformal":
             # Get double OOB predictions and the residuals
-            y_pred = self.predict(aggregation='doubleOOB')
+            y_pred = self.predict(aggregation="doubleOOB")
 
             if self.scale:
-                res = y_pred - (self.processed_dta['y'] * self.processed_dta['colSd'][-1] + self.processed_dta['colMeans'][-1])
+                res = y_pred - (
+                    self.processed_dta["y"] * self.processed_dta["colSd"][-1] + self.processed_dta["colMeans"][-1]
+                )
             else:
-                res = y_pred - self.processed_dta['y']
-
+                res = y_pred - self.processed_dta["y"]
 
             # Get (1-level) / 2 and 1 - (1-level) / 2 quantiles of the residuals
-            quantiles = np.quantile(res, [(1 - level)/2, 1 - (1 - level)/2])
+            quantiles = np.quantile(res, [(1 - level) / 2, 1 - (1 - level) / 2])
 
             # Get predictions on newdata
             predictions_new = self.predict(newdata)
 
             predictions = {
-                'Predictions': predictions_new,
-                'CI.upper':  predictions_new + quantiles[1],
-                'CI.lower':  predictions_new + quantiles[0],
-                'level':  level
+                "Predictions": predictions_new,
+                "CI.upper": predictions_new + quantiles[1],
+                "CI.lower": predictions_new + quantiles[0],
+                "level": level,
             }
 
             return predictions
 
-        else: # method == 'local-conformal'
+        else:  # method == 'local-conformal'
 
-            OOB_preds = self.predict(aggregation='oob')
+            oob_preds = self.predict(aggregation="oob")
             if self.scale:
-                OOB_res = (self.processed_dta['y'] * self.processed_dta['colSd'][-1] + self.processed_dta['colMeans'][-1]) - OOB_preds
+                oob_res = (
+                    self.processed_dta["y"] * self.processed_dta["colSd"][-1] + self.processed_dta["colMeans"][-1]
+                ) - oob_preds
             else:
-                OOB_res = self.processed_dta['y'] - OOB_preds
+                oob_res = self.processed_dta["y"] - oob_preds
 
-            pass ### weightmatrix not implemented yet!!!!
+            pass  # weightmatrix not implemented yet!!!!
 
-
-    def predict_info(self, newdata, aggregation='oob'):
+    def predict_info(self, newdata, aggregation: str = "oob"):
         """
         Get the observations which are used to predict for a set of new
         observations using either all trees (for out of sample observations), or
@@ -1106,13 +1149,12 @@ class RandomForest:
 
         """
 
-        if aggregation not in ['average', 'oob', 'doubleOOB']:
-            raise ValueError('Aggregation must be one of average, oob, or doubleOOB')
+        if aggregation not in ["average", "oob", "doubleOOB"]:
+            raise ValueError("Aggregation must be one of average, oob, or doubleOOB")
 
-        pass ### weightmatrix not implemented yet!!!!
+        pass  # weightmatrix not implemented yet!!!!
 
-
-    def decision_path(self, X, tree_idx=0):
+    def decision_path(self, X, tree_idx: int = 0):
         """
         Gets the decision path in the forest.
 
@@ -1127,52 +1169,46 @@ class RandomForest:
         """
 
         X = pd.DataFrame(X)
-        
+
         res = np.empty(len(X.index), dtype=object)
         for i in range(len(X.index)):
             obs = X.iloc[i, :].values
-            path_ptr = extension.get_path(
-                self.forest,
-                obs,
-                tree_idx
-            )
- 
+            path_ptr = extension.get_path(self.forest, obs, tree_idx)
+
             path_length = int(extension.vector_get_size_t(path_ptr, 0))
             path_array = np.empty(path_length, dtype=np.intc)
-        
+
             for j in range(path_length):
-                path_array[j] = int(extension.vector_get_size_t(path_ptr, j+1))
-            
+                path_array[j] = int(extension.vector_get_size_t(path_ptr, j + 1))
+
             res[i] = path_array
 
         return res
-        
-    
+
     def score(self, X, y, sample_weight=None):
         """
-        Gets the coefficient of determination (R\ :sup:`2`).
+        Gets the coefficient of determination (R \ :sup:`2`).
 
         :param X: Testing samples.
         :type X: *pandas.DataFrame, pandas.Series, numpy.ndarray, 2d list of shape [nsamples, ncols]*
-        :param y: True outcome values of X. 
+        :param y: True outcome values of X.
         :type y: *array_like of shape [nsamples,]*
-        :param sample_weight: Sample weights. Uses equal weights by default. 
+        :param sample_weight: Sample weights. Uses equal weights by default.
         :type sample_weight: *array_like of shape [nsamples,], optional, default=None*
-        :return: The value of R\ :sup:`2`.
+        :return: The value of R \ :sup:`2`.
         :rtype: float
 
         """
         from sklearn.metrics import r2_score
 
-        y_pred = self.predict(newdata=X, aggregation='average')
-        
-        return r2_score(y, y_pred, sample_weight=sample_weight)
+        y_pred = self.predict(newdata=X, aggregation="average")
 
+        return r2_score(y, y_pred, sample_weight=sample_weight)
 
     # def translate_tree_python(self, tree_ids = None):
     #     """
-    #     Given a trained forest, translates the selected trees by allowing access to its undelying structure. 
-    #     After translating tree *i*, its structure will be stored as a dictionary in :ref:`Py_forest <translate-label>` and can be accessed 
+    #     Given a trained forest, translates the selected trees by allowing access to its undelying structure.
+    #     After translating tree *i*, its structure will be stored as a dictionary in :ref:`Py_forest <translate-label>` and can be accessed
     #     by ``[RandomForest object].Py_forest[i]``. Check out the :ref:`Py_forest <translate-label>` attribute for more
     #     details about its structure.
 
@@ -1187,7 +1223,7 @@ class RandomForest:
 
     #     if tree_ids is None:
     #         idx = np.arange(self.ntree)
-        
+
     #     else:
     #         if isinstance(tree_ids, (int, np.integer)):
     #             idx = np.array([tree_ids])
@@ -1203,7 +1239,6 @@ class RandomForest:
     #             self.forest,
     #             cur_id
     #         )
-
 
     #         tree_info = ctypes.c_void_p(lib.get_tree_info(
     #             self.forest,
@@ -1244,16 +1279,14 @@ class RandomForest:
     #             self.Py_forest[cur_id]['averaging_sample_idx'][i] = int(lib.vector_get(tree_info, ind))
     #             ind+=1
 
-            
     #         self.Py_forest[cur_id]['seed'] = int(lib.vector_get(tree_info, ind))
 
     #     return
 
-
-    def translate_tree_python(self, tree_ids = None):
+    def translate_tree_python(self, tree_ids=None) -> None:
         """
-        Given a trained forest, translates the selected trees by allowing access to its undelying structure. 
-        After translating tree *i*, its structure will be stored as a dictionary in :ref:`Py_forest <translate-label>` and can be accessed 
+        Given a trained forest, translates the selected trees by allowing access to its undelying structure.
+        After translating tree *i*, its structure will be stored as a dictionary in :ref:`Py_forest <translate-label>` and can be accessed
         by ``[RandomForest object].Py_forest[i]``. Check out the :ref:`Py_forest <translate-label>` attribute for more
         details about its structure.
 
@@ -1263,12 +1296,12 @@ class RandomForest:
         :rtype: None
         """
 
-        if self.Py_forest is None:
-            self.Py_forest = [dict() for _ in range(self.ntree)]
+        if self.py_forest is None:
+            self.py_forest = [dict() for _ in range(self.ntree)]
 
         if tree_ids is None:
             idx = np.arange(self.ntree)
-        
+
         else:
             if isinstance(tree_ids, (int, np.integer)):
                 idx = np.array([tree_ids])
@@ -1277,87 +1310,72 @@ class RandomForest:
 
         for cur_id in idx:
 
-            if self.Py_forest[cur_id]:
+            if self.py_forest[cur_id]:
                 continue
 
-            numNodes = extension.getTreeNodeCount(
-                self.forest,
-                cur_id
-            )
+            num_nodes = extension.getTreeNodeCount(self.forest, cur_id)
 
             # Initialize arrays to pass to C
-            assert self.sampsize
             split_info = np.empty(self.sampsize + 1, dtype=np.intc)
             averaging_info = split_info
 
-            tree_info = np.empty(numNodes*8 + 1, dtype=np.double)
+            tree_info = np.empty(num_nodes * 8 + 1, dtype=np.double)
 
+            extension.fill_tree_info(self.forest, cur_id, tree_info, split_info, averaging_info)
 
-            extension.fill_tree_info(
-                self.forest,
-                cur_id,
-                tree_info,
-                split_info,
-                averaging_info
-            )
+            self.py_forest[cur_id]["children_right"] = np.empty(num_nodes, dtype=np.intc)
+            self.py_forest[cur_id]["children_left"] = np.empty(num_nodes, dtype=np.intc)
+            self.py_forest[cur_id]["feature"] = np.empty(num_nodes, dtype=np.intc)
+            self.py_forest[cur_id]["n_node_samples"] = np.empty(num_nodes, dtype=np.intc)
+            self.py_forest[cur_id]["threshold"] = np.empty(num_nodes, dtype=np.double)
+            self.py_forest[cur_id]["values"] = np.empty(num_nodes, dtype=np.double)
+            self.py_forest[cur_id]["na_left_count"] = np.empty(num_nodes, dtype=np.intc)
+            self.py_forest[cur_id]["na_right_count"] = np.empty(num_nodes, dtype=np.intc)
 
+            for i in range(num_nodes):
+                self.py_forest[cur_id]["children_right"][i] = int(tree_info[i])
+                self.py_forest[cur_id]["children_left"][i] = int(tree_info[num_nodes + i])
+                self.py_forest[cur_id]["feature"][i] = int(tree_info[num_nodes * 2 + i])
+                self.py_forest[cur_id]["n_node_samples"][i] = int(tree_info[num_nodes * 3 + i])
+                self.py_forest[cur_id]["threshold"][i] = tree_info[num_nodes * 4 + i]
+                self.py_forest[cur_id]["values"][i] = tree_info[num_nodes * 5 + i]
+                self.py_forest[cur_id]["na_left_count"][i] = int(tree_info[num_nodes * 6 + i])
+                self.py_forest[cur_id]["na_right_count"][i] = int(tree_info[num_nodes * 7 + i])
 
-            self.Py_forest[cur_id]['children_right'] = np.empty(numNodes, dtype=np.intc)
-            self.Py_forest[cur_id]['children_left'] = np.empty(numNodes, dtype=np.intc)
-            self.Py_forest[cur_id]['feature'] = np.empty(numNodes, dtype=np.intc)
-            self.Py_forest[cur_id]['n_node_samples'] = np.empty(numNodes, dtype=np.intc)
-            self.Py_forest[cur_id]['threshold'] = np.empty(numNodes, dtype=np.double)
-            self.Py_forest[cur_id]['values'] = np.empty(numNodes, dtype=np.double)
-            self.Py_forest[cur_id]['na_left_count'] = np.empty(numNodes, dtype=np.intc)
-            self.Py_forest[cur_id]['na_right_count'] = np.empty(numNodes, dtype=np.intc)
+            num_split_idx = int(split_info[0])
+            self.py_forest[cur_id]["splitting_sample_idx"] = np.empty(num_split_idx, dtype=np.intc)
+            for i in range(num_split_idx):
+                self.py_forest[cur_id]["splitting_sample_idx"][i] = int(split_info[i + 1])
 
+            num_av_idx = int(averaging_info[0])
+            self.py_forest[cur_id]["averaging_sample_idx"] = np.empty(num_av_idx, dtype=np.intc)
+            for i in range(num_av_idx):
+                self.py_forest[cur_id]["averaging_sample_idx"][i] = int(averaging_info[i + 1])
 
-            for i in range(numNodes):
-                self.Py_forest[cur_id]['children_right'][i] = int(tree_info[i])
-                self.Py_forest[cur_id]['children_left'][i] = int(tree_info[numNodes + i])
-                self.Py_forest[cur_id]['feature'][i] = int(tree_info[numNodes*2 + i])
-                self.Py_forest[cur_id]['n_node_samples'][i] = int(tree_info[numNodes*3 + i])
-                self.Py_forest[cur_id]['threshold'][i] = tree_info[numNodes*4 + i]
-                self.Py_forest[cur_id]['values'][i] = tree_info[numNodes*5 + i]
-                self.Py_forest[cur_id]['na_left_count'][i] = int(tree_info[numNodes*6 + i])
-                self.Py_forest[cur_id]['na_right_count'][i] = int(tree_info[numNodes*7 + i])
-
-
-            numSplitidx = int(split_info[0])
-            self.Py_forest[cur_id]['splitting_sample_idx'] = np.empty(numSplitidx, dtype=np.intc)
-            for i in range(numSplitidx):
-                self.Py_forest[cur_id]['splitting_sample_idx'][i] = int(split_info[i+1])
-
-            numAvidx = int(averaging_info[0])
-            self.Py_forest[cur_id]['averaging_sample_idx'] = np.empty(numAvidx, dtype=np.intc)
-            for i in range(numAvidx):
-                self.Py_forest[cur_id]['averaging_sample_idx'][i] = int(averaging_info[i+1])
-
-            self.Py_forest[cur_id]['seed'] = int(tree_info[numNodes*8])
+            self.py_forest[cur_id]["seed"] = int(tree_info[num_nodes * 8])
 
         return
 
-
     def corrected_predict(
         self,
-        newdata = None,
-        feats = None,
-        nrounds = 0,
-        linear = True,
-        double = False,
-        simple = True,
-        verbose = False,
-        use_residuals = False,
-        adaptive = False,
-        monotone = False,
-        num_quants = 5,
-        params_forestry = dict(),
-        keep_fits = False
+        newdata=None,
+        feats=None,
+        nrounds=0,
+        linear=True,
+        double=False,
+        simple=True,
+        verbose=False,
+        use_residuals=False,
+        adaptive=False,
+        monotone=False,
+        num_quants=5,
+        params_forestry=dict(),
+        keep_fits=False,
     ):
         """
-        Perform predictions given the forest using a bias correction based on 
-        the out of bag predictions on the training set. By default, we use a final linear 
-        correction based on the leave-one-out hat matrix after doing 'nrounds' nonlinear 
+        Perform predictions given the forest using a bias correction based on
+        the out of bag predictions on the training set. By default, we use a final linear
+        correction based on the leave-one-out hat matrix after doing 'nrounds' nonlinear
         corrections.
 
         :param newdata: Dataframe on which to predict. If this is left *None*, we
@@ -1400,7 +1418,7 @@ class RandomForest:
          calls. Note that these forests will be trained on features of dimension
          ``len(feats) + 1`` as the correction forests are trained using the additional feature *Y_hat*,
          so monotonic constraints etc given to this list should be of size ``len(feats) + 1``.
-         Defaults to the standard *RandomForest* parameters for any parameters that are 
+         Defaults to the standard *RandomForest* parameters for any parameters that are
          not included in the dictionary.
         :type params_forestry: *dict, optional*
         :param keep_fits: A flag that indicates if we should save the intermediate
@@ -1416,24 +1434,31 @@ class RandomForest:
 
         # Check allowed settings for the bias correction
         if (not linear) and nrounds < 1:
-            raise ValueError('We must do at least one round of bias corrections, with either linear = True or nrounds > 0.')
+            raise ValueError(
+                "We must do at least one round of bias corrections, with either linear = True or nrounds > 0."
+            )
 
         if (not isinstance(nrounds, int)) or nrounds < 0:
-            raise ValueError('nrounds must be a non negative integer.')
-    
+            raise ValueError("nrounds must be a non negative integer.")
+
         if feats is not None:
-            if any(not isinstance(x, (int, np.integer)) or x < -self.processed_dta['numColumns'] or x >= self.processed_dta['numColumns'] for x in feats):
-                raise ValueError('feats must be  a integer between -ncol and ncol(x)-1')
+            if any(
+                not isinstance(x, (int, np.integer))
+                or x < -self.processed_dta["numColumns"]
+                or x >= self.processed_dta["numColumns"]
+                for x in feats
+            ):
+                raise ValueError("feats must be  a integer between -ncol and ncol(x)-1")
 
         # Check the parameters match parameters for RandomForest or adaptiveForestry
         if adaptive:
-            pass #Adaptive not implemented
+            pass  # Adaptive not implemented
         else:
             forestry_args = set(self.get_params().keys())
 
         for param in params_forestry:
             if param not in forestry_args:
-                raise ValueError('Invalid parameter in params.forestry: ' + param)
+                raise ValueError("Invalid parameter in params.forestry: " + param)
 
         if double:
             agg = "doubleOOB"
@@ -1441,15 +1466,15 @@ class RandomForest:
             agg = "oob"
 
         # First get out of bag preds
-        oob_preds = self.predict(aggregation = agg)
+        oob_preds = self.predict(aggregation=agg)
 
         if feats is None:
-            adjust_data = pd.DataFrame({'Y': self.processed_dta['y'], 'Y.hat': oob_preds})
+            adjust_data = pd.DataFrame({"Y": self.processed_dta["y"], "Y.hat": oob_preds})
         else:
-            adjust_data = self.processed_dta['processed_x'].iloc[:, feats]
-            adjust_data.columns = ['V' + str(x) for x in range(len(feats))]
-            adjust_data['Y'] = self.processed_dta['y']
-            adjust_data['Y.hat'] = oob_preds
+            adjust_data = self.processed_dta["processed_x"].iloc[:, feats]
+            adjust_data.columns = ["V" + str(x) for x in range(len(feats))]
+            adjust_data["Y"] = self.processed_dta["y"]
+            adjust_data["Y.hat"] = oob_preds
 
         # Store the RF fits
         rf_fits = []
@@ -1458,36 +1483,37 @@ class RandomForest:
             for round_i in range(nrounds):
                 # Set right outcome to regress for regression step
                 if use_residuals:
-                    y_reg = adjust_data['Y'] - adjust_data['Y.hat']
+                    y_reg = adjust_data["Y"] - adjust_data["Y.hat"]
                 else:
-                    y_reg = adjust_data['Y']
+                    y_reg = adjust_data["Y"]
 
                 if adaptive:
-                    pass #Adaptive not implemented
+                    pass  # Adaptive not implemented
 
                 elif monotone:
                     # Set default params for monotonicity in the Y.hat feature
                     params_forestry_i = params_forestry.copy()
-                    params_forestry_i['OOBhonest'] = True
-                    params_forestry_i['monotoneAvg'] = True
+                    params_forestry_i["OOBhonest"] = True
+                    params_forestry_i["monotoneAvg"] = True
                     monotone_constraits = np.zeros(len(adjust_data.columns) - 1)
                     monotone_constraits[-1] = 1
 
                     forest_i = RandomForest(**params_forestry_i)
-                    forest_i.fit(x = adjust_data.loc[:, adjust_data.columns != 'Y'],
-                                 y = y_reg,
-                                 monotonicConstraints = monotone_constraits)
+                    forest_i.fit(
+                        x=adjust_data.loc[:, adjust_data.columns != "Y"],
+                        y=y_reg,
+                        monotonicConstraints=monotone_constraits,
+                    )
 
                 else:
                     # Set default RandomForest params
                     params_forestry_i = params_forestry.copy()
-                    params_forestry_i['OOBhonest'] = True
+                    params_forestry_i["OOBhonest"] = True
 
                     forest_i = RandomForest(**params_forestry_i)
-                    forest_i.fit(x = adjust_data.loc[:, adjust_data.columns != 'Y'],
-                                 y = y_reg)
+                    forest_i.fit(x=adjust_data.loc[:, adjust_data.columns != "Y"], y=y_reg)
 
-                pred_i = forest_i.predict(adjust_data.loc[:, adjust_data.columns != 'Y'], aggregation = agg)
+                pred_i = forest_i.predict(adjust_data.loc[:, adjust_data.columns != "Y"], aggregation=agg)
 
                 # Stror the ith fit
                 rf_fits.append(forest_i)
@@ -1495,59 +1521,57 @@ class RandomForest:
                 # If we predicted some residuals, we now have to add the old Y.hat to them
                 # to get the new Y.hat
                 if use_residuals:
-                    pred_i = adjust_data['Y.hat'] + pred_i
-                
-                # Adjust the predicted Y hats
-                adjust_data['Y.hat'] = pred_i 
+                    pred_i = adjust_data["Y.hat"] + pred_i
 
+                # Adjust the predicted Y hats
+                adjust_data["Y.hat"] = pred_i
 
             # if we have a new feature, we need to run the correction fits on that as well# if we have a new feature, we need to run the correction fits on that as well
             if newdata is not None:
                 # Get initial predictions
-                if feats is None: 
-                    pred_data = pd.DataFrame({'Y.hat': self.predict(newdata = newdata)})
+                if feats is None:
+                    pred_data = pd.DataFrame({"Y.hat": self.predict(newdata=newdata)})
                 else:
                     pred_data = pd.DataFrame(newdata.iloc[:, feats])
-                    pred_data['Y.hat'] = self.predict(newdata = newdata) # aggregation = agg ?????
+                    pred_data["Y.hat"] = self.predict(newdata=newdata)  # aggregation = agg ?????
 
                 # Set column names to follow a format matching the features used
                 if feats is not None:
-                    pred_data.columns = ['V' + str(x) for x in range(len(feats))] + ['Y.hat']
+                    pred_data.columns = ["V" + str(x) for x in range(len(feats))] + ["Y.hat"]
 
                 for iter in range(nrounds):
-                    adjusted_pred = rf_fits[iter].predict(newdata = pred_data) # aggregation = agg ?????
-                    pred_data['Y.hat'] = adjusted_pred  #doesnt make sense??????
+                    adjusted_pred = rf_fits[iter].predict(newdata=pred_data)  # aggregation = agg ?????
+                    pred_data["Y.hat"] = adjusted_pred  # doesnt make sense??????
 
         if newdata is not None:
             if nrounds > 0:
-                preds_initial = pred_data['Y.hat']
+                preds_initial = pred_data["Y.hat"]
             else:
-                preds_initial = self.predict(newdata = newdata)
-
+                preds_initial = self.predict(newdata=newdata)
 
         # Given a dataframe with Y and Y.hat at least, fits an OLS and gives the LOO
         # predictions on the sample
         def loo_pred_helper(df):
 
-            Y = df['Y']
-            X = df.loc[:, df.columns != 'Y']
+            Y = df["Y"]
+            X = df.loc[:, df.columns != "Y"]
             X = sm.add_constant(X)
 
-            adjust_lm = sm.OLS(Y,X).fit()
-            
+            adjust_lm = sm.OLS(Y, X).fit()
+
             cv = LeaveOneOut()
             cv_pred = np.empty(Y.size)
 
             for i, (train, test) in enumerate(cv.split(X)):
                 # split data
                 X_train, X_test = X.iloc[train, :], X.iloc[test, :]
-                y_train, y_test = Y[train], Y[test]
+                y_train, _ = Y[train], Y[test]
 
                 # fit model
                 model = sm.OLS(y_train, X_train).fit()
                 cv_pred[i] = model.predict(X_test)
 
-            return {'insample_preds': cv_pred, 'adjustment_model': adjust_lm}
+            return {"insample_preds": cv_pred, "adjustment_model": adjust_lm}
 
         if linear:
             # Now do linear adjustment
@@ -1555,26 +1579,26 @@ class RandomForest:
                 # Now we either return the adjusted in sample predictions, or the
                 # out of sample predictions scaled according to the adjustment model
                 if newdata is None:
-                    preds_adjusted = loo_pred_helper(adjust_data)['insample_preds']
+                    preds_adjusted = loo_pred_helper(adjust_data)["insample_preds"]
                 else:
-                    model = loo_pred_helper(adjust_data)['adjustment_model']
-                    
-                    if feats is None: 
-                        data_pred = pd.DataFrame({'Y.hat': preds_initial})
+                    model = loo_pred_helper(adjust_data)["adjustment_model"]
+
+                    if feats is None:
+                        data_pred = pd.DataFrame({"Y.hat": preds_initial})
                     else:
                         data_pred = pd.DataFrame(newdata.iloc[:, feats])
-                        data_pred.columns = ['V' + str(x) for x in range(len(feats))]
-                        data_pred['Y.hat'] = preds_initial
-                    
+                        data_pred.columns = ["V" + str(x) for x in range(len(feats))]
+                        data_pred["Y.hat"] = preds_initial
+
                     preds_adjusted = np.array(model.predict(sm.add_constant(data_pred)))
 
             # Not simple
             else:
                 # split Yhat into quantiles
-                Y_hat = adjust_data['Y.hat']
-                Y = np.array(adjust_data['Y'])
+                Y_hat = adjust_data["Y.hat"]
+                Y = np.array(adjust_data["Y"])
 
-                cuts, training_quantiles = pd.qcut(Y_hat, num_quants, retbins = True)
+                cuts, training_quantiles = pd.qcut(Y_hat, num_quants, retbins=True)
                 q_idx = np.array(cuts.cat.codes)
 
                 new_pred = np.empty(Y_hat.size)
@@ -1584,10 +1608,10 @@ class RandomForest:
                     mask = q_idx == i
                     if verbose:
                         bias = np.mean(Y[mask] - Y_hat[mask])
-                        print('Quantile %d: ' % i + ' ' + str(cuts.cat.categories[i]) + ', Bias: %f' % bias)
+                        print("Quantile %d: " % i + " " + str(cuts.cat.categories[i]) + ", Bias: %f" % bias)
                     # Again we have to check if the data was in or out of sample, and do predictions
                     # accordingly --????? why aren't we doing this?
-                    new_pred[mask] = loo_pred_helper(adjust_data.loc[mask, :].reset_index(drop=True))['insample_preds']
+                    new_pred[mask] = loo_pred_helper(adjust_data.loc[mask, :].reset_index(drop=True))["insample_preds"]
 
                 if newdata is not None:
                     # Now we have fit the Q_num different models, we take the models and use
@@ -1597,7 +1621,7 @@ class RandomForest:
 
                     # Get the quantile each testing observation falls into
                     testing_quantiles = np.empty(preds_initial.size, dtype=np.intc)
-                    for i in range(preds_initial.size):  #?????? Why use two loops??
+                    for i in range(preds_initial.size):  # ?????? Why use two loops??
                         testing_quantiles[i] = np.argmax(training_quantiles >= preds_initial[i]) - 1
 
                     # Now predict for each index set using the right model
@@ -1605,32 +1629,39 @@ class RandomForest:
                     for i in range(training_quantiles.size - 1):
                         mask = testing_quantiles == i
 
-                        if feats is None:  #???? Check this later
-                            pred_df = pd.DataFrame({'Y.hat': preds_initial[mask].reset_index(drop=True)})
+                        if feats is None:  # ???? Check this later
+                            pred_df = pd.DataFrame({"Y.hat": preds_initial[mask].reset_index(drop=True)})
                         else:
                             pred_df = pd.DataFrame(newdata.iloc[mask, feats].reset_index(drop=True))
-                            pred_df.columns = ['V' + str(x) for x in range(len(feats))]
-                            pred_df['Y.hat'] = preds_initial[mask].reset_index(drop=True)
+                            pred_df.columns = ["V" + str(x) for x in range(len(feats))]
+                            pred_df["Y.hat"] = preds_initial[mask].reset_index(drop=True)
 
-                        fit_i = sm.OLS( Y[q_idx == i], sm.add_constant( adjust_data.loc[q_idx == i, adjust_data.columns != 'Y'].reset_index(drop=True))).fit()
+                        fit_i = sm.OLS(
+                            Y[q_idx == i],
+                            sm.add_constant(
+                                adjust_data.loc[q_idx == i, adjust_data.columns != "Y"].reset_index(drop=True)
+                            ),
+                        ).fit()
                         preds_adjusted[mask] = fit_i.predict(sm.add_constant(pred_df))
-                    
+
                 else:
                     preds_adjusted = new_pred
 
             if not keep_fits:
                 return preds_adjusted
             else:
-                return {'predictions': preds_adjusted, 'fits': rf_fits}
+                return {"predictions": preds_adjusted, "fits": rf_fits}
 
         # Not linear
         else:
             if not keep_fits:
                 return np.array(adjust_data.iloc[:, -1])
             else:
-                return {'predictions': np.array(adjust_data.iloc[:, -1]), 'fits': rf_fits}
+                return {
+                    "predictions": np.array(adjust_data.iloc[:, -1]),
+                    "fits": rf_fits,
+                }
 
-        
     def get_split_props(self):
         """
         Retrieves the proportion of splits for each feature in the given
@@ -1640,17 +1671,16 @@ class RandomForest:
         :return: An array of length equal to the number of columns
         :rtype: numpy.array
         """
-        
-        split_nums = np.zeros(self.processed_dta['numColumns'])
+
+        split_nums = np.zeros(self.processed_dta["numColumns"])
 
         self.translate_tree_python()
         for i in range(self.ntree):
-            for feat in self.Py_forest[i]['feature']:
+            for feat in self.Py_forest[i]["feature"]:
                 if feat >= 0:
                     split_nums[feat] += 1
 
         return split_nums / np.sum(split_nums)
-
 
     def get_params(self):
         """
@@ -1662,11 +1692,10 @@ class RandomForest:
 
         out = dict()
         for key in self.__dict__:
-            if key not in {'forest', 'dataframe', 'processed_dta', 'Py_forest'}:
+            if key not in {"forest", "dataframe", "processed_dta", "py_forest"}:
                 out[key] = self.__dict__[key]
 
         return out
-
 
     def set_params(self, **params):
         """
@@ -1685,23 +1714,22 @@ class RandomForest:
         valid_params = self.get_params()
         for key, value in params.items():
             if key not in valid_params:
-                raise ValueError('Invalid parameter %s for RandomForest. '
-                                 'Check the list of available parameters '
-                                 'with `estimator.get_params().keys()`.' %
-                                 key)
+                raise ValueError(
+                    "Invalid parameter %s for RandomForest. "
+                    "Check the list of available parameters "
+                    "with `estimator.get_params().keys()`." % key
+                )
 
             valid_params[key] = value
-        
+
         self.__init__(**valid_params)
         return self
-
-
 
     # Saving and loading
     def save_forestry(self, filename):
         self.translate_tree_python()
 
-        with open(filename, 'wb') as outp:  # Overwrites any existing file.
+        with open(filename, "wb") as outp:  # Overwrites any existing file.
             # Set the ctypes pointers to None before saving (required by pickle)
             temp_df = self.dataframe
             temp_forest = self.forest
@@ -1714,47 +1742,59 @@ class RandomForest:
             self.dataframe = temp_df
             self.forest = temp_forest
 
-
     def load_forestry(self, filename):
-        with open(filename, 'rb') as inp:
+        with open(filename, "rb") as inp:
             rf = pickle.load(inp)
-                
-            groupVector = pd.to_numeric(rf.processed_dta['groups']) if rf.processed_dta['groups'] is not None else np.repeat(0, rf.processed_dta['nObservations'])
+
+            groupVector = (
+                pd.to_numeric(rf.processed_dta["groups"])
+                if rf.processed_dta["groups"] is not None
+                else np.repeat(0, rf.processed_dta["nObservations"])
+            )
             rf.dataframe = extension.get_data(
-                np.ascontiguousarray(pd.concat([rf.processed_dta['processed_x'], pd.Series(rf.processed_dta['y'])], axis=1).values[:,:], np.double).ravel(),
-                rf.processed_dta['categoricalFeatureCols'],
-                rf.processed_dta['categoricalFeatureCols'].size,
-                rf.processed_dta['linearFeatureCols'],
-                rf.processed_dta['linearFeatureCols'].size,
-                rf.processed_dta['featureWeights'],
-                rf.processed_dta['featureWeightsVariables'],
-                rf.processed_dta['featureWeightsVariables'].size,
-                rf.processed_dta['deepFeatureWeights'],
-                rf.processed_dta['deepFeatureWeightsVariables'],
-                rf.processed_dta['deepFeatureWeightsVariables'].size,
-                rf.processed_dta['observationWeights'],
-                rf.processed_dta['monotonicConstraints'],
+                np.ascontiguousarray(
+                    pd.concat(
+                        [
+                            rf.processed_dta["processed_x"],
+                            pd.Series(rf.processed_dta["y"]),
+                        ],
+                        axis=1,
+                    ).values[:, :],
+                    np.double,
+                ).ravel(),
+                rf.processed_dta["categoricalFeatureCols"],
+                rf.processed_dta["categoricalFeatureCols"].size,
+                rf.processed_dta["linearFeatureCols"],
+                rf.processed_dta["linearFeatureCols"].size,
+                rf.processed_dta["featureWeights"],
+                rf.processed_dta["featureWeightsVariables"],
+                rf.processed_dta["featureWeightsVariables"].size,
+                rf.processed_dta["deepFeatureWeights"],
+                rf.processed_dta["deepFeatureWeightsVariables"],
+                rf.processed_dta["deepFeatureWeightsVariables"].size,
+                rf.processed_dta["observationWeights"],
+                rf.processed_dta["monotonicConstraints"],
                 groupVector,
                 rf.monotoneAvg,
-                rf.processed_dta['symmetric'],
-                rf.processed_dta['symmetric'].size,
-                rf.processed_dta['nObservations'],
-                rf.processed_dta['numColumns']+1,
-                rf.seed
+                rf.processed_dta["symmetric"],
+                rf.processed_dta["symmetric"].size,
+                rf.processed_dta["nObservations"],
+                rf.processed_dta["numColumns"] + 1,
+                rf.seed,
             )
 
-            tree_info = np.empty(rf.ntree*3, dtype=np.intc)
+            tree_info = np.empty(rf.ntree * 3, dtype=np.intc)
             total_nodes, total_split_idx, total_av_idx = 0, 0, 0
-            for i in range(rf.ntree): 
-                tree_info[3*i] = rf.Py_forest[i]['children_right'].size
-                total_nodes += tree_info[3*i]
+            for i in range(rf.ntree):
+                tree_info[3 * i] = rf.Py_forest[i]["children_right"].size
+                total_nodes += tree_info[3 * i]
 
-                tree_info[3*i+1] = rf.Py_forest[i]['splitting_sample_idx'].size
-                total_split_idx += tree_info[3*i+1]
+                tree_info[3 * i + 1] = rf.Py_forest[i]["splitting_sample_idx"].size
+                total_split_idx += tree_info[3 * i + 1]
 
-                tree_info[3*i+2] = rf.Py_forest[i]['averaging_sample_idx'].size
-                total_av_idx += tree_info[3*i+2]
-                
+                tree_info[3 * i + 2] = rf.Py_forest[i]["averaging_sample_idx"].size
+                total_av_idx += tree_info[3 * i + 2]
+
             thresholds = np.empty(total_nodes, dtype=np.double)
             features = np.empty(total_nodes, dtype=np.intc)
             na_left_counts = np.empty(total_nodes, dtype=np.intc)
@@ -1766,24 +1806,24 @@ class RandomForest:
 
             ind, ind_s, ind_a = 0, 0, 0
             for i in range(rf.ntree):
-                for j in range(tree_info[3*i]):
-                    thresholds[ind] = rf.Py_forest[i]['threshold'][j]
-                    features[ind] = rf.Py_forest[i]['feature'][j]
-                    na_left_counts[ind] = rf.Py_forest[i]['na_left_count'][j]
-                    na_right_counts[ind] = rf.Py_forest[i]['na_right_count'][j]
-                    predict_weights[ind] = rf.Py_forest[i]['values'][j]
+                for j in range(tree_info[3 * i]):
+                    thresholds[ind] = rf.Py_forest[i]["threshold"][j]
+                    features[ind] = rf.Py_forest[i]["feature"][j]
+                    na_left_counts[ind] = rf.Py_forest[i]["na_left_count"][j]
+                    na_right_counts[ind] = rf.Py_forest[i]["na_right_count"][j]
+                    predict_weights[ind] = rf.Py_forest[i]["values"][j]
 
                     ind += 1
 
-                for j in range(tree_info[3*i+1]):
-                    sample_split_idx[ind_s] = rf.Py_forest[i]['splitting_sample_idx'][j]
+                for j in range(tree_info[3 * i + 1]):
+                    sample_split_idx[ind_s] = rf.Py_forest[i]["splitting_sample_idx"][j]
                     ind_s += 1
-                
-                for j in range(tree_info[3*i+2]):
-                    sample_av_idx[ind_a] = rf.Py_forest[i]['averaging_sample_idx'][j]
+
+                for j in range(tree_info[3 * i + 2]):
+                    sample_av_idx[ind_a] = rf.Py_forest[i]["averaging_sample_idx"][j]
                     ind_a += 1
 
-                tree_seeds[i] = rf.Py_forest[i]['seed']
+                tree_seeds[i] = rf.Py_forest[i]["seed"]
 
             rf.forest = extension.py_reconstructree(
                 rf.dataframe,
@@ -1807,9 +1847,9 @@ class RandomForest:
                 rf.middleSplit,
                 rf.maxObs,
                 rf.minTreesPerGroup,
-                rf.processed_dta['hasNas'],
+                rf.processed_dta["hasNas"],
                 rf.linear,
-                not np.any(rf.processed_dta['symmetric']),
+                not np.any(rf.processed_dta["symmetric"]),
                 rf.overfitPenalty,
                 rf.doubleTree,
                 tree_info,
@@ -1822,12 +1862,13 @@ class RandomForest:
                 predict_weights,
                 tree_seeds,
             )
-            
+
             return rf
 
     def __del__(self):
         # Free the pointers to foretsry and dataframe
         extension.delete_forestry(self.forest, self.dataframe)
+
 
 # make linFeats same as symmetric...
 

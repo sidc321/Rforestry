@@ -4,11 +4,11 @@ from Rforestry import RandomForest
 
 X, y = get_data()
 
-forest = RandomForest(ntree=1, maxDepth=2, seed=1)
+forest = RandomForest(ntree=1, max_depth=2, seed=1)
 forest.fit(X, y)
 pred = forest.predict(X)
 
-forest_scaled = RandomForest(ntree=1, maxDepth=2, scale=True, seed=1)
+forest_scaled = RandomForest(ntree=1, max_depth=2, scale=True, seed=1)
 forest_scaled.fit(X, y)
 pred_scaled = forest_scaled.predict(X)
 

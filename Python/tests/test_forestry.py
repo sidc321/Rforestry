@@ -14,11 +14,11 @@ def forest():
         replace=True,
         sample_fraction=0.8,
         mtry=3,
-        nodesizeStrictSpl=5,
+        nodesize_strict_spl=5,
         nthread=1,
         splitrule="variance",
         splitratio=1,
-        nodesizeStrictAvg=5,
+        nodesize_strict_avg=5,
         seed=2,
     )
 
@@ -37,7 +37,7 @@ def predictions(forest):
 def test_newdata_wrong_dim(forest):
     X, _ = get_data()
     ncol = X.shape[1]
-    X = X.iloc[:, 0: ncol - 1]
+    X = X.iloc[:, 0 : ncol - 1]
 
     with pytest.raises(ValueError):
         assert forest.predict(X)
