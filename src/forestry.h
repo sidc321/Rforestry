@@ -39,7 +39,8 @@ public:
     bool verbose,
     bool splitMiddle,
     size_t maxObs,
-    size_t minTreesPerGroup,
+    size_t minTreesPerFold,
+    size_t foldSize,
     bool hasNas,
     bool linear,
     bool symmetric,
@@ -206,8 +207,12 @@ public:
     return _maxObs;
   }
 
-  size_t getMinTreesPerGroup() {
-    return _minTreesPerGroup;
+  size_t getminTreesPerFold() {
+    return _minTreesPerFold;
+  }
+
+  size_t getFoldSize() {
+      return _foldSize;
   }
 
   bool gethasNas() {
@@ -255,7 +260,8 @@ private:
   std::unique_ptr< std::vector<double> > _variableImportance;
   bool _splitMiddle;
   size_t _maxObs;
-  size_t _minTreesPerGroup;
+  size_t _minTreesPerFold;
+  size_t _foldSize;
   bool _hasNas;
   bool _linear;
   bool _symmetric;

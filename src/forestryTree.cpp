@@ -1694,7 +1694,8 @@ void forestryTree::getOOBhonestIndex(
 void forestryTree::getOOGIndex(
     std::vector<size_t> &outputOOBIndex,
     std::vector<size_t> groupMemberships,
-    std::vector<size_t> &allIndex
+    std::vector<size_t> &allIndex,
+    bool doubleOOB
 ){
 
   // For a given tree, we cycle through all averaging indices and get their
@@ -1716,6 +1717,16 @@ void forestryTree::getOOGIndex(
        iter != getAveragingIndex()->end();
        iter++) {
     in_sample_groups.insert(groupMemberships[*iter]);
+  }
+
+  // When doing double OOB predictions with groups, take neither groups in the
+  // averaging or splitting sets
+  if (doubleOOB) {
+      for (std::vector<size_t>::iterator iter = getSplittingIndex()->begin();
+           iter != getSplittingIndex()->end();
+           iter++) {
+          in_sample_groups.insert(groupMemberships[*iter]);
+      }
   }
 
   for (
@@ -1754,15 +1765,22 @@ void forestryTree::getOOBPrediction(
       std::iota(allIndex.begin(), allIndex.end(), 0);
   } else {
       allIndex = training_idx;
-      //std::cout << "All Index (size) "<< allIndex.size()  << std::endl;
-      //print_vector(allIndex);
   }
-    //std::cout << "tree avging indices" << std::endl;
-    //print_vector(*getAveragingIndex());
 
   if (trainingData->getGroups()->at(0) != 0) {
     std::vector<size_t> group_membership_vector = *(trainingData->getGroups());
-    getOOGIndex(OOBIndex, group_membership_vector, allIndex);
+    if (OOBhonest) {
+        getOOGIndex(OOBIndex,
+                    group_membership_vector,
+                    allIndex,
+                    doubleOOB);
+    } else {
+        getOOGIndex(OOBIndex,
+                    group_membership_vector,
+                    allIndex,
+                    true);
+    }
+
   } else {
     if (OOBhonest) {
       if (doubleOOB) {

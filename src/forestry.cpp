@@ -2,8 +2,10 @@
 // [[Rcpp::plugins(cpp11)]]
 #include "forestry.h"
 #include "utils.h"
+#include "sampling.h"
 #include <RcppThread.h>
 #include <random>
+#include <algorithm>
 #include <thread>
 #include <mutex>
 #include <RcppArmadillo.h>
@@ -15,7 +17,7 @@ forestry::forestry():
   _splitRatio(0),_OOBhonest(0),_mtry(0), _minNodeSizeSpt(0), _minNodeSizeAvg(0),
   _minNodeSizeToSplitSpt(0), _minNodeSizeToSplitAvg(0), _minSplitGain(0),
   _maxDepth(0), _interactionDepth(0), _forest(nullptr), _seed(0), _verbose(0),
-  _nthread(0), _OOBError(0), _splitMiddle(0),_minTreesPerGroup(0), _doubleTree(0){};
+  _nthread(0), _OOBError(0), _splitMiddle(0),_minTreesPerFold(0), _doubleTree(0){};
 
 forestry::~forestry(){
 //  for (std::vector<forestryTree*>::iterator it = (*_forest).begin();
@@ -47,7 +49,8 @@ forestry::forestry(
   bool verbose,
   bool splitMiddle,
   size_t maxObs,
-  size_t minTreesPerGroup,
+  size_t minTreesPerFold,
+  size_t foldSize,
   bool hasNas,
   bool linear,
   bool symmetric,
@@ -78,7 +81,8 @@ forestry::forestry(
   this->_linear = linear;
   this->_overfitPenalty = overfitPenalty;
   this->_doubleTree = doubleTree;
-  this->_minTreesPerGroup = minTreesPerGroup;
+  this->_minTreesPerFold = minTreesPerFold;
+  this->_foldSize = foldSize;
   this->_symmetric = symmetric;
 
   if (splitRatio > 1 || splitRatio < 0) {
@@ -139,21 +143,46 @@ void forestry::addTrees(size_t ntree) {
   unsigned int newEndingTreeNumber;
   size_t numToGrow, groupToGrow;
 
+
+  std::vector< std::vector<size_t> > foldMemberships(1);
+
   // This is called with ntree = 0 only when loading a saved forest.
-  // When minTreesPerGroup takes precedence over ntree, we need to make sure to
+  // When minTreesPerFold takes precedence over ntree, we need to make sure to
   // train 0 trees when ntree = 0, otherwise this messes up the reconstruction of the forest
-  if ((ntree != 0) && (getMinTreesPerGroup() > 0)) {
-    numToGrow =
-      (unsigned int) getMinTreesPerGroup() * ((*std::max_element(getTrainingData()->getGroups()->begin(),
-                                                                 getTrainingData()->getGroups()->end())));
+  if ((ntree != 0) && (getminTreesPerFold() > 0)) {
+    size_t numGroups = (*std::max_element(getTrainingData()->getGroups()->begin(),
+                                          getTrainingData()->getGroups()->end()));
+
+    size_t numFolds = ((size_t) std::ceil((double) numGroups / (double) getFoldSize()));
+
+    numToGrow = (unsigned int) getminTreesPerFold() * (numFolds);
     // Want to grow max(ntree, |groups|*minTreePerGroup) total trees
     groupToGrow = numToGrow;
     numToGrow = std::max(numToGrow, ntree);
+
+    std::mt19937_64 group_assign_rng;
+    group_assign_rng.seed(getSeed());
+
+    foldMemberships.resize(numFolds);
+    for (size_t fold_i = 0; fold_i < numFolds; fold_i++) {
+        foldMemberships[fold_i] = std::vector<size_t>(getFoldSize());
+    }
+    // Assign the groups to different folds. When the foldsize is 1, this is equivalent
+    // to the previous minTreesPerFold implementation
+    assign_groups_to_folds(
+            numGroups,
+            getFoldSize(),
+            foldMemberships,
+            group_assign_rng
+    );
   } else {
     numToGrow = ntree;
   }
   newEndingTreeNumber = newStartingTreeNumber + (unsigned int) numToGrow;
-
+  //for (size_t i = 0; i < foldMemberships.size(); i++) {
+  //    std::cout << "Fold " << i << std::endl;
+  //    print_vector(foldMemberships[i]);
+  //}
   //RcppThread::Rcout << newEndingTreeNumber;
 
   unsigned int nthreadToUse = (unsigned int) getNthread();
@@ -162,9 +191,6 @@ void forestry::addTrees(size_t ntree) {
     nthreadToUse = (unsigned int) std::thread::hardware_concurrency();
   }
   const unsigned int see = this->getSeed();
-
-  size_t splitSampleSize = (size_t) (getSplitRatio() * getSampleSize());
-
 
   #if DOPARELLEL
   if (isVerbose()) {
@@ -198,195 +224,52 @@ void forestry::addTrees(size_t ntree) {
           std::mt19937_64 random_number_generator;
           random_number_generator.seed(myseed);
 
-          // Generate a sample index for each tree
-          std::vector<size_t> sampleIndex;
 
-          // If the forest is to be constructed with minTreesPerGroup, we want to
-          // use that sampling method instead of the sampling methods we have
-          size_t currentGroup;
-          if ((getMinTreesPerGroup() > 0) && (i < groupToGrow)) {
-
-            // Get the current group
-            currentGroup = (((size_t) i) / ((size_t) getMinTreesPerGroup())) + 1;
-
-            //RcppThread::Rcout << currentGroup;
-
-            // Populate sampleIndex with the leave group out function
-            group_out_sample(
-              currentGroup,
-              (*getTrainingData()->getGroups()),
-              sampleIndex,
-              random_number_generator
-            );
-
-          } else if (isReplacement()) {
-
-            // Now we generate a weighted distribution using observationWeights
-            std::vector<double>* sampleWeights = (this->getTrainingData()->getobservationWeights());
-            std::discrete_distribution<size_t> sample_dist(
-                sampleWeights->begin(), sampleWeights->end()
-            );
-
-            // Generate index with replacement
-            while (sampleIndex.size() < getSampleSize()) {
-              size_t randomIndex = sample_dist(random_number_generator);
-              sampleIndex.push_back(randomIndex);
-            }
-          } else {
-            // In this case, when we have no replacement, we disregard
-            // observationWeights and use a uniform distribution
-            std::uniform_int_distribution<size_t> unif_dist(
-                0, (size_t) (*getTrainingData()).getNumRows() - 1
-            );
-
-            // Generate index without replacement
-            while (sampleIndex.size() < getSampleSize()) {
-              size_t randomIndex = unif_dist(random_number_generator);
-
-              if (
-                  sampleIndex.size() == 0 ||
-                    std::find(
-                      sampleIndex.begin(),
-                      sampleIndex.end(),
-                      randomIndex
-                    ) == sampleIndex.end()
-              ) {
-                sampleIndex.push_back(randomIndex);
-              }
-            }
-          }
-
+          // Split sampled indices into averaging and splitting sets
           std::unique_ptr<std::vector<size_t> > splitSampleIndex;
           std::unique_ptr<std::vector<size_t> > averageSampleIndex;
 
           std::unique_ptr<std::vector<size_t> > splitSampleIndex2;
           std::unique_ptr<std::vector<size_t> > averageSampleIndex2;
 
-          // If OOBhonest is true, we generate the averaging set based
-          // on the OOB set.
-          if (getOOBhonest()) {
+          std::vector<size_t> splitIndicesFill;
+          std::vector<size_t> avgIndicesFill;
 
-            std::vector<size_t> splitSampleIndex_;
-            std::vector<size_t> averageSampleIndex_;
+          // Generate the splitting and averaging indices for the ith tree
+          generate_sample_indices(
+                  splitIndicesFill,
+                  avgIndicesFill,
+                  groupToGrow,
+                  getminTreesPerFold(),
+                  i,
+                  getSampleSize(),
+                  isReplacement(),
+                  getOOBhonest(),
+                  getDoubleBootstrap(),
+                  getSplitRatio(),
+                  _doubleTree,
+                  random_number_generator,
+                  foldMemberships,
+                  getTrainingData()
+                  );
 
-            std::sort(
-              sampleIndex.begin(),
-              sampleIndex.end()
-            );
 
-            std::vector<size_t> allIndex;
-            for (size_t i = 0; i < getSampleSize(); i++) {
-              // If we are doing leave a group out sampling, we make sure the
-              // allIndex vector doesn't include observations in the currently
-              // left out group
-              if (getMinTreesPerGroup() == 0) {
-                allIndex.push_back(i);
-              } else if ((*(getTrainingData()->getGroups()))[i]
-                           != currentGroup) {
-                allIndex.push_back(i);
-              }
-            }
+          // Set the smart pointers to use the returned indices
+          splitSampleIndex.reset(
+                    new std::vector<size_t>(splitIndicesFill)
+          );
+          averageSampleIndex.reset(
+                    new std::vector<size_t>(avgIndicesFill)
+          );
 
-            std::vector<size_t> OOBIndex(getSampleSize());
-
-            // First we get the set of all possible
-            // OOB index is the set difference between sampleIndex and all_idx
-            std::vector<size_t>::iterator it = std::set_difference (
-              allIndex.begin(),
-              allIndex.end(),
-              sampleIndex.begin(),
-              sampleIndex.end(),
-              OOBIndex.begin()
-            );
-
-            // resize OOB index
-            OOBIndex.resize((unsigned long) (it - OOBIndex.begin()));
-            std::vector< size_t > AvgIndices;
-
-            // Check the double bootstrap, if true, we take another sample
-            // from the OOB indices, otherwise we just take the OOB index
-            // set with standard (uniform) weightings
-            if (getDoubleBootstrap()) {
-              // Now in new version, of OOB honesty
-              // we want to sample with replacement from
-              // the OOB index vector, so that our averaging vector
-              // is also bagged.
-              std::uniform_int_distribution<size_t> uniform_dist(
-                  0, (size_t) (OOBIndex.size() - 1)
-              );
-
-              // Sample with replacement
-              while (AvgIndices.size() < OOBIndex.size()) {
-                size_t randomIndex = uniform_dist(random_number_generator);
-                AvgIndices.push_back(
-                  OOBIndex[randomIndex]
+          // If we are doing doubleTree, swap the indices and make two trees
+          if (_doubleTree) {
+                splitSampleIndex2.reset(
+                        new std::vector<size_t>(splitIndicesFill)
                 );
-              }
-
-            } else {
-              AvgIndices = OOBIndex;
-            }
-
-            // Now set the splitting indices and averaging indices
-            splitSampleIndex_ = sampleIndex;
-            averageSampleIndex_ = AvgIndices;
-
-            // Give split and avg sample indices the right indices
-            splitSampleIndex.reset(
-              new std::vector<size_t>(splitSampleIndex_)
-            );
-            averageSampleIndex.reset(
-              new std::vector<size_t>(averageSampleIndex_)
-            );
-
-            // If we are doing doubleTree, swap the indices and make two trees
-            if (_doubleTree) {
-              splitSampleIndex2.reset(
-                new std::vector<size_t>(splitSampleIndex_)
-              );
-              averageSampleIndex2.reset(
-                new std::vector<size_t>(averageSampleIndex_)
-              );
-            }
-          } else if (getSplitRatio() == 1 || getSplitRatio() == 0) {
-
-            // Treat it as normal RF
-            splitSampleIndex.reset(new std::vector<size_t>(sampleIndex));
-            averageSampleIndex.reset(new std::vector<size_t>(sampleIndex));
-
-          } else {
-
-            // Generate sample index based on the split ratio
-            std::vector<size_t> splitSampleIndex_;
-            std::vector<size_t> averageSampleIndex_;
-            for (
-                std::vector<size_t>::iterator it = sampleIndex.begin();
-                it != sampleIndex.end();
-                ++it
-            ) {
-              if (splitSampleIndex_.size() < splitSampleSize) {
-                splitSampleIndex_.push_back(*it);
-              } else {
-                averageSampleIndex_.push_back(*it);
-              }
-            }
-
-            splitSampleIndex.reset(
-              new std::vector<size_t>(splitSampleIndex_)
-            );
-            averageSampleIndex.reset(
-              new std::vector<size_t>(averageSampleIndex_)
-            );
-
-            // If we are doing doubleTree, swap the indices and make two trees
-            if (_doubleTree) {
-              splitSampleIndex2.reset(
-                new std::vector<size_t>(splitSampleIndex_)
-              );
-              averageSampleIndex2.reset(
-                new std::vector<size_t>(averageSampleIndex_)
-              );
-            }
+                averageSampleIndex2.reset(
+                        new std::vector<size_t>(avgIndicesFill)
+                );
           }
 
           try{
@@ -473,9 +356,6 @@ void forestry::addTrees(size_t ntree) {
            newStartingTreeNumber + (t + 1) * numToGrow / nthreadToUse,
            t
     );
-    // this is a problem, we are apparently casting
-    // this to a size_t even though we are iterating through
-    // and multiplying it with an unsigned int for the seeds
 
     allThreads[t] = std::thread(dummyThread);
   }

@@ -89,6 +89,6 @@ test_that("Test if nodesizeStrictSpl is working correctly", {
   expect_gt(length(which(p$weightMatrix != 0 )), 10)
 
   skip_if_not_mac()
-  expect_equal(length(which(p$weightMatrix != 0 )), 11)
+  expect_equal(length(which(p$weightMatrix != 0 )), 18)
 
 })

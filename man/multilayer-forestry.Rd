@@ -35,7 +35,7 @@ multilayerForestry(
   linFeats = 0:(ncol(x) - 1),
   monotonicConstraints = rep(0, ncol(x)),
   groups = NULL,
-  minTreesPerGroup = 0,
+  minTreesPerFold = 0,
   monotoneAvg = FALSE,
   featureWeights = rep(1, ncol(x)),
   deepFeatureWeights = featureWeights,
@@ -172,17 +172,19 @@ predictions which do not use any data from a common group to make predictions fo
 any observation in the group. This can be used to create general custom
 resampling schemes, and provide predictions consistent with the Out-of-Group set.}
 
-\item{minTreesPerGroup}{The number of trees which we make sure have been created leaving
-out each group. This is 0 by default, so we will not give any special treatment to
-the groups when sampling, however if this is set to a positive integer, we
+\item{minTreesPerFold}{The number of trees which we make sure have been created leaving
+out each fold (each fold is a set of randomly selected groups).
+ This is 0 by default, so we will not give any special treatment to
+the groups when sampling observations, however if this is set to a positive integer, we
 modify the bootstrap sampling scheme to ensure that exactly that many trees
-have the group left out. We do this by, for each group, creating minTreesPerGroup
+have each group left out. We do this by, for each fold, creating minTreesPerFold
 trees which are built on observations sampled from the set of training observations
-which are not in the current group. This means we create at least # groups * minTreesPerGroup
-trees for the forest. If ntree > # groups * minTreesPerGroup, we create
-max(# groups * minTreesPerGroup,ntree) total trees, in which at least minTreesPerGroup
-are created leaving out each group. For debugging purposes, these group sampling
-trees are stored at the end of the R forest, in blocks based on the left out group.}
+which are not in a group in the current fold. The folds form a random partition of
+all of the possible groups, each of size foldSize. This means we create at
+least # folds * minTreesPerFold trees for the forest.
+If ntree > # folds * minTreesPerFold, we create
+max(# folds * minTreesPerFold, ntree) total trees, in which at least minTreesPerFold
+are created leaving out each fold.}
 
 \item{monotoneAvg}{This is a boolean flag that indicates whether or not monotonic
 constraints should be enforced on the averaging set in addition to the splitting set.
