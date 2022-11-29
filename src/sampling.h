@@ -24,4 +24,21 @@ void group_out_sample(
         DataFrame* trainingData
 );
 
+void generate_sample_indices(
+        std::vector<size_t>& splitSampleIndexReturn,
+        std::vector<size_t>& averageSampleIndexReturn,
+        size_t groupToGrow,
+        size_t minTreesPerFold,
+        size_t treeIndex,
+        size_t sampleSize,
+        bool replacement,
+        bool oobHonest,
+        bool doubleBootstrap,
+        double splitratio,
+        bool doubleTree,
+        std::mt19937_64& random_number_generator,
+        std::vector< std::vector<size_t> >& foldMemberships,
+        DataFrame* trainingData
+);
+
 #endif //SRC_SAMPLING_H
