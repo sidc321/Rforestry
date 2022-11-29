@@ -21,12 +21,15 @@ test_that("Tests sampling with groups", {
   # Note that because we sort by seed after training the forest
   # so the first trees in R_forest have left out the last group etc
   idx1 <- rf@R_forest[[1]]$splittingSampleIndex
+  skip_if_not_mac()
   expect_equal(all(!((101:150) %in% idx1)), TRUE)
 
   idx2 <- rf@R_forest[[2]]$splittingSampleIndex
+  skip_if_not_mac()
   expect_equal(all(!((51:100) %in% idx2)), TRUE)
 
   idx3 <- rf@R_forest[[3]]$splittingSampleIndex
+  skip_if_not_mac()
   expect_equal(all(!((1:50) %in% idx3)), TRUE)
 
 
@@ -64,21 +67,27 @@ test_that("Tests sampling with groups", {
 
   spl_idx1 <- rf@R_forest[[1]]$splittingSampleIndex
   avg_idx1 <- rf@R_forest[[1]]$averagingSampleIndex
+  skip_if_not_mac()
   expect_equal(all(!((101:150) %in% spl_idx1)), TRUE)
+  skip_if_not_mac()
   expect_equal(all(!((101:150) %in% avg_idx1)), TRUE)
 
   expect_equal(length(intersect(spl_idx1,avg_idx1)), 0)
 
   spl_idx2 <- rf@R_forest[[2]]$splittingSampleIndex
   avg_idx2 <- rf@R_forest[[2]]$averagingSampleIndex
+  skip_if_not_mac()
   expect_equal(all(!((51:100) %in% spl_idx2)), TRUE)
+  skip_if_not_mac()
   expect_equal(all(!((51:100) %in% avg_idx2)), TRUE)
 
   expect_equal(length(intersect(spl_idx2,avg_idx2)), 0)
 
   spl_idx3 <- rf@R_forest[[3]]$splittingSampleIndex
   avg_idx3 <- rf@R_forest[[3]]$averagingSampleIndex
+  skip_if_not_mac()
   expect_equal(all(!((1:50) %in% spl_idx3)), TRUE)
+  skip_if_not_mac()
   expect_equal(all(!((1:50) %in% avg_idx3)), TRUE)
 
   expect_equal(length(intersect(spl_idx3,avg_idx3)), 0)
