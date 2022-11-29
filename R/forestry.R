@@ -580,19 +580,21 @@ setClass(
 #'   any observation in the group. This can be used to create general custom
 #'   resampling schemes, and provide predictions consistent with the Out-of-Group set.
 #' @param minTreesPerFold The number of trees which we make sure have been created leaving
-#'   out each group. This is 0 by default, so we will not give any special treatment to
-#'   the groups when sampling, however if this is set to a positive integer, we
+#'   out each fold (each fold is a set of randomly selected groups).
+#'    This is 0 by default, so we will not give any special treatment to
+#'   the groups when sampling observations, however if this is set to a positive integer, we
 #'   modify the bootstrap sampling scheme to ensure that exactly that many trees
-#'   have the group left out. We do this by, for each group, creating minTreesPerFold
+#'   have each group left out. We do this by, for each fold, creating minTreesPerFold
 #'   trees which are built on observations sampled from the set of training observations
-#'   which are not in the current group. This means we create at least # folds * minTreesPerFold
-#'   trees for the forest. If ntree > # folds * minTreesPerFold, we create
-#'   max(# folds * minTreesPerFold,ntree) total trees, in which at least minTreesPerFold
-#'   are created leaving out each group. For debugging purposes, these group sampling
-#'   trees are stored at the end of the R forest, in blocks based on the left out group.
+#'   which are not in a group in the current fold. The folds form a random partition of
+#'   all of the possible groups, each of size foldSize. This means we create at
+#'   least # folds * minTreesPerFold trees for the forest.
+#'   If ntree > # folds * minTreesPerFold, we create
+#'   max(# folds * minTreesPerFold, ntree) total trees, in which at least minTreesPerFold
+#'   are created leaving out each fold.
 #' @param foldSize The number of groups that are selected randomly for each fold to be
 #'   left out when using minTreesPerFold. When minTreesPerFold is set and foldSize is
-#'   set, the groups will be partitioned into folds, each containing foldSize unique groups
+#'   set, all possible groups will be partitioned into folds, each containing foldSize unique groups
 #'   (if foldSize doesn't evenly divide the number of groups, a single fold will be smaller,
 #'   as it will contain the remaining groups). Then minTreesPerFold are grown with each
 #'   entire fold of groups left out.
