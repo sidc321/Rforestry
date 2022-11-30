@@ -1,18 +1,24 @@
+import sys
 import warnings
 from collections import defaultdict
-from typing import List, Mapping, Optional
+from typing import List, Mapping, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
 from dtreeviz.models.shadow_decision_tree import ShadowDecTree
 from sklearn.utils import compute_class_weight
 
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
+
 
 class ShadowForestryTree(ShadowDecTree):
     """
     *ShadowForestryTree* implements *ShadowDecTree* to enable easy plotting. Note that to plot a specific tree, one must
-    initialize an instance of this class and pass it *dtreeviz*. Check out the :ref:`Usage <plot>` section for an example
-    of how to do this.
+    initialize an instance of this class and pass it *dtreeviz*. Check out the :ref:`Usage <plot>` section for
+    an example of how to do this.
 
     :param tree_model: The model to be visualized.
     :type tree_model: *RandomForest*
@@ -33,12 +39,12 @@ class ShadowForestryTree(ShadowDecTree):
     def __init__(
         self,
         tree_model,
-        x_data: (pd.DataFrame, np.ndarray),
-        y_data: (pd.Series, np.ndarray),
+        x_data: Union[pd.DataFrame, np.ndarray],
+        y_data: Union[pd.Series, np.ndarray],
         feature_names: Optional[List[str]] = None,
         target_name: Optional[str] = None,
         tree_id=0,
-        class_names: (List[str], Mapping[int, str]) = None,
+        class_names: Optional[Union[List[str], Mapping[int, str]]] = None,
     ):
 
         if feature_names is not None:
@@ -63,7 +69,7 @@ class ShadowForestryTree(ShadowDecTree):
             tree_model, x_data, y_data, feature_names, target_name, class_names
         )
 
-    def is_fit(self):
+    def is_fit(self) -> bool:
         """
         Checks if the model has been trained.
 
@@ -73,7 +79,7 @@ class ShadowForestryTree(ShadowDecTree):
         """
         return getattr(self.tree_model, "forest") is not None
 
-    def is_classifier(self):
+    def is_classifier(self) -> Self:
         """
         Checks if the model does classification or regression.
 
@@ -84,7 +90,7 @@ class ShadowForestryTree(ShadowDecTree):
         # TODO: Change if we implement classification as a different method
         return False
 
-    def get_class_weights(self):
+    def get_class_weights(self) -> Optional[np.ndarray]:
         """
         Gets the class weights of the tree model.
 
@@ -98,8 +104,9 @@ class ShadowForestryTree(ShadowDecTree):
                 classes=unique_target_values,
                 y=self.y_data,
             )
+        return None
 
-    def get_thresholds(self):
+    def get_thresholds(self) -> np.ndarray:
         """
         Gets the threshold values for each node in the tree.
 
@@ -109,7 +116,7 @@ class ShadowForestryTree(ShadowDecTree):
         """
         return self.tree_model.Py_forest[self.tree_id]["threshold"]
 
-    def get_features(self):
+    def get_features(self) -> np.ndarray:
         """
         Gets the splitting features for each node in the tree.
 
@@ -120,7 +127,7 @@ class ShadowForestryTree(ShadowDecTree):
         """
         return self.tree_model.Py_forest[self.tree_id]["feature"]
 
-    def criterion(self):
+    def criterion(self) -> str:
         """
         Gets the function to measure the quality of a split.
         Ex. Gini, entropy, MSE, MAE.
@@ -130,17 +137,19 @@ class ShadowForestryTree(ShadowDecTree):
         """
         return "SQUARED_ERROR"
 
-    def get_class_weight(self):
+    def get_class_weight(self) -> Optional[np.ndarray]:
         """
-        Gets the class weights of the tree model. To be compared with :meth:`get_class_weights() <ShadowForestryTree.get_class_weights>`.
+        Gets the class weights of the tree model.
+        To be compared with :meth:`get_class_weights() <ShadowForestryTree.get_class_weights>`.
 
         :return: An array whose *i-th* element is the weight for the *i-th* class.
         :rtype: numpy.array of shape [n_classes,]
         """
         if self.is_classifier():
             return self.tree_model.class_weight
+        return None
 
-    def nclasses(self):
+    def nclasses(self) -> int:
         """
         Gets the number of classes. If the tree does regression, returns 1.
 
@@ -149,7 +158,7 @@ class ShadowForestryTree(ShadowDecTree):
         """
         return 1
 
-    def classes(self):
+    def classes(self) -> Optional[np.ndarray]:
         """
         Gets the classes of the tree in case of classification.
 
@@ -158,8 +167,9 @@ class ShadowForestryTree(ShadowDecTree):
         """
         if self.is_classifier():
             return self.tree_model.classes_
+        return None
 
-    def get_node_samples(self):
+    def get_node_samples(self) -> dict:
         """
         Maps the node id to the sample indices considered at that node for splitting.
 
@@ -177,7 +187,7 @@ class ShadowForestryTree(ShadowDecTree):
 
         return node_to_samples
 
-    def get_split_samples(self, id):
+    def get_split_samples(self, id: int) -> Tuple[np.ndarray, np.ndarray]:  # pylint: disable=redefined-builtin
         """
         Gets the left and right split indices from a node.
 
@@ -196,7 +206,7 @@ class ShadowForestryTree(ShadowDecTree):
 
         return left, right
 
-    def get_root_edge_labels(self):
+    def get_root_edge_labels(self) -> List:
         """
         Gets the labels for roots and edges.
 
@@ -205,7 +215,7 @@ class ShadowForestryTree(ShadowDecTree):
         """
         return ["&le;", "&gt;"]
 
-    def get_node_nsamples(self, id):
+    def get_node_nsamples(self, id: int) -> int:  # pylint: disable=redefined-builtin
         """
         Gets the number of samples for a given node.
 
@@ -216,7 +226,7 @@ class ShadowForestryTree(ShadowDecTree):
         """
         return len(self.get_node_samples()[id])
 
-    def get_children_left(self):
+    def get_children_left(self) -> np.ndarray:
         """
         For each node in the tree, gets the node id of its left child.
 
@@ -226,7 +236,7 @@ class ShadowForestryTree(ShadowDecTree):
         """
         return self.tree_model.Py_forest[self.tree_id]["children_left"]
 
-    def get_children_right(self):
+    def get_children_right(self) -> np.ndarray:
         """
         For each node in the tree, gets the node id of its right child.
 
@@ -236,7 +246,7 @@ class ShadowForestryTree(ShadowDecTree):
         """
         return self.tree_model.Py_forest[self.tree_id]["children_right"]
 
-    def get_node_split(self, id) -> (int, float):
+    def get_node_split(self, id: int) -> Union[int, float]:  # pylint: disable=redefined-builtin
         """
         Gets the split value (threshold) of the node with a given id.
 
@@ -247,7 +257,7 @@ class ShadowForestryTree(ShadowDecTree):
         """
         return self.tree_model.Py_forest[self.tree_id]["threshold"][id]
 
-    def get_node_feature(self, id) -> int:
+    def get_node_feature(self, id: int) -> int:  # pylint: disable=redefined-builtin
         """
         Gets the index of the split feature for a given node.
 
@@ -259,7 +269,7 @@ class ShadowForestryTree(ShadowDecTree):
         """
         return self.tree_model.Py_forest[self.tree_id]["feature"][id]
 
-    def get_node_nsamples_by_class(self, id):
+    def get_node_nsamples_by_class(self, id: int) -> Optional[np.ndarray]:  # pylint: disable=redefined-builtin
         """
         In case of a classification tree, gets the number of samples in each class in a given node.
 
@@ -270,8 +280,9 @@ class ShadowForestryTree(ShadowDecTree):
         """
         if self.is_classifier():
             return self.tree_model.Py_forest[self.tree_id]["values"][id][0]
+        return None
 
-    def get_prediction(self, id):
+    def get_prediction(self, id: int) -> Union[int, float, np.signedinteger]:  # pylint: disable=redefined-builtin
         """
         Gets the prediction made by a given node.
 
@@ -283,10 +294,10 @@ class ShadowForestryTree(ShadowDecTree):
         if self.is_classifier():
             counts = self.tree_model.Py_forest[self.tree_id]["values"][id][0]
             return np.argmax(counts)
-        else:
-            return self.tree_model.Py_forest[self.tree_id]["values"][id]
 
-    def nnodes(self):
+        return self.tree_model.Py_forest[self.tree_id]["values"][id]
+
+    def nnodes(self) -> int:
         """
         Gets the number of nodes in the tree.
 
@@ -295,7 +306,7 @@ class ShadowForestryTree(ShadowDecTree):
         """
         return len(self.tree_model.Py_forest[self.tree_id]["feature"])
 
-    def get_node_criterion(self, id):
+    def get_node_criterion(self, id: int) -> Union[int, float]:  # pylint: disable=redefined-builtin
         """
         Gets the impurity at a given node.
 
@@ -306,7 +317,7 @@ class ShadowForestryTree(ShadowDecTree):
         """
         return self.tree_model.tree_.impurity[id]
 
-    def get_feature_path_importance(self, node_list):
+    def get_feature_path_importance(self, node_list: np.ndarray) -> np.ndarray:
         """
         For a given list of nodes, returns the feature importance.
 
@@ -334,7 +345,7 @@ class ShadowForestryTree(ShadowDecTree):
 
         return gini
 
-    def get_max_depth(self):
+    def get_max_depth(self) -> int:
         """
         Gets the maximum depth of the tree.
 
@@ -343,10 +354,10 @@ class ShadowForestryTree(ShadowDecTree):
         """
         return self.tree_model.maxDepth
 
-    def get_score(self):
+    def get_score(self) -> float:
         """
         Scores the model. For a classification tree, gets the mean accuracy. For a regression tree, gets
-        the coefficient of determination (R \ :sup:`2`).
+        the coefficient of determination (R :sup:`2`).
 
         :return: The score of the model
         :rtype: float
@@ -354,7 +365,7 @@ class ShadowForestryTree(ShadowDecTree):
         X = pd.DataFrame(self.x_data, columns=self.feature_names)
         return self.tree_model.score(X, self.y_data)
 
-    def get_min_samples_leaf(self):
+    def get_min_samples_leaf(self) -> int:
         """
         Gets the minimum number of samples required to be in a leaf node.
 
@@ -363,7 +374,7 @@ class ShadowForestryTree(ShadowDecTree):
         """
         return self.tree_model.nodesizeSpl
 
-    def shouldGoLeftAtSplit(self, id, x):
+    def should_go_left_at_split(self, node_id: int, x: Union[int, float]) -> bool:
         """
         Finds out whether an observation should go to the left child node from a given node.
 
@@ -374,4 +385,4 @@ class ShadowForestryTree(ShadowDecTree):
         :return: *True* if the given observation should go to the left child node of the current node.
         :rtype: bool
         """
-        return x < self.get_node_split(id)
+        return x < self.get_node_split(node_id)

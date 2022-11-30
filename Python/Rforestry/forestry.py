@@ -4,14 +4,19 @@ import pickle  # nosec B403 - 'Consider possible security implications associate
 import sys
 import warnings
 from random import randrange
-from typing import List
+from typing import Any, List, Optional, Union
 
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 from sklearn.model_selection import LeaveOneOut
 
-from Rforestry import Py_preprocessing, extension
+from . import Py_preprocessing, extension
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 
 class RandomForest:
@@ -232,27 +237,27 @@ class RandomForest:
         self,
         ntree: int = 500,
         replace: bool = True,
-        sampsize=None,  # Add a default value.
-        sample_fraction=None,
-        mtry=None,  # Add a default value.
+        sampsize: Optional[int] = None,  # Add a default value.
+        sample_fraction: Optional[float] = None,
+        mtry: Optional[int] = None,  # Add a default value.
         nodesize_spl: int = 5,
         nodesize_avg: int = 5,
         nodesize_strict_spl: int = 1,
         nodesize_strict_avg: int = 1,
         min_split_gain: int = 0,
-        max_depth=None,  # Add a default value.
-        interaction_depth=None,  # Add a default value.
+        max_depth: Optional[int] = None,  # Add a default value.
+        interaction_depth: Optional[int] = None,  # Add a default value.
         splitratio: int = 1,
         oob_honest: bool = False,
         double_bootstrap=None,  # Add a default value.
-        seed=randrange(
+        seed: int = randrange(
             1001
         ),  # nosec B311 - 'Standard pseudo-random generators are not suitable for security/cryptographic purposes'
         verbose: bool = False,
         nthread: int = 0,
-        splitrule: str = "variance",
+        splitrule: str = "variance",  # TODO This argument is not in use. Consider removing
         middle_split: bool = False,
-        max_obs=None,  # Add a default value.
+        max_obs: Optional[int] = None,  # Add a default value.
         linear: bool = False,
         min_trees_per_group: int = 0,
         monotone_avg: bool = False,
@@ -368,7 +373,7 @@ class RandomForest:
         lin_feats=None,  # Add a default value.
         monotonic_constraints=None,  # Add a default value.
         groups=None,
-        seed=None,
+        seed: Optional[int] = None,
     ):
         """
         Trains all the trees in the forest.
@@ -817,8 +822,8 @@ class RandomForest:
         # If trees are being used, we need to convert them into a weight vector
         tree_weights = np.zeros(self.ntree, dtype=np.ulonglong)
         if trees is not None:
-            for i in range(len(trees)):
-                tree_weights[trees[i]] += 1
+            for tree in trees:
+                tree_weights[tree] += 1
             use_weights = True
         else:
             use_weights = False
@@ -947,7 +952,7 @@ class RandomForest:
 
         return predictions
 
-    def get_oob(self, no_warning: bool = False):
+    def get_oob(self, no_warning: bool = False) -> float:
         """
         Calculate the out-of-bag error of a given forest. This is done
         by using the out-of-bag predictions for each observation, and calculating the
@@ -998,13 +1003,13 @@ class RandomForest:
                 warnings.warn("Samples are drawn without replacement and sample size is too big!")
             return None
 
-        cpp_vi = ctypes.c_void_p(extension.getVI(self.forest))
+        cpp_vi = ctypes.c_void_p(extension.get_vi(self.forest))
 
-        res = np.empty(self.processed_dta["numColumns"])
+        result = np.empty(self.processed_dta["numColumns"])
         for i in range(self.processed_dta["numColumns"]):
-            res[i] = extension.vector_get(cpp_vi, i)
+            result[i] = extension.vector_get(cpp_vi, i)
 
-        return res
+        return result
 
     def get_ci(
         self, newdata, level: float = 0.95, B: int = 100, method: str = "OOB-conformal", no_warning: bool = False
@@ -1088,7 +1093,7 @@ class RandomForest:
 
             return predictions
 
-        elif method == "OOB-conformal":
+        if method == "OOB-conformal":
             # Get double OOB predictions and the residuals
             y_pred = self.predict(aggregation="doubleOOB")
 
@@ -1154,7 +1159,7 @@ class RandomForest:
 
         pass  # weightmatrix not implemented yet!!!!
 
-    def decision_path(self, X, tree_idx: int = 0):
+    def decision_path(self, X: Union[pd.DataFrame, pd.Series, np.ndarray], tree_idx: int = 0) -> np.ndarray:
         """
         Gets the decision path in the forest.
 
@@ -1170,7 +1175,7 @@ class RandomForest:
 
         X = pd.DataFrame(X)
 
-        res = np.empty(len(X.index), dtype=object)
+        result = np.empty(len(X.index), dtype=object)
         for i in range(len(X.index)):
             obs = X.iloc[i, :].values
             path_ptr = extension.get_path(self.forest, obs, tree_idx)
@@ -1181,11 +1186,11 @@ class RandomForest:
             for j in range(path_length):
                 path_array[j] = int(extension.vector_get_size_t(path_ptr, j + 1))
 
-            res[i] = path_array
+            result[i] = path_array
 
-        return res
+        return result
 
-    def score(self, X, y, sample_weight=None):
+    def score(self, X, y, sample_weight: Optional[np.ndarray]=None) -> float:
         """
         Gets the coefficient of determination (R \ :sup:`2`).
 
@@ -1283,12 +1288,12 @@ class RandomForest:
 
     #     return
 
-    def translate_tree_python(self, tree_ids=None) -> None:
+    def translate_tree_python(self, tree_ids: Optional[np.ndarray] = None) -> None:
         """
         Given a trained forest, translates the selected trees by allowing access to its undelying structure.
-        After translating tree *i*, its structure will be stored as a dictionary in :ref:`Py_forest <translate-label>` and can be accessed
-        by ``[RandomForest object].Py_forest[i]``. Check out the :ref:`Py_forest <translate-label>` attribute for more
-        details about its structure.
+        After translating tree *i*, its structure will be stored as a dictionary in :ref:`Py_forest <translate-label>`
+        and can be accessed by ``[RandomForest object].Py_forest[i]``. Check out the :ref:`Py_forest <translate-label>`
+        attribute for more details about its structure.
 
         :param tree_ids: The indices of the trees to be translated. By default, all the trees in the forest
          are translated.
@@ -1297,7 +1302,7 @@ class RandomForest:
         """
 
         if self.py_forest is None:
-            self.py_forest = [dict() for _ in range(self.ntree)]
+            self.py_forest = [{} for _ in range(self.ntree)]
 
         if tree_ids is None:
             idx = np.arange(self.ntree)
@@ -1313,7 +1318,7 @@ class RandomForest:
             if self.py_forest[cur_id]:
                 continue
 
-            num_nodes = extension.getTreeNodeCount(self.forest, cur_id)
+            num_nodes = extension.get_tree_node_count(self.forest, cur_id)
 
             # Initialize arrays to pass to C
             split_info = np.empty(self.sampsize + 1, dtype=np.intc)
@@ -1358,20 +1363,20 @@ class RandomForest:
 
     def corrected_predict(
         self,
-        newdata=None,
-        feats=None,
-        nrounds=0,
-        linear=True,
-        double=False,
-        simple=True,
-        verbose=False,
-        use_residuals=False,
-        adaptive=False,
-        monotone=False,
-        num_quants=5,
-        params_forestry=dict(),
-        keep_fits=False,
-    ):
+        newdata: Optional[Any] = None,
+        feats: Optional[Any] = None,
+        nrounds: int = 0,
+        linear: bool = True,
+        double: bool = False,
+        simple: bool = True,
+        verbose: bool = False,
+        use_residuals: bool = False,
+        adaptive: bool = False,
+        monotone: bool = False,
+        num_quants: int = 5,
+        params_forestry: dict = {},
+        keep_fits: bool = False,
+    ) -> np.ndarray:
         """
         Perform predictions given the forest using a bias correction based on
         the out of bag predictions on the training set. By default, we use a final linear
@@ -1444,7 +1449,7 @@ class RandomForest:
         if feats is not None:
             if any(
                 not isinstance(x, (int, np.integer))
-                or x < -self.processed_dta["numColumns"]
+                or x < -self.processed_dta["numColumns"] # pylint: disable=invalid-unary-operand-type
                 or x >= self.processed_dta["numColumns"]
                 for x in feats
             ):
@@ -1502,7 +1507,7 @@ class RandomForest:
                     forest_i.fit(
                         x=adjust_data.loc[:, adjust_data.columns != "Y"],
                         y=y_reg,
-                        monotonicConstraints=monotone_constraits,
+                        monotonic_constraints=monotone_constraits,
                     )
 
                 else:
@@ -1526,7 +1531,7 @@ class RandomForest:
                 # Adjust the predicted Y hats
                 adjust_data["Y.hat"] = pred_i
 
-            # if we have a new feature, we need to run the correction fits on that as well# if we have a new feature, we need to run the correction fits on that as well
+            # if we have a new feature, we need to run the correction fits on that as well
             if newdata is not None:
                 # Get initial predictions
                 if feats is None:
@@ -1539,8 +1544,8 @@ class RandomForest:
                 if feats is not None:
                     pred_data.columns = ["V" + str(x) for x in range(len(feats))] + ["Y.hat"]
 
-                for iter in range(nrounds):
-                    adjusted_pred = rf_fits[iter].predict(newdata=pred_data)  # aggregation = agg ?????
+                for i in range(nrounds):
+                    adjusted_pred = rf_fits[i].predict(newdata=pred_data)  # aggregation = agg ?????
                     pred_data["Y.hat"] = adjusted_pred  # doesnt make sense??????
 
         if newdata is not None:
@@ -1551,10 +1556,10 @@ class RandomForest:
 
         # Given a dataframe with Y and Y.hat at least, fits an OLS and gives the LOO
         # predictions on the sample
-        def loo_pred_helper(df):
+        def loo_pred_helper(data_frame: pd.DataFrame) -> dict:
 
-            Y = df["Y"]
-            X = df.loc[:, df.columns != "Y"]
+            Y = data_frame["Y"]
+            X = data_frame.loc[:, data_frame.columns != "Y"]
             X = sm.add_constant(X)
 
             adjust_lm = sm.OLS(Y, X).fit()
@@ -1662,7 +1667,7 @@ class RandomForest:
                     "fits": rf_fits,
                 }
 
-    def get_split_props(self):
+    def get_split_props(self) -> np.ndarray:
         """
         Retrieves the proportion of splits for each feature in the given
         *RandomForest* object. These proportions are calculated as the number of splits
@@ -1682,11 +1687,11 @@ class RandomForest:
 
         return split_nums / np.sum(split_nums)
 
-    def get_params(self):
+    def get_params(self) -> dict:
         """
-        Get the parameters of *RandomForest*.
+        Get the parameters of `RandomForest`.
 
-        :return: A dictionary mapping parameter names of the *RandomForest* to their values.
+        :return: A dictionary mapping parameter names of the `RandomForest` to their values.
         :rtype: dict
         """
 
@@ -1697,13 +1702,14 @@ class RandomForest:
 
         return out
 
-    def set_params(self, **params):
+    def set_params(self, **params: dict) -> Self:
         """
         Set the parameters of the *RandomForest*.
 
-        :param \**params: Forestry parameters.
-        :type \**params: *dict*
-        :return: A new *RandomForest* object with the given parameters. Note: this reinitializes the *RandomForest* object,
+        :param **params: Forestry parameters.
+        :type **params: *dict*
+        :return: A new *RandomForest* object with the given parameters.
+         Note: this reinitializes the *RandomForest* object,
          so fit must be called on the new estimator.
         :rtype: *RandomForest* -- MIGHT CHANGE THE NAME
         """
@@ -1715,9 +1721,8 @@ class RandomForest:
         for key, value in params.items():
             if key not in valid_params:
                 raise ValueError(
-                    "Invalid parameter %s for RandomForest. "
-                    "Check the list of available parameters "
-                    "with `estimator.get_params().keys()`." % key
+                    f"Invalid parameter {key} for RandomForest. Check the list of available parameters "
+                    "with `estimator.get_params().keys()`."
                 )
 
             valid_params[key] = value

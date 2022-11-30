@@ -5,21 +5,23 @@ LIBRARIES NEEDED
 
 import math
 import os
+from typing import Any, Tuple, List, Dict
 import warnings
 
 import numpy as np
 import pandas as pd
 
-"""
---------------------------------------
-
-Helper Function
-@return a nunpy array indicating the indices of first occurunces of
-  the elements of A in B
-"""
 
 
 def find_match(A, B):
+    """
+    --------------------------------------
+    
+    Helper Function
+    @return a nunpy array indicating the indices of first occurunces of
+      the elements of A in B
+    """
+
     d = {}
 
     for i in range(len(B)):
@@ -177,20 +179,6 @@ def forest_parameter_checker(
     return splitratio, replace, doubleTree, interactionDepth
 
 
-"""
-#-- Sanity Checker -------------------------------------------------------------
-#' @name training_data_checker
-#' @title Training data check
-#' @rdname training_data_checker-RandomForest
-#' @description Check the input to RandomForest constructor
-#' @inheritParams RandomForest
-#' @param featureWeights weights used when subsampling features for nodes above or at interactionDepth.
-#' @param deepFeatureWeights weights used when subsampling features for nodes below interactionDepth.
-#' @param hasNas indicates if there is any missingness in x.
-#' @return A tuple of parameters after checking the selected parameters are valid.
-"""
-
-
 def training_data_checker(
     forest,
     nrows,
@@ -203,6 +191,18 @@ def training_data_checker(
     symmetric,
     hasNas,
 ):
+    """
+    -- Sanity Checker -------------------------------------------------------------
+    @name training_data_checker
+    @title Training data check
+    @rdname training_data_checker-RandomForest
+    @description Check the input to RandomForest constructor
+    @inheritParams RandomForest
+    @param featureWeights weights used when subsampling features for nodes above or at interactionDepth.
+    @param deepFeatureWeights weights used when subsampling features for nodes below interactionDepth.
+    @param hasNas indicates if there is any missingness in x.
+    @return A tuple of parameters after checking the selected parameters are valid.
+    """
 
     # make np arrays
     symmetric = np.array(symmetric)
@@ -363,120 +363,123 @@ def sample_weights_checker(featureWeights, mtry, ncol):
     return featureWeightsVariables
 
 
-"""
-Checks if RandomForest object has valid pointer for C++ object.
-@param object a RandomForest object
-@return A message if the forest does not have a valid C++ pointer.
-"""
 
+def forest_checker(forest):
+    """
+    Checks if RandomForest object has valid pointer for C++ object.
+    @param object a RandomForest object
+    @return A message if the forest does not have a valid C++ pointer.
+    """
 
-def forest_checker(fr):
-    if (not fr.dataframe) or (not fr.forest):
+    if (not forest.dataframe) or (not forest.forest):
         raise ValueError("The RandomForest object has invalid ctypes pointers.")
 
 
-# -- Methods for Preprocessing Data --------------------------------------------
-# ' @title preprocess_training
-# ' @description Perform preprocessing for the training data, including
-# '   converting data to dataframe, and encoding categorical data into numerical
-# '   representation.
-# ' @inheritParams RandomForest
-# ' @return A list of two datasets along with necessary information that encodes
-# '   the preprocessing.
+def preprocess_training(x: pd.DataFrame, y) -> Tuple[pd.DataFrame, np.ndarray, List[Dict]]:
+    """
+    -- Methods for Preprocessing Data --------------------------------------------
+    @title preprocess_training
+    @description Perform preprocessing for the training data, including
+      converting data to dataframe, and encoding categorical data into numerical
+      representation.
+    @inheritParams RandomForest
+    @return A list of two datasets along with necessary information that encodes
+      the preprocessing.
+    """
 
-
-def preprocess_training(x, y):
     # Check if the input dimension of x matches y
     if len(x.index) != y.size:
         raise ValueError("The dimension of input dataset x doesn't match the output vector y.")
 
     # Track the order of all features
-    featureNames = x.columns.values
-    if featureNames.size == 0:
+    feature_names = x.columns.values
+    if feature_names.size == 0:
         warnings.warn("No names are given for each column.")
 
     # Track all categorical features (both factors and characters)
-    categoricalFeatureCols = np.array((x.select_dtypes("category")).columns)
-    featureCharacterCols = np.array((x.select_dtypes("object")).columns)
+    categorical_feature_cols = np.array((x.select_dtypes("category")).columns)
+    feature_character_cols = np.array((x.select_dtypes("object")).columns)
 
-    if featureCharacterCols.size != 0:  # convert to a factor
+    if feature_character_cols.size != 0:  # convert to a factor
         warnings.warn("Character value features will be cast to categorical data.")
-        categoricalFeatureCols = np.concatenate((categoricalFeatureCols, featureCharacterCols), axis=0)
+        categorical_feature_cols = np.concatenate((categorical_feature_cols, feature_character_cols), axis=0)
 
-    categoricalFeatureCols = x.columns.get_indexer(categoricalFeatureCols)
+    categorical_feature_cols = x.columns.get_indexer(categorical_feature_cols)
 
     # For each categorical feature, encode x into numeric representation and
     # save the encoding mapping
-    categoricalFeatureMapping = [None for _ in range(categoricalFeatureCols.size)]
-    dummyIndex = 0
-    for categoricalFeatureCol in categoricalFeatureCols:
-        x.iloc[:, categoricalFeatureCol] = pd.Series(
-            x.iloc[:, categoricalFeatureCol], dtype="category"
+    categorical_feature_mapping: List[Dict] = []
+    for categorical_feature_col in categorical_feature_cols:
+        x.iloc[:, categorical_feature_col] = pd.Series(
+            x.iloc[:, categorical_feature_col], dtype="category"
         ).cat.remove_unused_categories()
 
-        categoricalFeatureMapping[dummyIndex] = {
-            "categoricalFeatureCol": categoricalFeatureCol,
-            "uniqueFeatureValues": list(x.iloc[:, categoricalFeatureCol].cat.categories),
-            "numericFeatureValues": np.arange(len(x.iloc[:, categoricalFeatureCol].cat.categories)),
-        }
+        categorical_feature_mapping.append({
+            "categoricalFeatureCol": categorical_feature_col,
+            "uniqueFeatureValues": list(x.iloc[:, categorical_feature_col].cat.categories),
+            "numericFeatureValues": np.arange(len(x.iloc[:, categorical_feature_col].cat.categories)),
+        })
 
-        x.iloc[:, categoricalFeatureCol] = pd.Series(x.iloc[:, categoricalFeatureCol].cat.codes, dtype="category")
-        dummyIndex += 1
+        x.iloc[:, categorical_feature_col] = pd.Series(x.iloc[:, categorical_feature_col].cat.codes, dtype="category")
 
-    return (x, categoricalFeatureCols, categoricalFeatureMapping)
+    return (x, categorical_feature_cols, categorical_feature_mapping)
 
 
-# ' @title preprocess_testing
-# ' @description Perform preprocessing for the testing data, including converting
-# '   data to dataframe, and testing if the columns are consistent with the
-# '   training data and encoding categorical data into numerical representation
-# '   in the same way as training data.
-# ' @inheritParams RandomForest
-# ' @param categoricalFeatureCols A list of index for all categorical data. Used
-# '   for trees to detect categorical columns.
-# ' @param categoricalFeatureMapping A list of encoding details for each
-# '   categorical column, including all unique factor values and their
-# '   corresponding numeric representation.
-# ' @return A preprocessed training dataaset x
-def preprocess_testing(x, categoricalFeatureCols, categoricalFeatureMapping):
+def preprocess_testing(x, categorical_feature_cols: list, categorical_feature_mapping: list) -> Any:
+    """
+    @title preprocess_testing
+    @description Perform preprocessing for the testing data, including converting
+      data to dataframe, and testing if the columns are consistent with the
+      training data and encoding categorical data into numerical representation
+      in the same way as training data.
+    @inheritParams RandomForest
+    @param categorical_feature_cols A list of index for all categorical data. Used
+      for trees to detect categorical columns.
+    @param categorical_feature_mapping A list of encoding details for each
+      categorical column, including all unique factor values and their
+      corresponding numeric representation.
+    @return A preprocessed training dataaset x
+    """
 
     # Track the order of all features
-    testingFeatureNames = x.columns.values
-    if testingFeatureNames.size == 0:
+    testing_feature_names = x.columns.values
+    if testing_feature_names.size == 0:
         warnings.warn("No names are given for each column.")
 
     # Track all categorical features (both factors and characters)
-    featureFactorCols = np.array((x.select_dtypes("category")).columns)
-    featureCharacterCols = np.array((x.select_dtypes("object")).columns)
+    feature_factor_cols = np.array((x.select_dtypes("category")).columns)
+    feature_character_cols = np.array((x.select_dtypes("object")).columns)
 
-    testingCategoricalFeatureCols = np.concatenate((featureFactorCols, featureCharacterCols), axis=0)
-    testingCategoricalFeatureCols = x.columns.get_indexer(testingCategoricalFeatureCols)
+    testing_categorical_feature_cols = np.concatenate((feature_factor_cols, feature_character_cols), axis=0)
+    testing_categorical_feature_cols = x.columns.get_indexer(testing_categorical_feature_cols)
 
-    if (set(categoricalFeatureCols) - set(testingCategoricalFeatureCols)) or (
-        set(testingCategoricalFeatureCols) - set(categoricalFeatureCols)
+    if (set(categorical_feature_cols) - set(testing_categorical_feature_cols)) or (
+        set(testing_categorical_feature_cols) - set(categorical_feature_cols)
     ):
         raise ValueError("Categorical columns are different between testing and training data.")
 
     # For each categorical feature, encode x into numeric representation
-    for categoricalFeatureMapping_ in categoricalFeatureMapping:
-        categoricalFeatureCol = categoricalFeatureMapping_["categoricalFeatureCol"]
+    for categorical_feature_mapping_ in categorical_feature_mapping:
+        categorical_feature_col = categorical_feature_mapping_["categoricalFeatureCol"]
         # Get all unique feature values
-        testingUniqueFeatureValues = x.iloc[:, categoricalFeatureCol].unique()
-        uniqueFeatureValues = categoricalFeatureMapping_["uniqueFeatureValues"]
-        numericFeatureValues = categoricalFeatureMapping_["numericFeatureValues"]
+        testing_unique_feature_values = x.iloc[:, categorical_feature_col].unique()
+        unique_feature_values = categorical_feature_mapping_["uniqueFeatureValues"]
+        numeric_feature_values = categorical_feature_mapping_["numericFeatureValues"]
 
         # If testing dataset contains more, adding new factors to the mapping list
-        diffUniqueFeatureValues = set(testingUniqueFeatureValues) - set(uniqueFeatureValues)
-        if diffUniqueFeatureValues:
-            uniqueFeatureValues = np.concatenate((list(uniqueFeatureValues), list(diffUniqueFeatureValues)), axis=0)
-            numericFeatureValues = np.arange(uniqueFeatureValues.size)
+        diff_unique_feature_values = set(testing_unique_feature_values) - set(unique_feature_values)
+        if diff_unique_feature_values:
+            unique_feature_values = np.concatenate(
+                (list(unique_feature_values), list(diff_unique_feature_values)), axis=0
+            )
+            numeric_feature_values = np.arange(unique_feature_values.size)
 
             # update
-            categoricalFeatureMapping_["uniqueFeatureValues"] = uniqueFeatureValues
-            categoricalFeatureMapping_["numericFeatureValues"] = numericFeatureValues
+            categorical_feature_mapping_["uniqueFeatureValues"] = unique_feature_values
+            categorical_feature_mapping_["numericFeatureValues"] = numeric_feature_values
 
-        x.iloc[:, categoricalFeatureCol] = pd.Series(
-            find_match(x.iloc[:, categoricalFeatureCol], uniqueFeatureValues),
+        x.iloc[:, categorical_feature_col] = pd.Series(
+            find_match(x.iloc[:, categorical_feature_col], unique_feature_values),
             dtype="category",
         )
 
@@ -484,39 +487,45 @@ def preprocess_testing(x, categoricalFeatureCols, categoricalFeatureMapping):
     return x
 
 
-# ' @title scale_center
-# ' @description Given a dataframe, scale and center the continous features
-# ' @param x A dataframe in order to be processed.
-# ' @param categoricalFeatureCols A vector of the categorical features, we
-# '   don't want to scale/center these.
-# ' @param colMeans A vector of the means to center each column.
-# ' @param colSd A vector of the standard deviations to scale each column with.
-# ' @return A scaled and centered  dataset x
-def scale_center(x, categoricalFeatureCols, colMeans, colSd):
+def scale_center(x: pd.DataFrame, categorical_feature_cols: list, col_means: list, col_sd: list) -> Any:
+    """
+    @title scale_center
+    @description Given a dataframe, scale and center the continous features
+    @param x A dataframe in order to be processed.
+    @param categoricalFeatureCols A vector of the categorical features, we
+      don't want to scale/center these.
+    @param colMeans A vector of the means to center each column.
+    @param colSd A vector of the standard deviations to scale each column with.
+    @return A scaled and centered  dataset x
+    """
+
     for col_idx in range(len(x.columns)):
-        if col_idx not in categoricalFeatureCols:
-            if colSd[col_idx] != 0:
-                x.iloc[:, col_idx] = (x.iloc[:, col_idx] - colMeans[col_idx]) / colSd[col_idx]
+        if col_idx not in categorical_feature_cols:
+            if col_sd[col_idx] != 0:
+                x.iloc[:, col_idx] = (x.iloc[:, col_idx] - col_means[col_idx]) / col_sd[col_idx]
             else:
-                x.iloc[:, col_idx] = x.iloc[:, col_idx] - colMeans[col_idx]
+                x.iloc[:, col_idx] = x.iloc[:, col_idx] - col_means[col_idx]
 
     return x
 
 
-# ' @title unscale_uncenter
-# ' @description Given a dataframe, un scale and un center the continous features
-# ' @param x A dataframe in order to be processed.
-# ' @param categoricalFeatureCols A vector of the categorical features, we
-# '   don't want to scale/center these. Should be 1-indexed.
-# ' @param colMeans A vector of the means to add to each column.
-# ' @param colSd A vector of the standard deviations to rescale each column with.
-# ' @return A dataset x in it's original scaling
-def unscale_uncenter(x, categoricalFeatureCols, colMeans, colSd):
+def unscale_uncenter(x: pd.DataFrame, categorical_feature_cols: list, col_means: list, col_sd: list) -> Any:
+    """
+    @title unscale_uncenter
+    @description Given a dataframe, un scale and un center the continous features
+    @param x A dataframe in order to be processed.
+    @param categoricalFeatureCols A vector of the categorical features, we
+      don't want to scale/center these. Should be 1-indexed.
+    @param colMeans A vector of the means to add to each column.
+    @param colSd A vector of the standard deviations to rescale each column with.
+    @return A dataset x in it's original scaling
+    """
+
     for col_idx in range(len(x.columns)):
-        if x.columns[col_idx] not in categoricalFeatureCols:
-            if colSd[col_idx] != 0:
-                x.iloc[:, col_idx] = x.iloc[:, col_idx] * colSd[col_idx] + colMeans[col_idx]
+        if x.columns[col_idx] not in categorical_feature_cols:
+            if col_sd[col_idx] != 0:
+                x.iloc[:, col_idx] = x.iloc[:, col_idx] * col_sd[col_idx] + col_means[col_idx]
             else:
-                x.iloc[:, col_idx] = x.iloc[:, col_idx] + colMeans[col_idx]
+                x.iloc[:, col_idx] = x.iloc[:, col_idx] + col_means[col_idx]
 
     return x

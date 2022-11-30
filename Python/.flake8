@@ -10,4 +10,6 @@ ignore =
     # W291: trailing whitespace - pylint will take care of it
     W291,
     # W503: line break before binary operator
-    W503
+    W503,
+    # E203: whitespace before ':' - conflict with black
+    E203

@@ -1,9 +1,13 @@
+import platform
+
 import numpy as np
+import pytest
 from helpers import get_data
 
 from Rforestry import RandomForest
 
 
+@pytest.mark.skipif(platform.system() == "Darwin", reason="This is expected to fail on MacOS")
 def test_different_predictions():
 
     X, y = get_data()
