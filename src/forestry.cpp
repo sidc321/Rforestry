@@ -149,9 +149,10 @@ void forestry::addTrees(size_t ntree) {
   // This is called with ntree = 0 only when loading a saved forest.
   // When minTreesPerFold takes precedence over ntree, we need to make sure to
   // train 0 trees when ntree = 0, otherwise this messes up the reconstruction of the forest
+  size_t numGroups = (*std::max_element(getTrainingData()->getGroups()->begin(),
+                                        getTrainingData()->getGroups()->end()));
+
   if ((ntree != 0) && (getminTreesPerFold() > 0)) {
-    size_t numGroups = (*std::max_element(getTrainingData()->getGroups()->begin(),
-                                          getTrainingData()->getGroups()->end()));
 
     size_t numFolds = ((size_t) std::ceil((double) numGroups / (double) getFoldSize()));
 
@@ -243,6 +244,7 @@ void forestry::addTrees(size_t ntree) {
                   getminTreesPerFold(),
                   i,
                   getSampleSize(),
+                  (ntree != 0) && (getminTreesPerFold() > 0) ? numGroups : 0,
                   isReplacement(),
                   getOOBhonest(),
                   getDoubleBootstrap(),
