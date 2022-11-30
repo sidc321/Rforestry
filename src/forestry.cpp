@@ -255,7 +255,6 @@ void forestry::addTrees(size_t ntree) {
                   getTrainingData()
                   );
 
-
           // Set the smart pointers to use the returned indices
           splitSampleIndex.reset(
                     new std::vector<size_t>(splitIndicesFill)
