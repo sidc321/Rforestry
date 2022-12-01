@@ -1,0 +1,117 @@
+name: Python package
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "Python/**"
+      - "C%2B%2B/**"
+      - ".github/workflows/python.yaml"
+
+jobs:
+  build_wheels:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        os: [ubuntu-22.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Install system dependencies
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: libarmadillo-dev
+          version: 1.0
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+          cache-dependency-path: "Python/requirements-dev.txt"
+      - name: Install python lint, build and test dependencies
+        working-directory: Python/
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+      - name: Lint
+        working-directory: Python/
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          python -m flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+          python -m flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: Build
+        working-directory: Python/
+        run: |
+          python -m build --wheel
+      - name: Audit wheel
+        working-directory: Python/
+        run: |
+          python -m auditwheel show dist/*
+      - name: Test
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install pytest Python/dist/*.whl
+          .venv/bin/python -m pytest Python/tests -v --color=yes
+
+  build_sdist:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+          cache: "pip"
+          cache-dependency-path: "Python/requirements-dev.txt"
+
+      - name: Build
+        working-directory: Python/
+        run: |
+          python -m pip install build
+          python -m build --sdist
+          ls dist
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: sdist
+          path: Python/dist/*
+
+  test_sdist_on_macos:
+    needs: build_sdist
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        os: [macos-12]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install system dependencies
+        run: |
+          brew install armadillo
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Get sdist
+        uses: actions/download-artifact@v3
+        with:
+          name: sdist
+          path: /tmp/sdist
+      - name: Install and Test
+        run: |
+          python -m pip install pytest /tmp/sdist/*
+          python -m pytest Python/tests -v --color=yes
+          
+
