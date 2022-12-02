@@ -1,4 +1,5 @@
 #include "sampling.h"
+#include "utils.h"
 #include <vector>
 #include <string>
 #include <iostream>
@@ -80,7 +81,7 @@ void group_out_sample(
 
     std::vector<size_t> sampledIndices;
 
-    while (sampledIndices.size() < groupMemberships.size()) {
+    while (sampledIndices.size() < index_sampling_weights.size()) {
         size_t randomIndex = unif_dist(random_number_generator);
         // Push back the out of group index at that position
         sampledIndices.push_back(out_of_group_indices[randomIndex]);
@@ -124,7 +125,7 @@ void generate_sample_indices(
 
     // If using groups with honesty, we split the groups into either splitting or
     // averaging groups before taking the bootstrap sample
-    if ((*(trainingData->getGroups())[0] != 0) && (oobHonest || ((splitratio != 1) && (splitratio != 0))) ) {
+    if (((*trainingData->getGroups())[0] != 0) && (oobHonest || ((splitratio != 1) && (splitratio != 0))) ) {
 
         // If we are combining honesty with groups, first partition the groups of the tree into
         // splitting and averaging groups.
@@ -147,14 +148,14 @@ void generate_sample_indices(
             currentFold = (size_t) std::floor((double) treeIndex / (double) minTreesPerFold);
             std::vector<size_t> currentFoldGroups = foldMemberships[currentFold];
 
-            honestSplitSize = (size_t) std::ceil((std::max(splitratio, 1 - splitratio) * (double) (numGroups-currentFoldGroups.size())));
+            honestSplitSize = (size_t) std::floor((std::max(splitratio, 1 - splitratio) * (double) (numGroups-currentFoldGroups.size())));
 
             // Holds the assignment of groups to either splitting or avging sets
             std::vector<std::vector<size_t>> honestGroupAssignments(2);
             honestGroupAssignments[0] = std::vector<size_t>(honestSplitSize);
             honestGroupAssignments[1] = std::vector<size_t>(honestSplitSize);
 
-            std::cout << "honestSplitSize " << honestSplitSize << std::endl;
+
 
             // Now assign the groups to folds based on the smaller number of groups
             assign_groups_to_folds(numGroups-currentFoldGroups.size(),
@@ -163,7 +164,7 @@ void generate_sample_indices(
                                    random_number_generator);
 
             // Now we need to actually fill in the correct groups, since we have sampled indices
-            std::sort(currentFoldGroups);
+            std::sort(currentFoldGroups.begin(), currentFoldGroups.end());
 
             std::vector<size_t> restrictedGroupIndices(numGroups);
             std::iota(restrictedGroupIndices.begin(), restrictedGroupIndices.end(), 1);
@@ -177,7 +178,14 @@ void generate_sample_indices(
                                 std::inserter(restrictedGroupIndicesDiff, restrictedGroupIndicesDiff.begin()));
 
             // Go through folds and replace the indices we have sampled with the group they correspond to
-
+            for (auto entry : honestGroupAssignments[0]) {
+                entry = restrictedGroupIndicesDiff[entry];
+            }
+            for (auto entry : honestGroupAssignments[1]) {
+                entry = restrictedGroupIndicesDiff[entry];
+            }
+            splittingGroups = honestGroupAssignments[splitFold];
+            averagingGroups = honestGroupAssignments[avgFold];
 
         } else {
             honestSplitSize = (size_t) std::ceil((std::max(splitratio, 1 - splitratio) * (double) numGroups));
@@ -189,7 +197,6 @@ void generate_sample_indices(
 
             // Partition groups randomly into the honesty sets. First index will always be the larger of the splitting
             // and averaging sets
-            std::cout << "honestSplitSize " << honestSplitSize << std::endl;
             assign_groups_to_folds(numGroups,
                                    honestSplitSize,
                                    honestGroupAssignments,
@@ -222,6 +229,8 @@ void generate_sample_indices(
                 random_number_generator,
                 trainingData
         );
+        std::cout << "splitting_groups_to_remove " << std::endl;
+        print_vector(splitting_groups_to_remove);
 
         std::vector<size_t> averaging_groups_to_remove = splittingGroups;
         // When sampling averaging indices, remove splitting groups
@@ -230,6 +239,8 @@ void generate_sample_indices(
             std::move((foldMemberships[currentFold]).begin(), (foldMemberships[currentFold]).end(),
                       std::back_inserter(averaging_groups_to_remove));
         }
+        std::cout << "averaging_groups_to_remove " << std::endl;
+        print_vector(averaging_groups_to_remove);
 
         // Populate averageSampleIndex_ with the group_out_sample function
         // Here we hold out the splitting groups and the current leave out group
