@@ -244,7 +244,7 @@ void forestry::addTrees(size_t ntree) {
                   getminTreesPerFold(),
                   i,
                   getSampleSize(),
-                  (ntree != 0) && (getminTreesPerFold() > 0) ? numGroups : 0,
+                  (ntree != 0) && (getTrainingData()->getGroups()->at(0) != 0) ? numGroups : 0,
                   isReplacement(),
                   getOOBhonest(),
                   getDoubleBootstrap(),
