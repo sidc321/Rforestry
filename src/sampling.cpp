@@ -318,10 +318,10 @@ void generate_sample_indices(
 
         // Fill weights vectors with the correct observation weights
         for (size_t i = 0; i < possibleSplittingIndices.size(); i++) {
-            split_sampling_weights[i] = sampleWeights->at(possibleSplittingIndices[i]);
+            split_sampling_weights[i] = sampleWeights->at(possibleSplittingIndices[i]-1);
         }
         for (size_t i = 0; i < possibleAveragingIndices.size(); i++) {
-            avg_sampling_weights[i] = sampleWeights->at(possibleAveragingIndices[i]);
+            avg_sampling_weights[i] = sampleWeights->at(possibleAveragingIndices[i]-1);
         }
 
         // Now sample the bootstrap sample from the two partitions
@@ -335,12 +335,12 @@ void generate_sample_indices(
         while (splitSampleIndex_.size() < split_sampling_weights.size()) {
             size_t randomIndex = weighted_split_dist(random_number_generator);
             // Push back the corresponding splitting Idx
-            splitSampleIndex_.push_back(possibleSplittingIndices[randomIndex]);
+            splitSampleIndex_.push_back(possibleSplittingIndices[randomIndex]-1);
         }
         while (averageSampleIndex_.size() < avg_sampling_weights.size()) {
             size_t randomIndex = weighted_avg_dist(random_number_generator);
             // Push back the corresponding averaging Idx
-            averageSampleIndex_.push_back(possibleAveragingIndices[randomIndex]);
+            averageSampleIndex_.push_back(possibleAveragingIndices[randomIndex]-1);
         }
 
         // Set the indices and return
