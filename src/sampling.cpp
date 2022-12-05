@@ -291,7 +291,7 @@ void generate_sample_indices(
         size_t honestSplitSize = (size_t) std::floor((std::max(splitratio, 1 - splitratio) * (double) trainingData->getNumRows()));
 
         if (honestSplitSize == 0) {
-            honestSplitSize = 1
+            honestSplitSize = 1;
         }
 
         // Holds the assignment of indices to either splitting or avging sets
