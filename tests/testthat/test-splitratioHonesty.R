@@ -80,5 +80,27 @@ test_that("Tests splitratio honesty", {
     expect_equal(c1,TRUE)
   }
 
+  context("Attempt to break honesty in zero signal dgp")
+
+  for (iter in 1:10) {
+    set.seed(iter+1)
+    x <- data.frame(x1 = rnorm(1000))
+    y <- rnorm(1000)
+
+
+    rf5 <- forestry(x = x,
+                    y = y,
+                    ntree = 100,
+                    seed = iter,
+                    splitratio = splitratio_use)
+    rf5 <- make_savable(rf5)
+
+    p <- predict(rf5, newdata = x)
+    expect_gt(cor(p, y), .2)
+
+    p_oob <- predict(rf5, newdata = x, aggregation = "oob")
+    expect_lt(cor(p_oob, y), .1)
+  }
+
 
 })
