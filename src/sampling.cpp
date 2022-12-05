@@ -290,6 +290,10 @@ void generate_sample_indices(
         size_t avgSetIdx = (splitratio >= 1 - splitratio ? 1 : 0);
         size_t honestSplitSize = (size_t) std::floor((std::max(splitratio, 1 - splitratio) * (double) trainingData->getNumRows()));
 
+        if (honestSplitSize == 0) {
+            honestSplitSize = 1
+        }
+
         // Holds the assignment of indices to either splitting or avging sets
         std::vector <std::vector<size_t>> honestIndexAssignments(2);
         honestIndexAssignments[0] = std::vector<size_t>(honestSplitSize);
