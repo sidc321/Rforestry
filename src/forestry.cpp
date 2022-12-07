@@ -52,6 +52,7 @@ forestry::forestry(
   size_t minTreesPerFold,
   size_t foldSize,
   bool hasNas,
+  bool naDirection,
   bool linear,
   bool symmetric,
   double overfitPenalty,
@@ -78,9 +79,11 @@ forestry::forestry(
   this->_splitMiddle = splitMiddle;
   this->_maxObs = maxObs;
   this->_hasNas = hasNas;
+  this->_naDirection = naDirection;
   this->_linear = linear;
   this->_overfitPenalty = overfitPenalty;
   this->_doubleTree = doubleTree;
+  this->_naDirection = naDirection;
   this->_minTreesPerFold = minTreesPerFold;
   this->_foldSize = foldSize;
   this->_symmetric = symmetric;
@@ -291,6 +294,7 @@ void forestry::addTrees(size_t ntree) {
                 getSplitMiddle(),
                 getMaxObs(),
                 gethasNas(),
+                getNaDirection(),
                 getlinear(),
                 getSymmetric(),
                 getOverfitPenalty(),
@@ -317,6 +321,7 @@ void forestry::addTrees(size_t ntree) {
                     getSplitMiddle(),
                     getMaxObs(),
                     gethasNas(),
+                    getNaDirection(),
                     getlinear(),
                     getSymmetric(),
                     getOverfitPenalty(),
@@ -1125,6 +1130,7 @@ void forestry::reconstructTrees(
                 getMaxDepth(),
                 getInteractionDepth(),
                 gethasNas(),
+                getNaDirection(),
                 getlinear(),
                 getOverfitPenalty(),
                 (*tree_seeds)[i],

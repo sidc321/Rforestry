@@ -42,6 +42,7 @@ public:
     size_t minTreesPerFold,
     size_t foldSize,
     bool hasNas,
+    bool naDirection,
     bool linear,
     bool symmetric,
     double overfitPenalty,
@@ -219,6 +220,11 @@ public:
     return _hasNas;
   }
 
+  bool getNaDirection() {
+    return _naDirection;
+  }
+
+
   bool getlinear() {
     return _linear;
   }
@@ -263,6 +269,7 @@ private:
   size_t _minTreesPerFold;
   size_t _foldSize;
   bool _hasNas;
+  bool _naDirection;
   bool _linear;
   bool _symmetric;
   double _overfitPenalty;

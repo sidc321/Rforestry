@@ -33,6 +33,7 @@ public:
     bool splitMiddle,
     size_t maxObs,
     bool hasNas,
+    bool naDirection,
     bool linear,
     bool symmetric,
     double overfitPenalty,
@@ -81,6 +82,7 @@ public:
       size_t maxDepth,
       size_t interactionDepth,
       bool hasNas,
+      bool naDirection,
       bool linear,
       double overfitPenalty,
       unsigned int seed,
@@ -261,6 +263,10 @@ public:
     return _hasNas;
   }
 
+  bool getNaDirection() {
+    return _naDirection;
+  }
+
   void assignNodeId(size_t& node_i) {
     node_i = ++_nodeCount;
   }
@@ -282,6 +288,7 @@ private:
   std::unique_ptr< std::vector<size_t> > _splittingSampleIndex;
   std::unique_ptr< RFNode > _root;
   bool _hasNas;
+  bool _naDirection;
   bool _linear;
   double _overfitPenalty;
   unsigned int _seed;

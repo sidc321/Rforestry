@@ -42,6 +42,7 @@ forestryTree::forestryTree(
   bool splitMiddle,
   size_t maxObs,
   bool hasNas,
+  bool naDirection,
   bool linear,
   bool symmetric,
   double overfitPenalty,
@@ -121,6 +122,7 @@ forestryTree::forestryTree(
   this->_minNodeSizeToSplitSpt = minNodeSizeToSplitSpt;
   this->_minSplitGain = minSplitGain;
   this->_hasNas = hasNas;
+  this->_naDirection = naDirection;
   this->_maxDepth = maxDepth;
   this->_interactionDepth = interactionDepth;
   this->_averagingSampleIndex = std::move(averagingSampleIndex);
@@ -2004,6 +2006,7 @@ void forestryTree::reconstruct_tree(
     size_t maxDepth,
     size_t interactionDepth,
     bool hasNas,
+    bool naDirection,
     bool linear,
     double overfitPenalty,
     unsigned int seed,
@@ -2026,6 +2029,7 @@ void forestryTree::reconstruct_tree(
   _maxDepth = maxDepth;
   _interactionDepth = interactionDepth;
   _hasNas = hasNas;
+  _naDirection = naDirection;
   _linear = linear;
   _overfitPenalty = overfitPenalty;
   _nodeCount = 0;

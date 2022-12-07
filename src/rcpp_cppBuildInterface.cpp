@@ -190,6 +190,7 @@ SEXP rcpp_cppBuildInterface(
   int foldSize,
   bool monotoneAvg,
   bool hasNas,
+  bool naDirection,
   bool linear,
   bool symmetric,
   double overfitPenalty,
@@ -227,6 +228,7 @@ SEXP rcpp_cppBuildInterface(
         (size_t) minTreesPerFold,
         (size_t) foldSize,
         hasNas,
+        naDirection,
         linear,
         symmetric,
         (double) overfitPenalty,
@@ -367,6 +369,7 @@ SEXP rcpp_cppBuildInterface(
         (size_t) minTreesPerFold,
         (size_t) foldSize,
         hasNas,
+        naDirection,
         linear,
         symmetric,
         (double) overfitPenalty,
@@ -428,6 +431,7 @@ SEXP rcpp_cppMultilayerBuildInterface(
     bool linear,
     double overfitPenalty,
     bool doubleTree,
+    bool naDirection,
     bool existing_dataframe_flag,
     SEXP existing_dataframe
 ){
@@ -461,7 +465,8 @@ SEXP rcpp_cppMultilayerBuildInterface(
         (size_t) maxObs,
         linear,
         (double) overfitPenalty,
-        doubleTree
+        doubleTree,
+        naDirection
       );
 
       // delete(testFullForest);
@@ -1140,6 +1145,7 @@ Rcpp::List rcpp_reconstructree(
   bool monotoneAvg,
   int symmetricIndex,
   bool hasNas,
+  bool naDirection,
   bool linear,
   Rcpp::NumericVector symmetric,
   double overfitPenalty,
@@ -1333,6 +1339,7 @@ Rcpp::List rcpp_reconstructree(
     (size_t) minTreesPerFold,
     1,
     (bool) hasNas,
+    (bool) naDirection,
     (bool) linear,
     (bool) symmetric,
     (double) overfitPenalty,
@@ -1405,7 +1412,8 @@ Rcpp::List rcpp_reconstruct_forests(
     bool linear,
     Rcpp::NumericVector symmetric,
     double overfitPenalty,
-    bool doubleTree
+    bool doubleTree,
+    bool naDirection
 ){
 
   // Decode the R_forest data and create appropriate pointers to pointers:
@@ -1635,7 +1643,8 @@ Rcpp::List rcpp_reconstruct_forests(
       (bool) linear,
       (bool) symmetric,
       (double) overfitPenalty,
-      doubleTree
+      doubleTree,
+      (bool) naDirection
     );
 
     // std::cout << "RECONSTRUCT a forest \n";
@@ -1783,7 +1792,8 @@ Rcpp::List rcpp_reconstruct_forests(
     (size_t) maxObs,
     (bool) linear,
     (double) overfitPenalty,
-    (bool) doubleTree
+    (bool) doubleTree,
+    (bool) naDirection
   );
 
   // Get the gammas
