@@ -5,39 +5,67 @@ LIBRARIES NEEDED
 
 import math
 import os
-from typing import Any, Tuple, List, Dict
+import sys
 import warnings
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
 
 
+def has_nas(x: pd.DataFrame) -> bool:
+    return x.isnull().values.any()
+
+
+def get_default_lin_feats(x: pd.DataFrame, lin_feats: Optional[np.ndarray]) -> np.ndarray:
+    _, ncol = x.shape
+    if lin_feats is None:
+        lin_feats = np.arange(ncol, dtype=np.ulonglong)
+    else:
+        lin_feats = np.array(lin_feats, dtype=np.ulonglong)
+    return pd.unique(lin_feats)
+
+
+def get_feat_names(x: Union[pd.DataFrame, pd.Series, List]) -> Optional[np.ndarray]:
+    if isinstance(x, pd.DataFrame):
+        return x.columns.values
+    if type(x).__module__ == np.__name__ or isinstance(x, (list, pd.Series)):
+        print(
+            "x does not have column names. ",
+            "The check that columns are provided in the same order when training and predicting will be skipped",
+            file=sys.stderr,
+        )
+        return None
+
+    raise AttributeError("x must be a Pandas DataFrame, a numpy array, a Pandas Series, or a regular list")
+
+
+def predict_exact(newdata: Optional[pd.DataFrame], exact: Optional[bool]) -> bool:
+    if exact is not None:
+        return exact
+    if newdata is None:
+        return True
+    if len(newdata.index) > 1e5:
+        return False
+    return True
+
 
 def find_match(A, B):
     """
     --------------------------------------
-    
+
     Helper Function
     @return a nunpy array indicating the indices of first occurunces of
       the elements of A in B
     """
 
-    d = {}
+    temp_dict = {}
 
     for i in range(len(B)):
-        if not str(B[i]) in d:
-            d[str(B[i])] = i
+        if not str(B[i]) in temp_dict:
+            temp_dict[str(B[i])] = i
 
-    return np.array([d[str(val)] for val in A])
-
-
-"""
-#-- Sanity Checker -------------------------------------------------------------
-#' @name forest_parameter_checker
-#' @description Check the input parameters to the RandomForest constructor
-#' @inheritParams RandomForest
-#' @return A tuple of parameters after checking the selected parameters are valid.
-"""
+    return np.array([temp_dict[str(val)] for val in A])
 
 
 def forest_parameter_checker(
@@ -68,6 +96,13 @@ def forest_parameter_checker(
     scale,
     doubleTree,
 ):
+    """
+    #-- Sanity Checker -------------------------------------------------------------
+    #' @name forest_parameter_checker
+    #' @description Check the input parameters to the RandomForest constructor
+    #' @inheritParams RandomForest
+    #' @return A tuple of parameters after checking the selected parameters are valid.
+    """
 
     # Check for types and ranges
 
@@ -181,15 +216,13 @@ def forest_parameter_checker(
 
 def training_data_checker(
     forest,
-    nrows,
-    nfeatures,
+    x,
     y,
     linFeats,
     monotonicConstraints,
     groups,
     observationWeights,
     symmetric,
-    hasNas,
 ):
     """
     -- Sanity Checker -------------------------------------------------------------
@@ -204,6 +237,8 @@ def training_data_checker(
     @return A tuple of parameters after checking the selected parameters are valid.
     """
 
+    nrows, nfeatures = x.shape
+
     # make np arrays
     symmetric = np.array(symmetric)
 
@@ -211,7 +246,7 @@ def training_data_checker(
     if nrows != y.size:
         raise ValueError("The dimension of input dataset x doesn't match the output y.")
 
-    if forest.linear and hasNas:
+    if forest.linear and has_nas(x):
         raise ValueError("Cannot do imputation splitting with linear.")
 
     if np.isnan(y).any():
@@ -250,7 +285,7 @@ def training_data_checker(
                 "Symmetric forests cannot be combined with linear aggregation please set either symmetric = False or linear = False"
             )
 
-        if hasNas:
+        if has_nas(x):
             raise ValueError(
                 "Symmetric forests cannot be combined with missing values please impute the missing features before training a forest with symmetry"
             )
@@ -284,25 +319,29 @@ def training_data_checker(
 
     if forest.nodesize_strict_spl > splitSampleSize:
         warnings.warn(
-            "nodesizeStrictSpl cannot exceed splitting sample size. We have set nodesizeStrictSpl to be the maximum."
+            "nodesizeStrictSpl cannot exceed splitting sample size. ",
+            "We have set nodesizeStrictSpl to be the maximum.",
         )
         forest.nodesize_strict_spl = splitSampleSize
 
     if forest.nodesize_strict_avg > avgSampleSize:
         warnings.warn(
-            "nodesizeStrictAvg cannot exceed averaging sample size. We have set nodesizeStrictAvg to be the maximum."
+            "nodesizeStrictAvg cannot exceed averaging sample size. ",
+            "We have set nodesizeStrictAvg to be the maximum.",
         )
         forest.nodesize_strict_avg = avgSampleSize
 
     if forest.double_tree:
         if forest.nodesize_strict_avg > splitSampleSize:
             warnings.warn(
-                "nodesizeStrictAvg cannot exceed splitting sample size. We have set nodesizeStrictAvg to be the maximum."
+                "nodesizeStrictAvg cannot exceed splitting sample size. ",
+                "We have set nodesizeStrictAvg to be the maximum.",
             )
             forest.nodesize_strict_avg = splitSampleSize
         if forest.nodesize_strict_spl > avgSampleSize:
             warnings.warn(
-                "nodesizeStrictSpl cannot exceed averaging sample size. We have set nodesizeStrictSpl to be the maximum."
+                "nodesizeStrictSpl cannot exceed averaging sample size. ",
+                "We have set nodesizeStrictSpl to be the maximum.",
             )
             forest.nodesize_strict_spl = avgSampleSize
 
@@ -315,29 +354,28 @@ def training_data_checker(
             raise ValueError("groups must have more than 1 level to be left out from sampling.")
 
 
-"""
-@title Test data check
-@name testing_data_checker-RandomForest
-@description Check the testing data to do prediction
-@param forest A RandomForest object.
-@param newdata A data frame of testing predictors.
-@param hasNas TRUE if the there were nan-s in the training data FALSE otherwise.
-@return A feature dataframe if it can be used for new predictions.
-"""
+def testing_data_checker(forest, newdata, has_nas):
+    """
+    @title Test data check
+    @name testing_data_checker-RandomForest
+    @description Check the testing data to do prediction
+    @param forest A RandomForest object.
+    @param newdata A data frame of testing predictors.
+    @param hasNas TRUE if the there were nan-s in the training data FALSE otherwise.
+    @return A feature dataframe if it can be used for new predictions.
+    """
 
-
-def testing_data_checker(forest, newdata, hasNas):
-    if len(newdata.columns) != forest.processed_dta["numColumns"]:
+    if len(newdata.columns) != forest.processed_dta.num_columns:
         raise ValueError(
             "newdata has "
             + str(len(newdata.columns))
             + " but the forest was trained with "
-            + str(forest.processed_dta["numColumns"])
+            + str(forest.processed_dta.num_columns)
             + " columns."
         )
 
-    if forest.processed_dta["featNames"] is not None:
-        if not (set(newdata.columns) == set(forest.processed_dta["featNames"])):
+    if forest.processed_dta.feat_names is not None:
+        if not set(newdata.columns) == set(forest.processed_dta.feat_names):
             raise ValueError("newdata has different columns then the ones the forest was trained with.")
 
         # If linear is true we can't predict observations with some features missing.
@@ -345,23 +383,24 @@ def testing_data_checker(forest, newdata, hasNas):
             raise ValueError("linear does not support missing data")
 
 
-def sample_weights_checker(featureWeights, mtry, ncol):
-    if featureWeights.size != ncol:
+def sample_weights_checker(feature_weights, mtry, ncol):
+    if feature_weights.size != ncol:
         raise ValueError("featureWeights and deepFeatureWeights must have length len(x.columns)")
 
-    if any(i < 0 for i in featureWeights):
+    if any(i < 0 for i in feature_weights):
         raise ValueError("The entries in featureWeights and deepFeatureWeights must be non negative")
 
-    if np.sum(featureWeights) == 0:
+    if np.sum(feature_weights) == 0:
         raise ValueError("There must be at least one non-zero weight in featureWeights and deepFeatureWeights")
 
-    featureWeightsVariables = [i for i in range(featureWeights.size) if featureWeights[i] > max(featureWeights) * 0.001]
-    if len(featureWeightsVariables) < mtry:
+    feature_weights_variables = [
+        i for i in range(feature_weights.size) if feature_weights[i] > max(feature_weights) * 0.001
+    ]
+    if len(feature_weights_variables) < mtry:
         raise ValueError("mtry is too large. Given the feature weights, can't select that many features.")
 
-    featureWeightsVariables = np.array(featureWeightsVariables, dtype=np.ulonglong)
-    return featureWeightsVariables
-
+    feature_weights_variables = np.array(feature_weights_variables, dtype=np.ulonglong)
+    return feature_weights_variables
 
 
 def forest_checker(forest):
@@ -414,18 +453,20 @@ def preprocess_training(x: pd.DataFrame, y) -> Tuple[pd.DataFrame, np.ndarray, L
             x.iloc[:, categorical_feature_col], dtype="category"
         ).cat.remove_unused_categories()
 
-        categorical_feature_mapping.append({
-            "categoricalFeatureCol": categorical_feature_col,
-            "uniqueFeatureValues": list(x.iloc[:, categorical_feature_col].cat.categories),
-            "numericFeatureValues": np.arange(len(x.iloc[:, categorical_feature_col].cat.categories)),
-        })
+        categorical_feature_mapping.append(
+            {
+                "categoricalFeatureCol": categorical_feature_col,
+                "uniqueFeatureValues": list(x.iloc[:, categorical_feature_col].cat.categories),
+                "numericFeatureValues": np.arange(len(x.iloc[:, categorical_feature_col].cat.categories)),
+            }
+        )
 
         x.iloc[:, categorical_feature_col] = pd.Series(x.iloc[:, categorical_feature_col].cat.codes, dtype="category")
 
-    return (x, categorical_feature_cols, categorical_feature_mapping)
+    return x, categorical_feature_cols, categorical_feature_mapping
 
 
-def preprocess_testing(x, categorical_feature_cols: list, categorical_feature_mapping: list) -> Any:
+def preprocess_testing(x, categorical_feature_cols: np.ndarray, categorical_feature_mapping: List[Dict]) -> Any:
     """
     @title preprocess_testing
     @description Perform preprocessing for the testing data, including converting
@@ -487,7 +528,9 @@ def preprocess_testing(x, categorical_feature_cols: list, categorical_feature_ma
     return x
 
 
-def scale_center(x: pd.DataFrame, categorical_feature_cols: list, col_means: list, col_sd: list) -> Any:
+def scale_center(
+    x: pd.DataFrame, categorical_feature_cols: np.ndarray, col_means: np.ndarray, col_sd: np.ndarray
+) -> pd.DataFrame:
     """
     @title scale_center
     @description Given a dataframe, scale and center the continous features
@@ -509,7 +552,7 @@ def scale_center(x: pd.DataFrame, categorical_feature_cols: list, col_means: lis
     return x
 
 
-def unscale_uncenter(x: pd.DataFrame, categorical_feature_cols: list, col_means: list, col_sd: list) -> Any:
+def unscale_uncenter(x: pd.DataFrame, categorical_feature_cols: list, col_means: list, col_sd: list) -> pd.DataFrame:
     """
     @title unscale_uncenter
     @description Given a dataframe, un scale and un center the continous features
@@ -529,3 +572,27 @@ def unscale_uncenter(x: pd.DataFrame, categorical_feature_cols: list, col_means:
                 x.iloc[:, col_idx] = x.iloc[:, col_idx] + col_means[col_idx]
 
     return x
+
+
+def scale(x, y, processed_x, categorical_feature_cols):
+    _, ncol = x.shape
+    col_means = np.repeat(0.0, ncol + 1)
+    col_sd = np.repeat(0.0, ncol + 1)
+
+    for col_idx in range(ncol):
+        if col_idx not in categorical_feature_cols:
+            col_means[col_idx] = np.nanmean(processed_x.iloc[:, col_idx])
+            col_sd[col_idx] = np.nanstd(processed_x.iloc[:, col_idx])
+
+    # Scale columns of X
+    processed_x = scale_center(processed_x, categorical_feature_cols, col_means, col_sd)
+
+    # Center and scale Y
+    col_means[ncol] = np.nanmean(y)
+    col_sd[ncol] = np.nanstd(y)
+    if col_sd[ncol] != 0:
+        y = (y - col_means[ncol]) / col_sd[ncol]
+    else:
+        y = y - col_means[ncol]
+
+    return processed_x, y, col_means, col_sd

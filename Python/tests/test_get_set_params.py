@@ -19,6 +19,7 @@ def forest():
         splitratio=1,
         nodesize_strict_avg=5,
         seed=2,
+        oob_honest=True,
     )
 
     X, y = get_data()
@@ -30,6 +31,7 @@ def forest():
 def test_get_params(forest):
     assert forest.get_params()
     assert forest.get_params()["ntree"] == 500
+    assert forest.get_params()["double_bootstrap"]
     assert len(forest.get_params().keys()) == 26
 
 
@@ -39,6 +41,7 @@ def test_set_params(forest):
     forest.set_params(ntree=1000, max_depth=5, seed=1729)
     assert forest.get_params()["ntree"] == 1000
     assert forest.get_params()["max_depth"] == 5
+    assert forest.get_params()["seed"] == 1729
 
     forest.fit(X, y)
     predictions_1 = forest.predict(X)
@@ -46,6 +49,7 @@ def test_set_params(forest):
     forest.set_params(seed=1)
     assert forest.get_params()["ntree"] == 1000
     assert forest.get_params()["max_depth"] == 5
+    assert forest.get_params()["seed"] == 1
 
     forest.fit(X, y)
     predictions_2 = forest.predict(X)

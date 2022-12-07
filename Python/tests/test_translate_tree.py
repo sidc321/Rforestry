@@ -33,7 +33,7 @@ def test_translate_single_tree(forest):
     forest.translate_tree_python(0)
     assert len(forest.py_forest) == forest.ntree
     assert forest.py_forest[0]  # py_forest[0] will be filled after translation
-    assert all(forest.py_forest[i] == dict() for i in range(1, forest.ntree))
+    assert all(forest.py_forest[i] == {} for i in range(1, forest.ntree))
 
     # numNodes = fr.py_forest[0]['children_right'].size
     # assert not any(fr.py_forest[0][key].size != numNodes for key in fr.py_forest[0].keys() )
