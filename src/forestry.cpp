@@ -641,6 +641,7 @@ std::unique_ptr< std::vector<double> > forestry::predict(
 std::vector<double> forestry::predictOOB(
     std::vector< std::vector<double> >* xNew,
     arma::Mat<double>* weightMatrix,
+    std::vector<size_t>* treeCounts,
     bool doubleOOB,
     bool exact,
     std::vector<size_t> &training_idx
@@ -784,6 +785,8 @@ std::vector<double> forestry::predictOOB(
           for (size_t i = 0; i < numTrainingRows; i++) {
             (*weightMatrix)(j,i) = (*weightMatrix)(j,i) / outputOOBCount[j];
           }
+            // Set the counts for this tree
+            (*treeCounts)[j] = outputOOBCount[j];
         }
       }
     }
@@ -800,6 +803,7 @@ std::vector<double> forestry::predictOOB(
           for (size_t i = 0; i < numTrainingRows; i++) {
             (*weightMatrix)(j,i) = (*weightMatrix)(j,i) / outputOOBCount[j];
           }
+          (*treeCounts)[j] = outputOOBCount[j];
         }
       } else {
         outputOOBPrediction[j] = std::numeric_limits<double>::quiet_NaN();

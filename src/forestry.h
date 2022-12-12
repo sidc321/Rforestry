@@ -63,6 +63,7 @@ public:
   std::vector<double> predictOOB(
     std::vector< std::vector<double> >* xNew,
     arma::Mat<double>* weightMatrix,
+    std::vector<size_t>* treeCounts,
     bool doubleOOB,
     bool exact,
     std::vector<size_t> &training_idx
