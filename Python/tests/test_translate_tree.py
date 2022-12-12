@@ -30,7 +30,7 @@ def forest():
 def test_translate_single_tree(forest):
     assert not forest.py_forest
 
-    forest.translate_tree_python(0)
+    forest.translate_tree(0)
     assert len(forest.py_forest) == forest.ntree
     assert forest.py_forest[0]  # py_forest[0] will be filled after translation
     assert all(forest.py_forest[i] == {} for i in range(1, forest.ntree))
@@ -42,17 +42,17 @@ def test_translate_single_tree(forest):
 def test_all_trees(forest):
     X, _ = get_data()
 
-    forest.translate_tree_python(0)
+    forest.translate_tree(0)
     assert forest.py_forest[0]
     assert len(forest.py_forest) == forest.ntree
 
     # Translating more trees
-    forest.translate_tree_python([0, 1, 2])
+    forest.translate_tree([0, 1, 2])
     assert forest.py_forest[0]
     assert forest.py_forest[1]
     assert forest.py_forest[2]
 
-    forest.translate_tree_python()
+    forest.translate_tree()
 
     for i in range(forest.ntree):
         assert forest.py_forest[i]
