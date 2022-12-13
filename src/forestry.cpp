@@ -149,9 +149,10 @@ void forestry::addTrees(size_t ntree) {
   // This is called with ntree = 0 only when loading a saved forest.
   // When minTreesPerFold takes precedence over ntree, we need to make sure to
   // train 0 trees when ntree = 0, otherwise this messes up the reconstruction of the forest
+  size_t numGroups = (*std::max_element(getTrainingData()->getGroups()->begin(),
+                                        getTrainingData()->getGroups()->end()));
+
   if ((ntree != 0) && (getminTreesPerFold() > 0)) {
-    size_t numGroups = (*std::max_element(getTrainingData()->getGroups()->begin(),
-                                          getTrainingData()->getGroups()->end()));
 
     size_t numFolds = ((size_t) std::ceil((double) numGroups / (double) getFoldSize()));
 
@@ -243,6 +244,7 @@ void forestry::addTrees(size_t ntree) {
                   getminTreesPerFold(),
                   i,
                   getSampleSize(),
+                  (ntree != 0) && (getTrainingData()->getGroups()->at(0) != 0) ? numGroups : 0,
                   isReplacement(),
                   getOOBhonest(),
                   getDoubleBootstrap(),
@@ -252,7 +254,6 @@ void forestry::addTrees(size_t ntree) {
                   foldMemberships,
                   getTrainingData()
                   );
-
 
           // Set the smart pointers to use the returned indices
           splitSampleIndex.reset(
@@ -640,6 +641,7 @@ std::unique_ptr< std::vector<double> > forestry::predict(
 std::vector<double> forestry::predictOOB(
     std::vector< std::vector<double> >* xNew,
     arma::Mat<double>* weightMatrix,
+    std::vector<size_t>* treeCounts,
     bool doubleOOB,
     bool exact,
     std::vector<size_t> &training_idx
@@ -783,6 +785,8 @@ std::vector<double> forestry::predictOOB(
           for (size_t i = 0; i < numTrainingRows; i++) {
             (*weightMatrix)(j,i) = (*weightMatrix)(j,i) / outputOOBCount[j];
           }
+            // Set the counts for this tree
+            (*treeCounts)[j] = outputOOBCount[j];
         }
       }
     }
@@ -799,6 +803,7 @@ std::vector<double> forestry::predictOOB(
           for (size_t i = 0; i < numTrainingRows; i++) {
             (*weightMatrix)(j,i) = (*weightMatrix)(j,i) / outputOOBCount[j];
           }
+          (*treeCounts)[j] = outputOOBCount[j];
         }
       } else {
         outputOOBPrediction[j] = std::numeric_limits<double>::quiet_NaN();

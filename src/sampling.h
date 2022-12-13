@@ -31,6 +31,7 @@ void generate_sample_indices(
         size_t minTreesPerFold,
         size_t treeIndex,
         size_t sampleSize,
+        size_t numGroups,
         bool replacement,
         bool oobHonest,
         bool doubleBootstrap,

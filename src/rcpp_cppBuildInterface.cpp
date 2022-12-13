@@ -771,25 +771,31 @@ Rcpp::List rcpp_OBBPredictionsInterface(
       Rcpp::XPtr< forestry > testFullForest(forest) ;
 
       arma::Mat<double> weightMatrix;
+      std::vector<size_t> treeCounts(1);
 
       if (returnWeightMatrix) {
         size_t nrow = use_training_idx ? training_idx.size() : (*testFullForest).getNtrain(); // number of features to be predicted
         size_t ncol = (*testFullForest).getNtrain(); // number of train data
         weightMatrix.resize(nrow, ncol); // initialize the space for the matrix
         weightMatrix.zeros(nrow, ncol);// set it all to 0
+        treeCounts.resize(nrow);
+        std::fill(treeCounts.begin(), treeCounts.end(), 0);
 
         std::vector<double> OOBpreds = (*testFullForest).predictOOB(&featureData,
                                         &weightMatrix,
+                                        &treeCounts,
                                         doubleOOB,
                                         exact,
                                         training_idx_cpp);
         Rcpp::NumericVector wrapped_preds = Rcpp::wrap(OOBpreds);
 
         return Rcpp::List::create(Rcpp::Named("predictions") = wrapped_preds,
-                                  Rcpp::Named("weightMatrix") = weightMatrix);
+                                  Rcpp::Named("weightMatrix") = weightMatrix,
+                                  Rcpp::Named("treeCounts") = treeCounts);
       } else {
         // If we don't need weightMatrix, don't return it
         std::vector<double> OOBpreds = (*testFullForest).predictOOB(&featureData,
+                                        NULL,
                                         NULL,
                                         doubleOOB,
                                         exact,
