@@ -19,6 +19,7 @@ dependencies = [
     "scikit-learn >= 1.1.1",
     "statsmodels >= 0.13.2",
     "dtreeviz >=1.4.0",
+    "pydantic >=1.10.2",
 
     # Conditional dependencies
     'typing_extensions; python_version < "3.11"'
@@ -43,15 +44,14 @@ current_version = "1.0.0"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "bump version {old_version} -> {new_version}"
 commit = true
-tag = true
-push = true
+tag = false
+push = false
 
 [tool.bumpver.file_patterns]
 "pyproject.toml" = [
     'current_version = "{version}"',
+    'version = "{version}"'
 ]
-"README.md" = [
-    "{version}",
-    "{pep440_version}",
+"Rforestry/__init__.py" =[
+    '^__version__ = "{version}"$'
 ]
-

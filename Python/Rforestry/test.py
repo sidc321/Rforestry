@@ -1,43 +1,57 @@
-from forestry import RandomForest
-from sklearn.datasets import load_iris
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from sklearn.datasets import load_iris
 
+from Rforestry import RandomForest
 
 # Getting the dataset
 data = load_iris()
-X = pd.DataFrame(data['data'], columns=data['feature_names'])
-y = data['target']
-cat_col = np.random.choice(['a', 'b', 'c'], size=len(X.index))
-X['CategoricalVar'] = pd.Categorical(cat_col)
+X = pd.DataFrame(data["data"], columns=data["feature_names"])
+y = data["target"]
+cat_col = np.random.choice(["a", "b", "c"], size=len(X.index))
+X["CategoricalVar"] = pd.Categorical(cat_col)
 
 # Create a RandomForest object
-fr = RandomForest(ntree=100, linear=True, maxDepth=5, overfitPenalty=0.001, nodesizeStrictSpl=10, seed=1)
-fr.fit(X.iloc[:, 1:], X.iloc[:, 1], linFeats=[0, 1])
+fr = RandomForest(ntree=100, linear=True, max_depth=5, overfit_penalty=0.001, nodesize_strict_spl=10, seed=1)
+fr.fit(X.iloc[:, 1:], X.iloc[:, 1], lin_feats=[0, 1])
 
-fr2 = RandomForest(ntree=100, linear=True, maxDepth=5, overfitPenalty=0.001, nodesizeStrictSpl=10, seed=1, doubleBootstrap=True)
-fr2.fit(X.iloc[:, 1:], X.iloc[:, 1], linFeats=[0, 1])
+fr2 = RandomForest(
+    ntree=100, linear=True, max_depth=5, overfit_penalty=0.001, nodesize_strict_spl=10, seed=1, double_bootstrap=True
+)
+fr2.fit(X.iloc[:, 1:], X.iloc[:, 1], lin_feats=[0, 1])
 
-print('translate the first tree')
+print("translate the first tree")
 
-fr.translate_tree_python(0)
-print(fr.Py_forest[0]['children_left'].size)
-fr2.translate_tree_python(0)
-print(fr2.Py_forest[0])
+fr.translate_tree(0)
+# print(fr.py_forest[0]["children_left"].size)
+fr2.translate_tree(0)
+# print(fr2.py_forest[0])
 
-print('Making predictions')
-preds = fr2.predict(X.iloc[:, 1:], aggregation='doubleOOB', weightMatrix=True)
-print(preds)
-fr2.save_forestry('rforest')
+print("Making predictions")
+preds = fr2.predict(X.iloc[:, 1:], aggregation="doubleOOB", return_weight_matrix=True)
 
-fr_load = fr2.load_forestry('rforest')
-preds_after = fr_load.predict(weightMatrix=True, aggregation='doubleOOB')
-print(preds['weightMatrix'])
+fr2.save_forestry("rforest")
+fr_load = RandomForest.load_forestry("rforest")
 
-print('\n The two predictions are equal: ' + str(np.array_equal(preds['weightMatrix'], preds_after['weightMatrix'])))
+for k in fr2.get_parameters():
+    if getattr(fr2, k) != getattr(fr_load, k):
+        print(k)
 
 
-for i in range(150):
-    print('\n The two predictions are equal: ' + str(np.array_equal(preds['weightMatrix'][i], preds_after['weightMatrix'][i])))
-    print("MSe: " + str(np.sum((preds['weightMatrix'][i] - preds_after['weightMatrix'][i])**2)))
+assert fr2.get_parameters() == fr_load.get_parameters()
+assert np.array_equal(fr2.processed_dta.y, fr_load.processed_dta.y)
+
+print(pd.DataFrame(data=fr2.forest))
+
+preds_after = fr_load.predict(return_weight_matrix=True, aggregation="doubleOOB")
+print(preds["weightMatrix"])
+
+print(preds_after["weightMatrix"])
+print("\n The two predictions are equal: " + str(np.array_equal(preds["weightMatrix"], preds_after["weightMatrix"])))
+
+
+# for i in range(150):
+#    print(
+#        "\n The two predictions are equal: "
+#        + str(np.array_equal(preds["weightMatrix"][i], preds_after["weightMatrix"][i]))
+#    )

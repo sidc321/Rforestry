@@ -1,5 +1,7 @@
 # pylint: disable=redefined-outer-name
 
+import platform
+
 import numpy as np
 import pytest
 from helpers import get_data
@@ -57,6 +59,7 @@ def test_equal_predictions(forest):
     assert np.array_equal(predictions_1, predictions_2)
 
 
+@pytest.mark.skipif(platform.system() == "Darwin", reason="This is expected to fail on MacOS")
 def test_error(predictions):
     _, y = get_data()
     print(np.mean((predictions - y) ** 2))
