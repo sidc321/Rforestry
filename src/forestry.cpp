@@ -478,6 +478,7 @@ std::unique_ptr< std::vector<double> > forestry::predict(
                   getTrainingData(),
                   weightMatrix,
                   getlinear(),
+                  getNaDirection(),
                   seed + i,
                   getMinNodeSizeToSplitAvg()
               );
@@ -491,6 +492,7 @@ std::unique_ptr< std::vector<double> > forestry::predict(
                   getTrainingData(),
                   weightMatrix,
                   getlinear(),
+                  getNaDirection(),
                   seed + i,
                   getMinNodeSizeToSplitAvg()
               );
@@ -1082,6 +1084,7 @@ void forestry::reconstructTrees(
     std::unique_ptr< std::vector< std::vector<double> >  > & split_vals,
     std::unique_ptr< std::vector< std::vector<int> >  > & naLeftCounts,
     std::unique_ptr< std::vector< std::vector<int> >  > & naRightCounts,
+    std::unique_ptr< std::vector< std::vector<int> >  > & naDefaultDirections,
     std::unique_ptr< std::vector< std::vector<size_t> >  > & averagingSampleIndex,
     std::unique_ptr< std::vector< std::vector<size_t> >  > & splittingSampleIndex,
     std::unique_ptr< std::vector< std::vector<double> >  > & weights){
@@ -1139,6 +1142,7 @@ void forestry::reconstructTrees(
                 (*split_vals)[i],
                 (*naLeftCounts)[i],
                 (*naRightCounts)[i],
+                (*naDefaultDirections)[i],
                 (*averagingSampleIndex)[i],
                 (*splittingSampleIndex)[i],
                 (*weights)[i]);

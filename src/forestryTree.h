@@ -63,6 +63,7 @@ public:
     DataFrame* trainingData,
     arma::Mat<double>* weightMatrix = NULL,
     bool linear = false,
+    bool naDirection = false,
     unsigned int seed = 44,
     size_t nodesizeStrictAvg = 1,
     std::vector<size_t>* OOBIndex = NULL
@@ -91,6 +92,7 @@ public:
       std::vector<double> split_vals,
       std::vector<int> naLeftCounts,
       std::vector<int> naRightCounts,
+      std::vector<int> naDefaultDirections,
       std::vector<size_t> averagingSampleIndex,
       std::vector<size_t> splittingSampleIndex,
       std::vector<double> predictWeights);
@@ -101,6 +103,7 @@ public:
       std::vector<double> * split_vals,
       std::vector<int> * naLeftCounts,
       std::vector<int> * naRightCounts,
+      std::vector<int> * naDefaultDirections,
       std::vector<double> * weights
   );
 
@@ -121,7 +124,8 @@ public:
     monotonic_info monotone_details,
     bool trinary,
     bool centerSplit,
-    symmetric_info symmetric_details
+    symmetric_info symmetric_details,
+    bool naDirection
   );
 
   void selectBestFeature(
