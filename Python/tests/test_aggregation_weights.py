@@ -17,27 +17,6 @@ def forest():
     return forest
 
 
-def test_tree_features(forest):
-    X, _ = get_data()
-
-    with pytest.raises(ValueError):
-        forest.predict(newdata=X, trees=np.array([1, 2, 3, 4, 4, 500]))
-
-    try:
-        forest.predict(newdata=X, trees=np.array([-500, 2, 3, 4, 4, 499]))
-    except ValueError:
-        assert False
-
-    with pytest.raises(ValueError):
-        forest.predict(newdata=X, trees=np.array([-501, 2, 3, 4, 4, 500]))
-
-    with pytest.raises(ValueError):
-        forest.predict(newdata=X, trees=[1, 2, 3, 4, 4, 499], aggregation="oob")
-
-    with pytest.raises(ValueError):
-        forest.predict(newdata=X, trees=[1, 2, 3, 4, 4, 499], aggregation="average", exact=False)
-
-
 def test_predict_settings(forest):
     X, _ = get_data()
 

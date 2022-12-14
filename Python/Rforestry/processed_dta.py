@@ -6,7 +6,7 @@ import pandas as pd
 
 
 @dataclass
-class ProcessedDta:
+class ProcessedDta:  # pylint: disable=too-many-instance-attributes
     processed_x: pd.DataFrame = field(default_factory=pd.DataFrame)
     y: np.ndarray = field(default_factory=lambda: np.array(0))
     categorical_feature_cols: np.ndarray = field(default_factory=lambda: np.array(0))

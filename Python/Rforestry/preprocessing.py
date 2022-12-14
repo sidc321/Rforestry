@@ -10,6 +10,8 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
+import statsmodels.api as sm
+from sklearn.model_selection import LeaveOneOut
 
 
 def has_nas(x: pd.DataFrame) -> bool:
@@ -49,16 +51,6 @@ def get_feat_names(x: Union[pd.DataFrame, pd.Series, List]) -> Optional[np.ndarr
     raise AttributeError("x must be a Pandas DataFrame, a numpy array, a Pandas Series, or a regular list")
 
 
-def predict_exact(newdata: Optional[pd.DataFrame], exact: Optional[bool]) -> bool:
-    if exact is not None:
-        return exact
-    if newdata is None:
-        return True
-    if len(newdata.index) > 1e5:
-        return False
-    return True
-
-
 def find_match(arr_a: Union[np.ndarray, List], arr_b: Union[np.ndarray, List]) -> np.ndarray:
     """
     --------------------------------------
@@ -77,35 +69,6 @@ def find_match(arr_a: Union[np.ndarray, List], arr_b: Union[np.ndarray, List]) -
     return np.array([temp_dict[str(val)] for val in arr_a])
 
 
-def testing_data_checker(forest, newdata: pd.DataFrame) -> None:
-    """
-    @title Test data check
-    @name testing_data_checker-RandomForest
-    @description Check the testing data to do prediction
-    @param forest A RandomForest object.
-    @param newdata A data frame of testing predictors.
-    @param hasNas TRUE if the there were nan-s in the training data FALSE otherwise.
-    @return A feature dataframe if it can be used for new predictions.
-    """
-
-    if len(newdata.columns) != forest.processed_dta.num_columns:
-        raise ValueError(
-            "newdata has "
-            + str(len(newdata.columns))
-            + " but the forest was trained with "
-            + str(forest.processed_dta.num_columns)
-            + " columns."
-        )
-
-    if forest.processed_dta.feat_names is not None:
-        if not set(newdata.columns) == set(forest.processed_dta.feat_names):
-            raise ValueError("newdata has different columns then the ones the forest was trained with.")
-
-        # If linear is true we can't predict observations with some features missing.
-        if forest.linear and newdata.isnull().values.any():
-            raise ValueError("linear does not support missing data")
-
-
 def forest_checker(forest) -> None:
     """
     Checks if RandomForest object has valid pointer for C++ object.
@@ -115,6 +78,31 @@ def forest_checker(forest) -> None:
 
     if (not forest.dataframe) or (not forest.forest):
         raise ValueError("The RandomForest object has invalid ctypes pointers.")
+
+
+# Given a dataframe with Y and Y.hat at least, fits an OLS and gives the LOO
+# predictions on the sample
+def loo_pred_helper(data_frame: pd.DataFrame) -> dict:
+
+    Y = data_frame["Y"]
+    X = data_frame.loc[:, data_frame.columns != "Y"]
+    X = sm.add_constant(X)
+
+    adjust_lm = sm.OLS(Y, X).fit()
+
+    cv = LeaveOneOut()
+    cv_pred = np.empty(Y.size)
+
+    for i, (train, test) in enumerate(cv.split(X)):
+        # split data
+        X_train, X_test = X.iloc[train, :], X.iloc[test, :]
+        y_train, _ = Y[train], Y[test]
+
+        # fit model
+        model = sm.OLS(y_train, X_train).fit()
+        cv_pred[i] = model.predict(X_test)
+
+    return {"insample_preds": cv_pred, "adjustment_model": adjust_lm}
 
 
 def preprocess_training(x: pd.DataFrame, y) -> Tuple[pd.DataFrame, np.ndarray, List[Dict]]:

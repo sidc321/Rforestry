@@ -11,13 +11,22 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
-from pydantic import ConfigDict, StrictBool, StrictFloat, StrictInt, confloat, conint, validate_arguments
+from pydantic import (  # pylint: disable=no-name-in-module
+    ConfigDict,
+    StrictBool,
+    StrictFloat,
+    StrictInt,
+    confloat,
+    conint,
+    validate_arguments,
+)
 from pydantic.dataclasses import dataclass
-from sklearn.model_selection import LeaveOneOut
 
 from . import extension, preprocessing  # type: ignore
 from .processed_dta import ProcessedDta
-from .fit_validator import FitValidator
+from .validators.corrected_predict_validator import CorrectedPredictValidator
+from .validators.fit_validator import FitValidator
+from .validators.predict_validator import PredictValidator
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -393,7 +402,7 @@ class RandomForest:
         x: Union[pd.DataFrame, pd.Series, List],
         y: np.ndarray,
         *,
-        interaction_variables: Optional[List] = None,
+        interaction_variables: Optional[List] = None,  # pylint: disable=unused-argument
         feature_weights: Optional[np.ndarray] = None,
         deep_feature_weights: Optional[np.ndarray] = None,
         observation_weights: Optional[np.ndarray] = None,
@@ -513,7 +522,7 @@ class RandomForest:
 
         # Get the symmetric feature if one is set
         symmetric_index = -1
-        idxs = np.where(symmetric > 0)[0]
+        idxs: np.ndarray = np.where(symmetric > 0)[0]
         if idxs.size != 0:
             symmetric_index = idxs[0]
 
@@ -596,11 +605,6 @@ class RandomForest:
             feat_names=feat_names,
         )
 
-    def _get_nthread(self, nthread: Optional[int]) -> int:
-        if nthread is None:
-            return self.nthread
-        return nthread
-
     def _get_test_data(self, newdata: Optional[pd.DataFrame]) -> np.ndarray:
         if newdata is None:
             return np.ascontiguousarray(self.processed_dta.processed_x.values[:, :], np.double).ravel()
@@ -624,8 +628,8 @@ class RandomForest:
         return len(processed_x.index)
 
     def _aggregation_oob(
-        self, newdata: Optional[pd.DataFrame], exact: Optional[bool], return_weight_matrix: bool
-    ) -> Tuple[np.ndarray, np.ndarray]:
+        self, newdata: Optional[pd.DataFrame], exact: bool, return_weight_matrix: bool
+    ) -> Optional[Tuple[np.ndarray, np.ndarray]]:
         if newdata is not None and self.processed_dta.n_observations != len(newdata.index):
             warnings.warn("Attempting to do OOB predictions on a dataset which doesn't match the training data!")
             return None
@@ -638,7 +642,7 @@ class RandomForest:
             self.dataframe,
             self._get_test_data(newdata),
             False,
-            preprocessing.predict_exact(newdata, exact),
+            exact,
             return_weight_matrix,
             self.verbose,
             n_preds,
@@ -646,13 +650,8 @@ class RandomForest:
         )
 
     def _aggregation_double_oob(
-        self, newdata: Optional[pd.DataFrame], exact: Optional[bool], return_weight_matrix: bool
+        self, newdata: Optional[pd.DataFrame], exact: bool, return_weight_matrix: bool
     ) -> Tuple[np.ndarray, np.ndarray]:
-        if not self.double_bootstrap:
-            raise ValueError(
-                "Attempting to do double OOB predictions with a forest that was not trained with doubleBootstrap = True"
-            )
-
         if newdata is None:
             double_oob = True
         else:
@@ -673,7 +672,7 @@ class RandomForest:
             self.dataframe,
             self._get_test_data(newdata),
             double_oob,
-            preprocessing.predict_exact(newdata, exact),
+            exact,
             return_weight_matrix,
             self.verbose,
             n_preds,
@@ -681,12 +680,8 @@ class RandomForest:
         )
 
     def _aggregation_coefs(
-        self, newdata: pd.DataFrame, exact: Optional[bool], seed: int, nthread: int
+        self, newdata: pd.DataFrame, exact: bool, seed: int, nthread: int
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        if not self.linear:
-            raise ValueError("Aggregation can only be linear with setting the parameter linear = True.")
-        if newdata is None:
-            raise ValueError("When using an aggregation that is not oob or doubleOOB, one must supply newdata")
         processed_x = preprocessing.preprocess_testing(
             newdata,
             self.processed_dta.categorical_feature_cols,
@@ -699,7 +694,7 @@ class RandomForest:
             np.ascontiguousarray(processed_x.values[:, :], np.double).ravel(),
             seed,
             nthread,
-            preprocessing.predict_exact(newdata, exact),
+            exact,
             False,
             True,
             False,
@@ -713,30 +708,19 @@ class RandomForest:
     def _aggregation_fallback(
         self,
         newdata: pd.DataFrame,
-        aggregation: str,
-        exact: Optional[bool],
+        exact: bool,
         seed: int,
         nthread: int,
         return_weight_matrix: bool,
         trees: Optional[np.ndarray],
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        if newdata is None:
-            raise ValueError("When using an aggregation that is not oob or doubleOOB, one must supply newdata")
         processed_x = preprocessing.preprocess_testing(
             newdata,
             self.processed_dta.categorical_feature_cols,
             self.processed_dta.categorical_feature_mapping,
         )
-        exact = preprocessing.predict_exact(newdata, exact)
         tree_weights = np.zeros(self.ntree, dtype=np.ulonglong)
-        # We can only use tree aggregations if exact = True and aggregation = "average"
         if trees is not None:
-            if not exact or aggregation != "average":
-                raise ValueError("When using tree indices, we must have exact = True and aggregation = 'average' ")
-
-            if any((not isinstance(i, (int, np.integer))) or (i < -self.ntree) or (i >= self.ntree) for i in trees):
-                raise ValueError("trees must contain indices which are integers between -ntree and ntree-1")
-
             # If trees are being used, we need to convert them into a weight vector
             for tree in trees:
                 tree_weights[tree] += 1
@@ -746,7 +730,6 @@ class RandomForest:
 
         n_preds = self._get_n_preds(newdata)
         n_weight_matrix = n_preds * self.processed_dta.n_observations if return_weight_matrix else 0
-        print(seed, nthread)
 
         return extension.predict_forest(
             self.forest,
@@ -765,10 +748,12 @@ class RandomForest:
             0,
         )
 
+    @PredictValidator
     def predict(
         self,
-        newdata: Optional[Union[pd.DataFrame, pd.Series, List]] = None,
-        aggregation: str = "average",
+        newdata: Optional[Union[pd.DataFrame, pd.Series, List]] = PredictValidator.DEFAULT_NEWDATA,
+        *,
+        aggregation: str = PredictValidator.DEFAULT_AGGREGATION,
         seed: Optional[int] = None,
         nthread: Optional[int] = None,
         exact: Optional[bool] = None,
@@ -844,33 +829,6 @@ class RandomForest:
 
         """
 
-        # Preprocess the data. We only run the data checker if ridge is turned on,
-        # because even in the case where there were no NAs in train, we still want to predict.
-
-        preprocessing.forest_checker(self)
-
-        if newdata is not None:
-            if not (isinstance(newdata, (pd.DataFrame, pd.Series, list)) or type(newdata).__module__ == np.__name__):
-                raise AttributeError(
-                    "newdata must be a Pandas DataFrame, a numpy array, a Pandas Series, or a regular list"
-                )
-
-            newdata = (pd.DataFrame(newdata)).copy()
-            newdata.reset_index(drop=True, inplace=True)
-            preprocessing.testing_data_checker(self, newdata)
-
-            if self.processed_dta.feat_names is not None:
-                if not all(newdata.columns == self.processed_dta.feat_names):
-                    warnings.warn("newdata columns have been reordered so that they match the training feature matrix")
-                    newdata = newdata[self.processed_dta.feat_names]
-
-        if trees is not None:
-            if not preprocessing.predict_exact(newdata, exact) or aggregation != "average":
-                raise ValueError("When using tree indices, we must have exact = True and aggregation = 'average' ")
-
-            if any((not isinstance(i, (int, np.integer))) or (i < -self.ntree) or (i >= self.ntree) for i in trees):
-                raise ValueError("trees must contain indices which are integers between -ntree and ntree-1")
-
         if aggregation == "oob":
             predictions, weight_matrix = self._aggregation_oob(newdata, exact, return_weight_matrix)
 
@@ -879,7 +837,7 @@ class RandomForest:
 
         elif aggregation == "coefs":
             predictions, weight_matrix, coefficients = self._aggregation_coefs(
-                newdata, exact, self._get_seed(seed), self._get_nthread(nthread)
+                newdata, exact, self._get_seed(seed), nthread
             )
             return {
                 "predictions": predictions,
@@ -899,10 +857,9 @@ class RandomForest:
         else:
             predictions, weight_matrix, _ = self._aggregation_fallback(
                 newdata,
-                aggregation,
                 exact,
                 self._get_seed(seed),
-                self._get_nthread(nthread),
+                nthread,
                 return_weight_matrix,
                 trees,
             )
@@ -936,6 +893,7 @@ class RandomForest:
         """
 
         preprocessing.forest_checker(self)
+
         if (not self.replace) and (self.ntree * (self.processed_dta.n_observations - self.sampsize)) < 10:
             if not no_warning:
                 warnings.warn("Samples are drawn without replacement and sample size is too big!")
@@ -968,6 +926,7 @@ class RandomForest:
         """
 
         preprocessing.forest_checker(self)
+
         if (not self.replace) and (self.ntree * (self.processed_dta.n_observations - self.sampsize)) < 10:
             if not no_warning:
                 warnings.warn("Samples are drawn without replacement and sample size is too big!")
@@ -1238,12 +1197,14 @@ class RandomForest:
 
             self.py_forest[cur_id]["seed"] = int(tree_info[num_nodes * 8])
 
+    @CorrectedPredictValidator
     def corrected_predict(
         self,
         newdata: Optional[Any] = None,
-        feats: Optional[Any] = None,
-        nrounds: int = 0,
-        linear: bool = True,
+        *,
+        feats: Optional[np.ndarray] = CorrectedPredictValidator.DEFAULT_FEATS,
+        nrounds: int = CorrectedPredictValidator.DEFAULT_NROUNDS,
+        linear: bool = CorrectedPredictValidator.DEFAULT_LINEAR,
         double: bool = False,
         simple: bool = True,
         verbose: bool = False,
@@ -1313,24 +1274,6 @@ class RandomForest:
 
         # To avoid false pd warnings
         pd.options.mode.chained_assignment = None
-
-        # Check allowed settings for the bias correction
-        if nrounds < 1 and not linear:
-            raise ValueError(
-                "We must do at least one round of bias corrections, with either linear = True or nrounds > 0."
-            )
-
-        if nrounds < 0 or not isinstance(nrounds, int):
-            raise ValueError("nrounds must be a non negative integer.")
-
-        if feats is not None:
-            if any(
-                not isinstance(x, (int, np.integer))
-                or x < -self.processed_dta.num_columns  # pylint: disable=invalid-unary-operand-type
-                or x >= self.processed_dta.num_columns
-                for x in feats
-            ):
-                raise ValueError("feats must be  a integer between -ncol and ncol(x)-1")
 
         # Check the parameters match parameters for RandomForest or adaptiveForestry
         if not adaptive:
@@ -1426,39 +1369,15 @@ class RandomForest:
             else:
                 preds_initial = self.predict(newdata=newdata)
 
-        # Given a dataframe with Y and Y.hat at least, fits an OLS and gives the LOO
-        # predictions on the sample
-        def loo_pred_helper(data_frame: pd.DataFrame) -> dict:
-
-            Y = data_frame["Y"]
-            X = data_frame.loc[:, data_frame.columns != "Y"]
-            X = sm.add_constant(X)
-
-            adjust_lm = sm.OLS(Y, X).fit()
-
-            cv = LeaveOneOut()
-            cv_pred = np.empty(Y.size)
-
-            for i, (train, test) in enumerate(cv.split(X)):
-                # split data
-                X_train, X_test = X.iloc[train, :], X.iloc[test, :]
-                y_train, _ = Y[train], Y[test]
-
-                # fit model
-                model = sm.OLS(y_train, X_train).fit()
-                cv_pred[i] = model.predict(X_test)
-
-            return {"insample_preds": cv_pred, "adjustment_model": adjust_lm}
-
         if linear:
             # Now do linear adjustment
             if simple:
                 # Now we either return the adjusted in sample predictions, or the
                 # out of sample predictions scaled according to the adjustment model
                 if newdata is None:
-                    preds_adjusted = loo_pred_helper(adjust_data)["insample_preds"]
+                    preds_adjusted = preprocessing.loo_pred_helper(adjust_data)["insample_preds"]
                 else:
-                    model = loo_pred_helper(adjust_data)["adjustment_model"]
+                    model = preprocessing.loo_pred_helper(adjust_data)["adjustment_model"]
 
                     if feats is None:
                         data_pred = pd.DataFrame({"Y.hat": preds_initial})
@@ -1488,7 +1407,9 @@ class RandomForest:
                         print(f"Quantile {i}: {cuts.cat.categories[i]}, Bias: {bias}")
                     # Again we have to check if the data was in or out of sample, and do predictions
                     # accordingly --????? why aren't we doing this?
-                    new_pred[mask] = loo_pred_helper(adjust_data.loc[mask, :].reset_index(drop=True))["insample_preds"]
+                    new_pred[mask] = preprocessing.loo_pred_helper(adjust_data.loc[mask, :].reset_index(drop=True))[
+                        "insample_preds"
+                    ]
 
                 if newdata is not None:
                     # Now we have fit the Q_num different models, we take the models and use

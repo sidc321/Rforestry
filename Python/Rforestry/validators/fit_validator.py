@@ -1,17 +1,14 @@
-import functools
 import warnings
 
 import numpy as np
 import pandas as pd
 
-from . import preprocessing
+from .. import preprocessing
+from .base_validator import BaseValidator
 
 
-class FitValidator:
-    def __init__(self, function):
-        self.function = function
-
-    def _validate_symmetric(self, *args, **kwargs):
+class FitValidator(BaseValidator):
+    def validate_symmetric(self, *args, **kwargs):
         _self = args[0]
 
         x = pd.DataFrame(kwargs.get("x", args[1])).copy()
@@ -42,7 +39,7 @@ class FitValidator:
 
         return symmetric
 
-    def _validate_monotonic_constraints(self, *args, **kwargs):
+    def validate_monotonic_constraints(self, *args, **kwargs):
         _self = args[0]
 
         x = pd.DataFrame(kwargs.get("x", args[1])).copy()
@@ -62,7 +59,7 @@ class FitValidator:
 
         return monotonic_constraints
 
-    def _validate_observation_weights(self, *args, **kwargs):
+    def validate_observation_weights(self, *args, **kwargs):
         _self = args[0]
 
         x = pd.DataFrame(kwargs.get("x", args[1])).copy()
@@ -84,7 +81,7 @@ class FitValidator:
 
         return observation_weights
 
-    def _validate_lin_feats(self, *args, **kwargs):
+    def validate_lin_feats(self, *args, **kwargs):
         x = pd.DataFrame(kwargs.get("x", args[1])).copy()
         _, ncols = x.shape
 
@@ -98,7 +95,7 @@ class FitValidator:
 
         return lin_feats
 
-    def _validate_feature_weights(self, *args, **kwargs):
+    def validate_feature_weights(self, *args, **kwargs):
         x = pd.DataFrame(kwargs.get("x", args[1])).copy()
         _, ncols = x.shape
 
@@ -120,7 +117,7 @@ class FitValidator:
 
         return feature_weights
 
-    def _validate_deep_feature_weights(self, *args, **kwargs):
+    def validate_deep_feature_weights(self, *args, **kwargs):
         x = pd.DataFrame(kwargs.get("x", args[1])).copy()
         _, ncols = x.shape
 
@@ -140,7 +137,7 @@ class FitValidator:
 
         return deep_feature_weights
 
-    def _validate_groups(self, *_, **kwargs):
+    def validate_groups(self, *_, **kwargs):
         if "groups" in kwargs:
             groups = kwargs["groups"]
             if not pd.api.types.is_categorical_dtype(groups):
@@ -154,9 +151,6 @@ class FitValidator:
             return pd.Series(groups, dtype="category")
 
         return None
-
-    def __get__(self, obj, objtype):
-        return functools.partial(self.__call__, obj)
 
     def __call__(self, *args, **kwargs):
         _self = args[0]
@@ -180,19 +174,19 @@ class FitValidator:
         if preprocessing.get_mtry(_self, x) > ncols:
             raise ValueError("mtry cannot exceed total amount of features in x.")
 
-        kwargs["symmetric"] = self._validate_symmetric(*args, **kwargs)
+        kwargs["symmetric"] = self.validate_symmetric(*args, **kwargs)
 
-        kwargs["monotonic_constraints"] = self._validate_monotonic_constraints(*args, **kwargs)
+        kwargs["monotonic_constraints"] = self.validate_monotonic_constraints(*args, **kwargs)
 
-        kwargs["lin_feats"] = self._validate_lin_feats(*args, **kwargs)
+        kwargs["lin_feats"] = self.validate_lin_feats(*args, **kwargs)
 
-        kwargs["feature_weights"] = self._validate_feature_weights(*args, **kwargs)
+        kwargs["feature_weights"] = self.validate_feature_weights(*args, **kwargs)
 
-        kwargs["deep_feature_weights"] = self._validate_deep_feature_weights(*args, **kwargs)
+        kwargs["deep_feature_weights"] = self.validate_deep_feature_weights(*args, **kwargs)
 
-        kwargs["observation_weights"] = self._validate_observation_weights(*args, **kwargs)
+        kwargs["observation_weights"] = self.validate_observation_weights(*args, **kwargs)
 
         if "groups" in kwargs:
-            kwargs["groups"] = self._validate_groups(*args, **kwargs)
+            kwargs["groups"] = self.validate_groups(*args, **kwargs)
 
         return self.function(*args, **kwargs)
