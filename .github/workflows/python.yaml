@@ -7,9 +7,6 @@ on:
       - "Python/**"
       - "C%2B%2B/**"
       - ".github/workflows/python.yaml"
-  release:
-    types:
-      - published
 
 jobs:
   build_sdist:
@@ -109,7 +106,7 @@ jobs:
 
   upload:
     needs: [build_sdist, build_linux_wheels, build_macos_wheels]
-    if: github.event_name == 'release' && github.event.action == 'published'
+    if: github.event_name == 'push' && github.ref_type == 'tag'
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/download-artifact@v3
