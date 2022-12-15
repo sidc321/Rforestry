@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - ".github/workflows/R.yaml"
+      - "C%2B%2B/**"
       - "R/**"
   #    branches:
   #      - main
@@ -14,6 +15,10 @@ on:
       - main
       - master
       - experimental
+    paths:
+      - ".github/workflows/R.yaml"
+      - "C%2B%2B/**"
+      - "R/**"
 
 jobs:
   R-CMD-check:

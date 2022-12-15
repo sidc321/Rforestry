@@ -7,6 +7,11 @@ on:
       - "Python/**"
       - "C%2B%2B/**"
       - ".github/workflows/python.yaml"
+  pull_request:
+    paths:
+      - "Python/**"
+      - "C%2B%2B/**"
+      - ".github/workflows/python.yaml"
 
 jobs:
   build_sdist:
