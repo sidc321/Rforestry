@@ -52,6 +52,7 @@ forestry::forestry(
   size_t minTreesPerFold,
   size_t foldSize,
   bool hasNas,
+  bool naDirection,
   bool linear,
   bool symmetric,
   double overfitPenalty,
@@ -78,9 +79,11 @@ forestry::forestry(
   this->_splitMiddle = splitMiddle;
   this->_maxObs = maxObs;
   this->_hasNas = hasNas;
+  this->_naDirection = naDirection;
   this->_linear = linear;
   this->_overfitPenalty = overfitPenalty;
   this->_doubleTree = doubleTree;
+  this->_naDirection = naDirection;
   this->_minTreesPerFold = minTreesPerFold;
   this->_foldSize = foldSize;
   this->_symmetric = symmetric;
@@ -292,6 +295,7 @@ void forestry::addTrees(size_t ntree) {
                 getSplitMiddle(),
                 getMaxObs(),
                 gethasNas(),
+                getNaDirection(),
                 getlinear(),
                 getSymmetric(),
                 getOverfitPenalty(),
@@ -318,6 +322,7 @@ void forestry::addTrees(size_t ntree) {
                     getSplitMiddle(),
                     getMaxObs(),
                     gethasNas(),
+                    getNaDirection(),
                     getlinear(),
                     getSymmetric(),
                     getOverfitPenalty(),
@@ -474,6 +479,7 @@ std::unique_ptr< std::vector<double> > forestry::predict(
                   getTrainingData(),
                   weightMatrix,
                   getlinear(),
+                  getNaDirection(),
                   seed + i,
                   getMinNodeSizeToSplitAvg()
               );
@@ -487,6 +493,7 @@ std::unique_ptr< std::vector<double> > forestry::predict(
                   getTrainingData(),
                   weightMatrix,
                   getlinear(),
+                  getNaDirection(),
                   seed + i,
                   getMinNodeSizeToSplitAvg()
               );
@@ -1082,6 +1089,7 @@ void forestry::reconstructTrees(
     std::unique_ptr< std::vector< std::vector<double> >  > & split_vals,
     std::unique_ptr< std::vector< std::vector<int> >  > & naLeftCounts,
     std::unique_ptr< std::vector< std::vector<int> >  > & naRightCounts,
+    std::unique_ptr< std::vector< std::vector<int> >  > & naDefaultDirections,
     std::unique_ptr< std::vector< std::vector<size_t> >  > & averagingSampleIndex,
     std::unique_ptr< std::vector< std::vector<size_t> >  > & splittingSampleIndex,
     std::unique_ptr< std::vector< std::vector<double> >  > & weights){
@@ -1130,6 +1138,7 @@ void forestry::reconstructTrees(
                 getMaxDepth(),
                 getInteractionDepth(),
                 gethasNas(),
+                getNaDirection(),
                 getlinear(),
                 getOverfitPenalty(),
                 (*tree_seeds)[i],
@@ -1138,6 +1147,7 @@ void forestry::reconstructTrees(
                 (*split_vals)[i],
                 (*naLeftCounts)[i],
                 (*naRightCounts)[i],
+                (*naDefaultDirections)[i],
                 (*averagingSampleIndex)[i],
                 (*splittingSampleIndex)[i],
                 (*weights)[i]);

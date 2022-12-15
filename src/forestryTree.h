@@ -33,6 +33,7 @@ public:
     bool splitMiddle,
     size_t maxObs,
     bool hasNas,
+    bool naDirection,
     bool linear,
     bool symmetric,
     double overfitPenalty,
@@ -62,6 +63,7 @@ public:
     DataFrame* trainingData,
     arma::Mat<double>* weightMatrix = NULL,
     bool linear = false,
+    bool naDirection = false,
     unsigned int seed = 44,
     size_t nodesizeStrictAvg = 1,
     std::vector<size_t>* OOBIndex = NULL
@@ -81,6 +83,7 @@ public:
       size_t maxDepth,
       size_t interactionDepth,
       bool hasNas,
+      bool naDirection,
       bool linear,
       double overfitPenalty,
       unsigned int seed,
@@ -89,6 +92,7 @@ public:
       std::vector<double> split_vals,
       std::vector<int> naLeftCounts,
       std::vector<int> naRightCounts,
+      std::vector<int> naDefaultDirections,
       std::vector<size_t> averagingSampleIndex,
       std::vector<size_t> splittingSampleIndex,
       std::vector<double> predictWeights);
@@ -99,6 +103,7 @@ public:
       std::vector<double> * split_vals,
       std::vector<int> * naLeftCounts,
       std::vector<int> * naRightCounts,
+      std::vector<int> * naDefaultDirections,
       std::vector<double> * weights
   );
 
@@ -119,7 +124,8 @@ public:
     monotonic_info monotone_details,
     bool trinary,
     bool centerSplit,
-    symmetric_info symmetric_details
+    symmetric_info symmetric_details,
+    bool naDirection
   );
 
   void selectBestFeature(
@@ -261,6 +267,10 @@ public:
     return _hasNas;
   }
 
+  bool getNaDirection() {
+    return _naDirection;
+  }
+
   void assignNodeId(size_t& node_i) {
     node_i = ++_nodeCount;
   }
@@ -282,6 +292,7 @@ private:
   std::unique_ptr< std::vector<size_t> > _splittingSampleIndex;
   std::unique_ptr< RFNode > _root;
   bool _hasNas;
+  bool _naDirection;
   bool _linear;
   double _overfitPenalty;
   unsigned int _seed;

@@ -43,6 +43,7 @@ forestry(
   overfitPenalty = 1,
   scale = TRUE,
   doubleTree = FALSE,
+  naDirection = FALSE,
   reuseforestry = NULL,
   savable = TRUE,
   saveable = TRUE
@@ -218,6 +219,12 @@ stability, so by default is TRUE.}
 
 \item{doubleTree}{if the number of tree is doubled as averaging and splitting
 data can be exchanged to create decorrelated trees. (Default = FALSE)}
+
+\item{naDirection}{Sets a default direction for missing values in each split
+node during training. It test placing all missing values to the left and
+right, then selects the direction that minimizes loss. If no missing values
+exist, then a default direction is randomly selected in proportion to the
+distribution of observations on the left and right. (Default = FALSE)}
 
 \item{reuseforestry}{Pass in an `forestry` object which will recycle the
 dataframe the old object created. It will save some space working on the

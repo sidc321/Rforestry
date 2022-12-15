@@ -36,7 +36,8 @@ multilayerForestry::multilayerForestry(
   size_t maxObs,
   bool linear,
   double overfitPenalty,
-  bool doubleTree
+  bool doubleTree,
+  bool naDirection
 ){
   this->_trainingData = trainingData;
   this->_ntree = ntree;
@@ -62,7 +63,7 @@ multilayerForestry::multilayerForestry(
   this->_linear = linear;
   this->_overfitPenalty = overfitPenalty;
   this->_doubleTree = doubleTree;
-
+  this->_naDirection = naDirection;
   addForests(ntree);
 }
 
@@ -166,7 +167,8 @@ void multilayerForestry::addForests(size_t ntree) {
       _linear,
       false, // Set symmetric = FALSE
       _overfitPenalty,
-      _doubleTree
+      _doubleTree,
+      _naDirection
     );
 
     multilayerForests[o] = residualForest;

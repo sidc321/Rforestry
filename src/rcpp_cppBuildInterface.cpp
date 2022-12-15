@@ -190,6 +190,7 @@ SEXP rcpp_cppBuildInterface(
   int foldSize,
   bool monotoneAvg,
   bool hasNas,
+  bool naDirection,
   bool linear,
   bool symmetric,
   double overfitPenalty,
@@ -227,6 +228,7 @@ SEXP rcpp_cppBuildInterface(
         (size_t) minTreesPerFold,
         (size_t) foldSize,
         hasNas,
+        naDirection,
         linear,
         symmetric,
         (double) overfitPenalty,
@@ -367,6 +369,7 @@ SEXP rcpp_cppBuildInterface(
         (size_t) minTreesPerFold,
         (size_t) foldSize,
         hasNas,
+        naDirection,
         linear,
         symmetric,
         (double) overfitPenalty,
@@ -428,6 +431,7 @@ SEXP rcpp_cppMultilayerBuildInterface(
     bool linear,
     double overfitPenalty,
     bool doubleTree,
+    bool naDirection,
     bool existing_dataframe_flag,
     SEXP existing_dataframe
 ){
@@ -461,7 +465,8 @@ SEXP rcpp_cppMultilayerBuildInterface(
         (size_t) maxObs,
         linear,
         (double) overfitPenalty,
-        doubleTree
+        doubleTree,
+        naDirection
       );
 
       // delete(testFullForest);
@@ -928,6 +933,9 @@ Rcpp::List rcpp_CppToR_translator(
       Rcpp::IntegerVector naRightCounts =
         Rcpp::wrap(((*forest_dta)[i]).naRightCount);
 
+      Rcpp::IntegerVector naDefaultDirections =
+        Rcpp::wrap(((*forest_dta)[i]).naDefaultDirection);
+
       Rcpp::NumericVector predictWeights =
               Rcpp::wrap(((*forest_dta)[i]).values);
 
@@ -940,6 +948,7 @@ Rcpp::List rcpp_CppToR_translator(
 			   Rcpp::Named("splittingSampleIndex") = splittingSampleIndex,
 			   Rcpp::Named("naLeftCounts") = naLeftCounts,
 			   Rcpp::Named("naRightCounts") = naRightCounts,
+			   Rcpp::Named("naDefaultDirections") = naDefaultDirections,
 			   Rcpp::Named("seed") = (*forest_dta)[i].seed, // Add the seeds to the list we return
                Rcpp::Named("weights") = predictWeights
         );
@@ -1065,6 +1074,9 @@ Rcpp::List rcpp_multilayer_CppToR_translator(
         Rcpp::IntegerVector naRightCounts =
           Rcpp::wrap((*(forest_dta[j]))[i].naRightCount);
 
+        Rcpp::IntegerVector naDefaultDirections =
+          Rcpp::wrap((*(forest_dta[j]))[i].naDefaultDirection);
+
         Rcpp::NumericVector predictWeights =
                   Rcpp::wrap((*(forest_dta[j]))[i].values);
 
@@ -1076,6 +1088,7 @@ Rcpp::List rcpp_multilayer_CppToR_translator(
             Rcpp::Named("splittingSampleIndex") = splittingSampleIndex,
             Rcpp::Named("naLeftCounts") = naLeftCounts,
             Rcpp::Named("naRightCounts") = naRightCounts,
+            Rcpp::Named("naDefaultDirections") = naDefaultDirections,
             Rcpp::Named("seed") = (*(forest_dta[j]))[i].seed,
             Rcpp::Named("weights") = predictWeights
           );
@@ -1146,6 +1159,7 @@ Rcpp::List rcpp_reconstructree(
   bool monotoneAvg,
   int symmetricIndex,
   bool hasNas,
+  bool naDirection,
   bool linear,
   Rcpp::NumericVector symmetric,
   double overfitPenalty,
@@ -1163,6 +1177,9 @@ Rcpp::List rcpp_reconstructree(
       new std::vector< std::vector<int> >
   );
   std::unique_ptr< std::vector< std::vector<int> > > naRightCounts(
+      new std::vector< std::vector<int> >
+  );
+  std::unique_ptr< std::vector< std::vector<int> > > naDefaultDirections(
       new std::vector< std::vector<int> >
   );
   std::unique_ptr< std::vector< std::vector<size_t> > > averagingSampleIndex(
@@ -1185,6 +1202,7 @@ Rcpp::List rcpp_reconstructree(
   splittingSampleIndex->reserve(R_forest.size());
   naLeftCounts->reserve(R_forest.size());
   naRightCounts->reserve(R_forest.size());
+  naDefaultDirections->reserve(R_forest.size());
   tree_seeds->reserve(R_forest.size());
   predictWeights->reserve(R_forest.size());
 
@@ -1209,11 +1227,14 @@ Rcpp::List rcpp_reconstructree(
     naRightCounts->push_back(
         Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[5])
     );
+    naDefaultDirections->push_back(
+        Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[6])
+    );
     tree_seeds->push_back(
-        Rcpp::as< unsigned int > ((Rcpp::as<Rcpp::List>(R_forest[i]))[6])
+        Rcpp::as< unsigned int > ((Rcpp::as<Rcpp::List>(R_forest[i]))[7])
     );
     predictWeights->push_back(
-            Rcpp::as< std::vector<double> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[7])
+            Rcpp::as< std::vector<double> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[8])
     );
   }
 
@@ -1339,6 +1360,7 @@ Rcpp::List rcpp_reconstructree(
     (size_t) minTreesPerFold,
     1,
     (bool) hasNas,
+    (bool) naDirection,
     (bool) linear,
     (bool) symmetric,
     (double) overfitPenalty,
@@ -1351,6 +1373,7 @@ Rcpp::List rcpp_reconstructree(
                                    split_vals,
                                    naLeftCounts,
                                    naRightCounts,
+                                   naDefaultDirections,
                                    averagingSampleIndex,
                                    splittingSampleIndex,
                                    predictWeights
@@ -1411,7 +1434,8 @@ Rcpp::List rcpp_reconstruct_forests(
     bool linear,
     Rcpp::NumericVector symmetric,
     double overfitPenalty,
-    bool doubleTree
+    bool doubleTree,
+    bool naDirection
 ){
 
   // Decode the R_forest data and create appropriate pointers to pointers:
@@ -1419,6 +1443,7 @@ Rcpp::List rcpp_reconstruct_forests(
   std::vector< std::unique_ptr< std::vector< std::vector<double> > > > split_vals;
   std::vector< std::unique_ptr< std::vector< std::vector<int> > > > naLeftCounts;
   std::vector< std::unique_ptr< std::vector< std::vector<int> > > > naRightCounts;
+  std::vector< std::unique_ptr< std::vector< std::vector<int> > > > naDefaultDirections;
   std::vector< std::unique_ptr< std::vector< std::vector<size_t> > > > averagingSampleIndex;
   std::vector< std::unique_ptr< std::vector< std::vector<size_t> > > > splittingSampleIndex;
   std::vector< std::unique_ptr< std::vector<unsigned int> > > tree_seeds;
@@ -1436,6 +1461,7 @@ Rcpp::List rcpp_reconstruct_forests(
       std::vector< std::vector<double> > cur_split_vals;
       std::vector< std::vector<int> > cur_naLeftCounts;
       std::vector< std::vector<int> > cur_naRightCounts;
+      std::vector< std::vector<int> > cur_naDefaultDirections;
       std::vector< std::vector<size_t> > cur_averagingSampleIndex;
       std::vector< std::vector<size_t> > cur_splittingSampleIndex;
       std::vector< std::vector<double> > cur_weights;
@@ -1470,12 +1496,16 @@ Rcpp::List rcpp_reconstruct_forests(
         Rcpp::as< std::vector<int> > (Rcpp::as<Rcpp::List>(Rcpp::as<Rcpp::List>(R_forests[j])[i])[5])
       );
 
+      cur_naDefaultDirections.push_back(
+        Rcpp::as< std::vector<int> > (Rcpp::as<Rcpp::List>(Rcpp::as<Rcpp::List>(R_forests[j])[i])[6])
+      );
+
       cur_tree_seeds.push_back(
-        Rcpp::as< unsigned int > (Rcpp::as<Rcpp::List>(Rcpp::as<Rcpp::List>(R_forests[j])[i])[6])
+        Rcpp::as< unsigned int > (Rcpp::as<Rcpp::List>(Rcpp::as<Rcpp::List>(R_forests[j])[i])[7])
       );
 
       cur_weights.push_back(
-              Rcpp::as< std::vector<double> > (Rcpp::as<Rcpp::List>(Rcpp::as<Rcpp::List>(R_forests[j])[i])[7])
+              Rcpp::as< std::vector<double> > (Rcpp::as<Rcpp::List>(Rcpp::as<Rcpp::List>(R_forests[j])[i])[8])
       );
     }
     // Now the cur vectors hold the info for each tree, we have to
@@ -1494,6 +1524,10 @@ Rcpp::List rcpp_reconstruct_forests(
 
     naRightCounts.push_back(std::unique_ptr< std::vector< std::vector<int> > >(
         new std::vector< std::vector<int> >(cur_naRightCounts)
+    ));
+
+    naDefaultDirections.push_back(std::unique_ptr< std::vector< std::vector<int> > >(
+        new std::vector< std::vector<int> >(cur_naDefaultDirections)
     ));
 
     averagingSampleIndex.push_back(std::unique_ptr< std::vector< std::vector<size_t> > >(
@@ -1641,7 +1675,8 @@ Rcpp::List rcpp_reconstruct_forests(
       (bool) linear,
       (bool) symmetric,
       (double) overfitPenalty,
-      doubleTree
+      doubleTree,
+      (bool) naDirection
     );
 
     // std::cout << "RECONSTRUCT a forest \n";
@@ -1653,6 +1688,7 @@ Rcpp::List rcpp_reconstruct_forests(
                                      split_vals[j],
                                      naLeftCounts[j],
                                      naRightCounts[j],
+                                     naDefaultDirections[j],
                                      averagingSampleIndex[j],
                                      splittingSampleIndex[j],
                                      weights[j]);
@@ -1789,7 +1825,8 @@ Rcpp::List rcpp_reconstruct_forests(
     (size_t) maxObs,
     (bool) linear,
     (double) overfitPenalty,
-    (bool) doubleTree
+    (bool) doubleTree,
+    (bool) naDirection
   );
 
   // Get the gammas

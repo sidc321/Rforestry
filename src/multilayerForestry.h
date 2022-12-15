@@ -42,7 +42,8 @@ public:
     size_t maxObs,
     bool linear,
     double overfitPenalty,
-    bool doubleTree
+    bool doubleTree,
+    bool naDirection
   );
 
   void addForests(size_t ntree);
@@ -197,6 +198,7 @@ private:
   bool _linear;
   double _overfitPenalty;
   bool _doubleTree;
+  bool _naDirection;
   std::unique_ptr<std::vector< forestry* > > _multilayerForests;
   std::vector<double> _gammas;
   double _meanOutcome;

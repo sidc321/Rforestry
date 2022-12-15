@@ -40,7 +40,9 @@ training_data_checker <- function(x,
                                   linear,
                                   symmetric,
                                   scale,
-                                  hasNas
+                                  hasNas,
+                                  naDirection,
+                                  relinkcpp_prt
                                   ) {
   x <- as.data.frame(x)
   nfeatures <- ncol(x)
@@ -305,7 +307,9 @@ training_data_checker <- function(x,
               "scale" = scale,
               "deepFeatureWeights" = deepFeatureWeights,
               "observationWeights" = observationWeights,
-              "hasNas" = hasNas))
+              "hasNas" = hasNas,
+              "naDirection" = naDirection
+        ))
 }
 
 #' @title Test data check
@@ -394,6 +398,7 @@ setClass(
     y = "vector",
     maxObs = "numeric",
     hasNas = "logical",
+    naDirection = "logical",
     linear = "logical",
     symmetric = "numeric",
     linFeats = "numeric",
@@ -458,6 +463,7 @@ setClass(
     overfitPenalty = "numeric",
     gammas = "numeric",
     doubleTree = "logical",
+    naDirection = "logical",
     groupsMapping = "list",
     groups = "numeric",
     scale = "logical",
@@ -548,6 +554,11 @@ setClass(
 #'   between two feature values. (Default = FALSE)
 #' @param doubleTree if the number of tree is doubled as averaging and splitting
 #'   data can be exchanged to create decorrelated trees. (Default = FALSE)
+#' @param naDirection Sets a default direction for missing values in each split
+#'   node during training. It test placing all missing values to the left and
+#'   right, then selects the direction that minimizes loss. If no missing values
+#'   exist, then a default direction is randomly selected in proportion to the
+#'   distribution of observations on the left and right. (Default = FALSE)
 #' @param reuseforestry Pass in an `forestry` object which will recycle the
 #'   dataframe the old object created. It will save some space working on the
 #'   same data set.
@@ -699,6 +710,7 @@ forestry <- function(x,
                      overfitPenalty = 1,
                      scale = TRUE,
                      doubleTree = FALSE,
+                     naDirection = FALSE,
                      reuseforestry = NULL,
                      savable = TRUE,
                      saveable = TRUE
@@ -784,7 +796,8 @@ forestry <- function(x,
       linear = linear,
       symmetric = symmetric,
       scale = scale,
-      hasNas = hasNas)
+      hasNas = hasNas,
+      naDirection = naDirection)
 
   for (variable in names(updated_variables)) {
     assign(x = variable, value = updated_variables[[variable]],
@@ -933,6 +946,7 @@ forestry <- function(x,
         foldSize,
         monotoneAvg,
         hasNas,
+        naDirection,
         linear,
         any(symmetric != 0),
         overfitPenalty,
@@ -995,6 +1009,7 @@ forestry <- function(x,
           deepFeatureWeightsVariables = deepFeatureWeightsVariables,
           observationWeights = observationWeights,
           hasNas = hasNas,
+          naDirection = naDirection,
           linear = linear,
           symmetric = symmetric,
           linFeats = linFeats,
@@ -1102,6 +1117,7 @@ forestry <- function(x,
         foldSize,
         monotoneAvg,
         hasNas,
+        naDirection,
         linear,
         any(symmetric != 0),
         overfitPenalty,
@@ -1141,6 +1157,7 @@ forestry <- function(x,
           deepFeatureWeights = deepFeatureWeights,
           observationWeights = observationWeights,
           hasNas = hasNas,
+          naDirection = naDirection,
           linear = linear,
           symmetric = symmetric,
           linFeats = linFeats,
@@ -1219,6 +1236,7 @@ multilayerForestry <- function(x,
                      overfitPenalty = 1,
                      scale = FALSE,
                      doubleTree = FALSE,
+                     naDirection = FALSE,
                      reuseforestry = NULL,
                      savable = TRUE,
                      saveable = TRUE
@@ -1298,7 +1316,8 @@ multilayerForestry <- function(x,
       linear = linear,
       scale = scale,
       symmetric = symmetric,
-      hasNas = hasNas)
+      hasNas = hasNas,
+      naDirection = naDirection)
 
   for (variable in names(updated_variables)) {
     assign(x = variable, value = updated_variables[[variable]],
@@ -1434,6 +1453,7 @@ multilayerForestry <- function(x,
         linear,
         overfitPenalty,
         doubleTree,
+        naDirection,
         TRUE,
         rcppDataFrame
       )
@@ -1488,6 +1508,7 @@ multilayerForestry <- function(x,
           linFeats = linFeats,
           overfitPenalty = overfitPenalty,
           doubleTree = doubleTree,
+          naDirection = naDirection,
           groupsMapping = groupsMapping,
           gammas = gammas,
           groups = groupVector,
@@ -1581,6 +1602,7 @@ multilayerForestry <- function(x,
         linear,
         overfitPenalty,
         doubleTree,
+        naDirection,
         TRUE,
         reuseforestry@dataframe
       )
@@ -1619,6 +1641,7 @@ multilayerForestry <- function(x,
           monotoneAvg = monotoneAvg,
           overfitPenalty = overfitPenalty,
           doubleTree = doubleTree,
+          naDirection = naDirection,
           groupsMapping = reuseforestry@groupsMapping,
           gammas = reuseforestry@gammas,
           groups = groupVector,
@@ -3121,6 +3144,7 @@ relinkCPP_prt <- function(object) {
           verbose = FALSE,
           middleSplit = object@middleSplit,
           hasNas = object@hasNas,
+          naDirection = object@naDirection,
           maxObs = object@maxObs,
           minTreesPerFold = object@minTreesPerFold,
           featureWeights = object@featureWeights,
@@ -3135,8 +3159,8 @@ relinkCPP_prt <- function(object) {
           symmetric = object@symmetric,
           symmetricIndex = as.integer(ifelse(any(object@symmetric != 0), which(object@symmetric != 0), 0)),
           overfitPenalty = object@overfitPenalty,
-          doubleTree = object@doubleTree)
-
+          doubleTree = object@doubleTree
+        )
         object@forest <- forest_and_df_ptr$forest_ptr
         object@dataframe <- forest_and_df_ptr$data_frame_ptr
       } else if (inherits(object,"multilayerForestry")) {
@@ -3173,6 +3197,7 @@ relinkCPP_prt <- function(object) {
           nthread = 0, # will use all threads available.
           verbose = FALSE,
           middleSplit = object@middleSplit,
+          naDirection = object@naDirection,
           maxObs = object@maxObs,
           minTreesPerFold = object@minTreesPerFold,
           featureWeights = object@featureWeights,
@@ -3188,8 +3213,8 @@ relinkCPP_prt <- function(object) {
           symmetric = object@symmetric,
           symmetricIndex = as.integer(ifelse(any(object@symmetric != 0), which(object@symmetric != 0), 0)),
           overfitPenalty = object@overfitPenalty,
-          doubleTree = object@doubleTree)
-
+          doubleTree = object@doubleTree
+        )
         object@forest <- forest_and_df_ptr$forest_ptr
         object@dataframe <- forest_and_df_ptr$data_frame_ptr
       } else {
