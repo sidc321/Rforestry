@@ -18,7 +18,6 @@ from pydantic import (  # pylint: disable=no-name-in-module
     StrictInt,
     confloat,
     conint,
-    validate_arguments,
 )
 from pydantic.dataclasses import dataclass
 
@@ -48,62 +47,62 @@ class RandomForest:
      length of the training data.
     :type sampsize: *int, optional*
     :param sample_fraction: If this is given, then sampsize is ignored and set to
-     be ``round(len(y) * sample_fraction)``. It must be a real number between 0 and 1.
+     be ``round(len(y) * sample_fraction)`` . It must be a real number between 0 and 1.
     :type sample_fraction: *float, optional*
     :param mtry: The number of variables randomly selected at each split point. The default value is set to be
      one-third of the total number of features of the training data.
     :type mtry: *int, optional*
-    :param nodesizeSpl: Minimum observations contained in terminal nodes.
-    :type nodesizeSpl: *int, optional, default=5*
-    :param nodesizeAvg: Minimum size of terminal nodes for averaging dataset.
-    :type nodesizeAvg: *int, optional, default=5*
-    :param nodesizeStrictSpl: Minimum observations to follow strictly in terminal nodes.
-    :type nodesizeStrictSpl: *int, optional, default=1*
-    :param nodesizeStrictAvg: The minimum size of terminal nodes for averaging data set to follow when predicting.
+    :param nodesize_spl: Minimum observations contained in terminal nodes.
+    :type nodesize_spl: *int, optional, default=5*
+    :param nodesize_avg: Minimum size of terminal nodes for averaging dataset.
+    :type nodesize_avg: *int, optional, default=5*
+    :param nodesize_strict_spl: Minimum observations to follow strictly in terminal nodes.
+    :type nodesize_strict_spl: *int, optional, default=1*
+    :param nodesize_strict_avg: The minimum size of terminal nodes for averaging data set to follow when predicting.
      No splits are allowed that result in nodes with observations less than this parameter.
      This parameter enforces overlap of the averaging data set with the splitting set when training.
      When using honesty, splits that leave less than nodesizeStrictAvg averaging
      observations in either child node will be rejected, ensuring every leaf node
      also has at least nodesizeStrictAvg averaging observations.
-    :type nodesizeStrictAvg: *int, optional, default=1*
-    :param minSplitGain: Minimum loss reduction to split a node further in a tree.
-    :type minSplitGain: *float, optional, default=0*
-    :param maxDepth: Maximum depth of a tree.
-    :type maxDepth: *int, optional, default=99*
-    :param interactionDepth: All splits at or above interaction depth must be on variables
+    :type nodesize_strict_avg: *int, optional, default=1*
+    :param min_split_gain: Minimum loss reduction to split a node further in a tree.
+    :type min_split_gain: *float, optional, default=0*
+    :param max_depth: Maximum depth of a tree.
+    :type max_depth: *int, optional, default=99*
+    :param interaction_depth: All splits at or above interaction depth must be on variables
      that are not weighting variables (as provided by the interactionVariables argument in fit).
-    :type interactionDepth: *int, optional, default=maxDepth*
+    :type interaction_depth: *int, optional, default=maxDepth*
     :param splitratio: Proportion of the training data used as the splitting dataset.
      It is a ratio between 0 and 1. If the ratio is 1 (the default), then the splitting
      set uses the entire data, as does the averaging set---i.e., the standard Breiman RF setup.
      If the ratio is 0, then the splitting data set is empty, and the entire dataset is used
      for the averaging set (This is not a good usage, however, since there will be no data available for splitting).
     :type splitratio: *double, optional, default=1*
-    :param OOBhonest: In this version of honesty, the out-of-bag observations for each tree
+    :param oob_honest: In this version of honesty, the out-of-bag observations for each tree
      are used as the honest (averaging) set. This setting also changes how predictions
      are constructed. When predicting for observations that are out-of-sample
-     ``(predict(..., aggregation = "average"))``, all the trees in the forest
+     ``(predict(..., aggregation = "average"))`` , all the trees in the forest
      are used to construct predictions. When predicting for an observation that was in-sample
-     ``(predict(..., aggregation = "oob"))``, only the trees for which that observation
+     ``(predict(..., aggregation = "oob"))`` , only the trees for which that observation
      was not in the averaging set are used to construct the prediction for that observation.
      *aggregation="oob"* (out-of-bag) ensures that the outcome value for an observation
      is never used to construct predictions for a given observation even when it is in sample.
      This property does not hold in standard honesty, which relies on an asymptotic
-     subsampling argument. By default, when *OOBhonest=True*, the out-of-bag observations
+     subsampling argument. By default, when *oob_honest=True*, the out-of-bag observations
      for each tree are resamples with replacement to be used for the honest (averaging)
      set. This results in a third set of observations that are left out of both
      the splitting and averaging set, we call these the double out-of-bag (doubleOOB)
      observations. In order to get the predictions of only the trees in which each
-     observation fell into this doubleOOB set, one can run ``predict(... , aggregation = "doubleOOB")``.
+     observation fell into this doubleOOB set, one can run ``predict(... , aggregation = "doubleOOB")`` .
      In order to not do this second bootstrap sample, the doubleBootstrap flag can
      be set to *False*.
-    :type OOBhonest: *bool, optional, default=False*
-    :param doubleBootstrap: The doubleBootstrap flag provides the option to resample
+    :type oob_honest: *bool, optional, default=False*
+    :param double_bootstrap: The doubleBootstrap flag provides the option to resample
      with replacement from the out-of-bag observations set for each tree to construct
      the averaging set when using OOBhonest. If this is *False*, the out-of-bag observations
-     are used as the averaging set. By default this option is *True* when running *OOBhonest=True*.
+     are used as the averaging set. By default this option is *True* when running *oob_honest=True*.
      This option increases diversity across trees.
-    :type doubleBootstrap: *bool, optional, default=OOBhonest*
+    :type double_bootstrap: *bool, optional, default=oob_honest*
     :param seed: Random number generator seed. The default value is a random integer.
     :type seed: *int, optional*
     :param verbose: Indicator to train the forest in verbose mode.
@@ -115,51 +114,52 @@ class RandomForest:
      specifies the loss function according to which the splits of random forest
      should be made.
     :type splitrule: *str, optional, default='variance'*
-    :param middleSplit: Indicator of whether the split value is takes the average of two feature
+    :param middle_split: Indicator of whether the split value is takes the average of two feature
      values. If *False*, it will take a point based on a uniform distribution
      between two feature values.
-    :type middleSplit: *bool, optional, default=False*
-    :param maxObs: The max number of observations to split on. The default is the number of observations.
-    :type maxObs: *int, optional*
+    :type middle_split: *bool, optional, default=False*
+    :param max_obs: The max number of observations to split on. The default is the number of observations.
+    :type max_obs: *int, optional*
     :param linear: Indicator that enables Ridge penalized splits and linear aggregation
      functions in the leaf nodes. This is recommended for data with linear outcomes.
      For implementation details, see: https://arxiv.org/abs/1906.06463.
     :type linear: *bool, optional, default=False*
-    :param minTreesPerGroup: The number of trees which we make sure have been created leaving
+    :param min_trees_per_group: The number of trees which we make sure have been created leaving
      out each group. This is 0 by default, so we will not give any special treatment to
      the groups when sampling, however if this is set to a positive integer, we
      modify the bootstrap sampling scheme to ensure that exactly that many trees
-     have the group left out. We do this by, for each group, creating *minTreesPerGroup*
+     have the group left out. We do this by, for each group, creating *min_trees_per_group*
      trees which are built on observations sampled from the set of training observations
-     which are not in the current group. This means we create at least ``len(groups)*minTreesPerGroup``
-     trees for the forest. If ``ntree>len(groups)*minTreesPerGroup``, we create
-     ``max(len(groups)*minTreesPerGroup,ntree)`` total trees, in which at least *minTreesPerGroup*
+     which are not in the current group. This means we create at least ``len(groups)*min_trees_per_group``
+     trees for the forest. If ``ntree>len(groups)*min_trees_per_group`` , we create
+     ``max(len(groups)*min_trees_per_group,ntree)`` total trees, in which at least *min_trees_per_group*
      are created leaving out each group. For debugging purposes, these group sampling
      trees are stored at the end of the Python forest, in blocks based on the left out group.
-    :type minTreesPerGroup: *int, optional, default=0*
-    :param monotoneAvg: This is a flag that indicates whether or not monotonic
+    :type min_trees_per_group: *int, optional, default=0*
+    :param monotone_avg: This is a flag that indicates whether or not monotonic
      constraints should be enforced on the averaging set in addition to the splitting set.
      This flag is meaningless unless both honesty and monotonic constraints are in use.
-    :type monotoneAvg: *bool, optional, default=False*
-    :param overfitPenalty: Value to determine how much to penalize the magnitude
+    :type monotone_avg: *bool, optional, default=False*
+    :param overfit_penalty: Value to determine how much to penalize the magnitude
      of coefficients in ridge regression when using linear splits.
-    :type overfitPenalty: *float, optional, default=1*
+    :type overfit_penalty: *float, optional, default=1*
     :param scale: A parameter which indicates whether or not we want to scale and center
      the covariates and outcome before doing the regression. This can help with
      stability, so the default is *True*.
     :type scale: *bool, optional, default=True*
-    :param doubleTree: Indicator of whether the number of trees is doubled as averaging and splitting
+    :param double_tree: Indicator of whether the number of trees is doubled as averaging and splitting
      data can be exchanged to create decorrelated trees.
-    :type doubleTree: *bool, optional, default=False*
+    :type double_tree: *bool, optional, default=False*
 
-    :ivar processed_dta: A dictionary containing information about the data after it has been preprocessed.
+    :ivar processed_dta: A data structure containing information about the data after it has been preprocessed.
      *processed_dta* has the following entries:
 
      * processed_x (*pandas.DataFrame*) - The processed feature matrix.
 
      * y (*numpy.array of shape[nrows,]*) - The processed target values.
 
-     * categoricalFeatureCols (*numpy.array*) - An array of the indices of the categorical features in the feature matrix.
+     * categorical_feature_cols (*numpy.array*) - An array of the indices of the categorical features
+       in the feature matrix.
 
       .. note::
         In order for the program to recognize a feature as categorical, it **must** be converted into a
@@ -168,78 +168,106 @@ class RandomForest:
 
             df['categorical'] = df['categorical'].astype('category')
 
-        Check out the :ref:`Handling Categorical Data <categorical>` section for an example of how to use categorical features.
+        Check out the :ref:`Handling Categorical Data <categorical>` section for an example
+        of how to use categorical features.
 
-     * categoricalFeatureMapping (*list[dict]*) - For each categorical feature, the data is encoded into numeric represetation. Those encodings are saved in *categoricalFeatureMapping*. *categoricalFeatureMapping[i]* has the following entries:
+     * categorical_feature_mapping (*list[dict]*) - For each categorical feature, the data is encoded into
+       numeric represetation. Those encodings are saved in *categoricalFeatureMapping*. *categoricalFeatureMapping[i]*
+       and has the following entries:
 
-        * categoricalFeatureCol (*int*) - The index of the current categorical feature column.
+        * categorical_feature_col (*int*) - The index of the current categorical feature column.
 
-        * uniqueFeatureValues (*list*) - The categories of the current categorical feature.
+        * unique_feature_values (*list*) - The categories of the current categorical feature.
 
-        * numericFeatureValues (*numpy.array*) - The categories of the current categorical feature encoded into numeric represetation.
+        * numeric_feature_values (*numpy.array*) - The categories of the current categorical feature encoded
+          into numeric represetation.
 
-     * featureWeights (*numpy.array of shape[ncols]*) - an array of sampling probabilities/weights for each feature used when subsampling *mtry* features at each node. Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
+     * feature_weights (*numpy.array of shape[ncols]*) - an array of sampling probabilities/weights for each feature
+       used when subsampling *mtry* features at each node.
+       Check out :meth:`fit() <Rforestry.RandomForest.fit>` fot more details.
 
-     * featureWeightsVariables (*numpy.array*) - Indices of the features which weight more than ``max(featureWeights)*0.001``.
+     * feature_weights_variables (*numpy.array*) - Indices of the features which weight
+       more than ``max(feature_weights)*0.001`` .
 
-     * deepFeatureWeights (*numpy.array of shape[ncols]*) - Used in place of *featureWeights* for splits below *interactionDepth*. Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
+     * deep_feature_weights (*numpy.array of shape[ncols]*) - Used in place of *feature_weights* for splits
+       below *interaction_depth*. Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
 
-     * deepFeatureWeightsVariables (*numpy.array*) - Indices of the features which weight more than ``max(deepFeatureWeights)*0.001``.
+     * deep_feature_weights_variables (*numpy.array*) - Indices of the features which weight more than
+       ``max(deep_feature_weights)*0.001`` .
 
-     * observationWeights (*numpy.array of shape[nrows]*) - Denotes the weights for each training observation that determine how likely the observation is to be selected in each bootstrap sample. Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
+     * observation_weights (*numpy.array of shape[nrows]*) - Denotes the weights for each training observation that
+       determine how likely the observation is to be selected in each bootstrap sample.
+       Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
 
-     * symmetric (*numpy.array  of shape[ncols]*) - Used for the experimental feature which imposes strict symmetric marginal structure on the predictions of the forest through only selecting symmetric splits with symmetric aggregation functions. It's a numpy array of size *ncols* consisting of 0-s and 1-s, with 1 denoting the features to enforce symmetry on. Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
+     * symmetric (*numpy.array  of shape[ncols]*) - Used for the experimental feature which imposes strict symmetric
+       marginal structure on the predictions of the forest through only selecting symmetric splits with symmetric
+       aggregation functions. It's a numpy array of size *ncols* consisting of 0-s and 1-s, with 1 denoting
+       the features to enforce symmetry on. Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
 
-     * monotonicConstraints (*numpy.array of shape[ncols]*) - An array of size *ncol* specifying monotonic relationships between the continuous features and the outcome. Its entries are in -1, 0, 1, in which 1 indicates an increasing monotonic relationship, -1 indicates a decreasing monotonic relationship, and 0 indicates no constraint. Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
+     * monotonic_constraints (*numpy.array of shape[ncols]*) - An array of size *ncol* specifying monotonic
+       relationships between the continuous features and the outcome. Its entries are in -1, 0, 1, in which
+       1 indicates an increasing monotonic relationship, -1 indicates a decreasing monotonic relationship, and
+       0 indicates no constraint. Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
 
-     * linearFeatureCols (*numpy.array*) - An array containing the indices of which features to split linearly on when using linear penalized splits. Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
+     * linear_feature_cols (*numpy.array*) - An array containing the indices of which features to split linearly on
+       when using linear penalized splits. Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
 
-     * groupsMapping (*dict*) - Contains informtion about the groups of the training observations. Has the following entries:
+     * groups_mapping (*dict*) - Contains informtion about the groups of the training observations.
+       Has the following entries:
 
-        * groupValue (*pandas.Index*) - The categories of the groups.
+        * group_value (*pandas.Index*) - The categories of the groups.
 
-        * groupNumericValue (*numpy.array*) - The categories of the groups encoded into numeric represetation
+        * group_numeric_value (*numpy.array*) - The categories of the groups encoded into numeric represetation
 
-     * groups (*pandas.Series(..., dtype='category')*) - Specifies the group membership of each training observation. Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
+     * groups (*pandas.Series(..., dtype='category')*) - Specifies the group membership of each training observation.
+       Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
 
-     * colMeans (*numpy.array of shape[ncols]*) - The mean value of each column.
+     * col_means (*numpy.array of shape[ncols]*) - The mean value of each column.
 
-     * colSd (*numpy.array of shape[ncols]*) - The standard deviation of each column.
+     * col_sd (*numpy.array of shape[ncols]*) - The standard deviation of each column.
 
-     * hasNas (*bool*) - Specifies whether the feature matrix contains missing observations or not.
+     * has_nas (*bool*) - Specifies whether the feature matrix contains missing observations or not.
 
-     * nObservations (*int*) - The number of observations in the training data.
+     * n_observations (*int*) - The number of observations in the training data.
 
-     * numColumns (*int*) - The number of features in the training data.
+     * num_columns (*int*) - The number of features in the training data.
 
-     * featNames (*numpy.array of shape[ncols]*) - The names of the features used for training.
+     * feat_names (*numpy.array of shape[ncols]*) - The names of the features used for training.
 
-     Note that **all** of the entries in processed_dta are set to ``None`` during initialization. They are only assigned a value after :meth:`fit() <forestry.RandomForest.fit>` is called.
+     Note that **all** of the entries in processed_dta are set to ``None`` or empty containers during initialization.
+     They are only assigned a value after :meth:`fit() <forestry.RandomForest.fit>` is called.
+    :vartype processed_dta: ProcessedDta
 
-    :vartype processed_dta: dict
+     .. _translate-label:
 
+    :ivar py_forest: For any tree *i* in the forest, *py_forest[i]* is a dictionary which gives access to the underlying
+     structrure of that tree. *py_forest[i]* has the following entries:
 
-    .. _translate-label:
+     * children_right (*numpy.array of shape[number of nodes in the tree,]*) - For a node with a given *id*,
+       *children_right[id]* gives the id of the right child of that node. If leaf node, *children_right[id]* is *-1*.
 
-    :ivar Py_forest: For any tree *i* in the forest, *Py_forest[i]* is a dictionary which gives access to the underlying structrure of that tree. *Py_forest[i]* has the following entries:
+     * children_left (*numpy.array of shape[number of nodes in the tree,]*) - For a node with a given *id*,
+       *children_left[id]* gives the id of the left child of that node. If leaf node, *children_left[id]* is *-1*.
 
-     * children_right (*numpy.array of shape[number of nodes in the tree,]*) - For a node with a given *id*, *children_right[id]* gives the id of the right child of that node. If leaf node, *children_right[id]* is *-1*.
+     * feature (*numpy.array of shape[number of nodes in the tree,]*) - For a node with a given *id*, *feature[id]*
+       gives the index of the splitting feature in that node. If leaf node, *feature[id]* is the negative number of
+       observations in the averaging set of that node.
 
-     * children_left (*numpy.array of shape[number of nodes in the tree,]*) - For a node with a given *id*, *children_left[id]* gives the id of the left child of that node. If leaf node, *children_left[id]* is *-1*.
+     * n_node_samples (*numpy.array of shape[number of nodes in the tree,]*) - For a node with a given *id*,
+       *feature[id]* gives the number of observations in the averaging set of that node.
 
-     * feature (*numpy.array of shape[number of nodes in the tree,]*) - For a node with a given *id*, *feature[id]* gives the index of the splitting feature in that node. If leaf node, *feature[id]* is the negative number of observations in the averaging set of that node.
+     * threshold (*numpy.array of shape[number of nodes in the tree,]*) - For a node with a given *id*, *threshold[id]*
+       gives the splitting point (threshold) of the split in that node. If leaf node, *threshold[id]* is *0.0*.
 
-     * n_node_samples (*numpy.array of shape[number of nodes in the tree,]*) - For a node with a given *id*, *feature[id]* gives the number of observations in the averaging set of that node.
-
-     * threshold (*numpy.array of shape[number of nodes in the tree,]*) - For a node with a given *id*, *threshold[id]* gives the splitting point (threshold) of the split in that node. If leaf node, *threshold[id]* is *0.0*.
-
-     * values (*numpy.array of shape[number of nodes in the tree,]*) - For a node with a given *id*, if that node is a leaf node, *values[id]* gives the prediction made by that node. Otherwise, *values[id]* is *0.0*.
+     * values (*numpy.array of shape[number of nodes in the tree,]*) - For a node with a given *id*, if that node is
+       a leaf node, *values[id]* gives the prediction made by that node. Otherwise, *values[id]* is *0.0*.
 
      .. note::
-        When a *RandomForest* is initialized, *Py_forest* is set to a list of *ntree* empty dictionaries.
-        In order to populate those dictionaries, one must use the :meth:`translate_tree_python() <forestry.RandomForest.translate_tree_python>` method.
+        When a *RandomForest* is initialized, *py_forest* is set to a list of *ntree* empty dictionaries. In order to
+        populate those dictionaries, one must use the :meth:`translate_tree() <Rforestry.RandomForest.translate_tree>`
+        method.
 
-    :vartype Py_forest: list[dict]
+    :vartype py_forest: list[dict]
     :ivar forest: A ctypes pointer to the *forestry* object in C++. It is initially set to *None* and updated only
      after :meth:`fit() <forestry.RandomForest.fit>` is called.
     :vartype forest: ctypes.c_void_p
@@ -314,7 +342,6 @@ class RandomForest:
             )
             self.interaction_depth = self.max_depth
 
-    @validate_arguments
     def _get_seed(self, seed: Optional[int]) -> int:
         if seed is None:
             return self.seed
@@ -816,7 +843,7 @@ class RandomForest:
             predict(..., trees = [0,1,1]) = (predict(..., trees = [0]) +
                                             2*predict(..., trees = [1])) / 3
 
-         note we must have ``exact = True``, and ``aggregation = "average"`` to use tree indices. Defaults to using
+         note we must have ``exact = True`` , and ``aggregation = "average"`` to use tree indices. Defaults to using
          all trees equally weighted.
         :type trees: *array_like, optional*
         :param weightMatrix: An indicator of whether or not we should also return a
@@ -919,9 +946,7 @@ class RandomForest:
         when each feature is shuffled.
 
         :param noWarning: A flag to not display warnings.
-        :type noWarning: *bool, optional, default=False*
         :return: The variable importance of the forest.
-        :rtype: numpy.array
 
         """
 
@@ -1131,7 +1156,7 @@ class RandomForest:
         """
         Given a trained forest, translates the selected trees by allowing access to its undelying structure.
         After translating tree *i*, its structure will be stored as a dictionary in :ref:`Py_forest <translate-label>`
-        and can be accessed by ``[RandomForest object].Py_forest[i]``. Check out the :ref:`Py_forest <translate-label>`
+        and can be accessed by ``[RandomForest object].Py_forest[i]`` . Check out the :ref:`Py_forest <translate-label>`
         attribute for more details about its structure.
 
         :param tree_ids: The indices of the trees to be translated. By default, all the trees in the forest
@@ -1235,7 +1260,7 @@ class RandomForest:
          bias correction after doing the nonlinear corrections.
         :type linear: *bool, optional, default=True*
         :param double: A flag indicating if one should use ``aggregation = "doubleOOB"`` for
-         the initial predictions rather than ``aggregation = "oob"``.
+         the initial predictions rather than ``aggregation = "oob"`` .
         :type double: *bool, optional, default=False*
         :param simple: flag indicating whether we should do a simple linear adjustment
          or do different adjustments by quantiles.

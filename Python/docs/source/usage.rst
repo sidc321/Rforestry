@@ -23,18 +23,18 @@ of the forestry.
     from Rforestry import RandomForest
 
     # Create a RandomForest object
-    fr = RandomForest(ntree=100, mtry=3, OOBhonest=True)
+    fr = RandomForest(ntree=100, mtry=3, oob_honest=True)
     
     # Check out the list of parameters
-    print(fr.get_params())
+    print(fr.get_parameters())
 
     # Modify some parameters
-    newparams = {'maxDepth': 10, 'OOBhonest': False}
-    fr.set_params(**newparams)
-    fr.set_params(seed=1729)
+    newparams = {'max_depth': 10, 'oob_honest': False}
+    fr.set_parameters(**newparams)
+    fr.set_parameters(seed=1729)
 
     # Check out the new parameters
-    print(fr.get_params())
+    print(fr.get_parameters())
 
 
 .. _train_test:
@@ -139,7 +139,7 @@ for more details.
     y = data['target']
 
     # Create a RandomForest object
-    fr = RandomForest(OOBhonest=True, scale=False)
+    fr = RandomForest(oob_honest=True, scale=False)
 
     print('Traingng the forest')
     fr.fit(X, y)
@@ -170,7 +170,7 @@ for more details.
     y = data['target']
 
     # Create a RandomForest object
-    fr = RandomForest(OOBhonest=True, doubleBootstrap=True, scale=False)
+    fr = RandomForest(oob_honest=True, double_bootstrap=True, scale=False)
 
     print('Traingng the forest')
     fr.fit(X, y)
@@ -201,7 +201,7 @@ for more details.
     y = data['target']
 
     # Create a RandomForest object and train
-    fr = RandomForest(OOBhonest=True, doubleBootstrap=True, scale=False)
+    fr = RandomForest(oob_honest=True, double_bootstrap=True, scale=False)
     fr.fit(X, y)
 
     # Get confidence intervals
@@ -227,7 +227,7 @@ for more details.
     X, y = load_breast_cancer(return_X_y=True)
 
     # Create a RandomForest object and train
-    fr = RandomForest(scale=False, maxDepth=50)
+    fr = RandomForest(scale=False, max_depth=50)
     fr.fit(X, y)
 
     var_importance = fr.get_vi()
@@ -255,7 +255,7 @@ for more details.
     X, y = load_breast_cancer(return_X_y=True)
 
     # Create a RandomForest object and train
-    fr = RandomForest(scale=False, OOBhonest=True)
+    fr = RandomForest(scale=False, oob_honest=True)
     fr.fit(X, y)
 
     # Getting the bias corrected predictions
@@ -273,8 +273,8 @@ Retrieve the Tree Structure
 ---------------------------
 
 This is an example of how to retrieve the underlying tree structure in the forest. To do that,
-we need to use the :meth:`translate_tree_python() <forestry.RandomForest.translate_tree_python>` function,
-which fills the :ref:`Py_forest <translate-label>` attribute for the corresponding tree.
+we need to use the :meth:`translate_tree() <forestry.RandomForest.translate_tree>` function,
+which fills the :ref:`py_forest <translate-label>` attribute for the corresponding tree.
 
 .. code-block:: Python
 
@@ -289,15 +289,15 @@ which fills the :ref:`Py_forest <translate-label>` attribute for the correspondi
     y = data['target']
 
     # Create a RandomForest object and train
-    fr = RandomForest(scale=False, maxDepth=50)
+    fr = RandomForest(scale=False, max_depth=50)
     fr.fit(X, y)
 
     # Translate the first tree in the forest
-    fr.translate_tree_python(0)
-    print(fr.Py_forest[0])
+    fr.translate_tree(0)
+    print(fr.py_forest[0])
 
     # Calculate the proportion of splits for each feature_names
-    split_prop = fr.get_split_props()
+    split_prop = fr.get_split_propotions()
     print(split_prop)
 
 
@@ -324,7 +324,7 @@ then use the `dtreeviz <https://github.com/parrt/dtreeviz#usage>`_ library for v
     y = data['target']
 
     # Create a RandomForest object and train
-    fr = RandomForest(ntree=100, maxDepth=8)
+    fr = RandomForest(ntree=100, max_depth=8)
     fr.fit(X, y)
 
     # Create a ShadowForestryTree object

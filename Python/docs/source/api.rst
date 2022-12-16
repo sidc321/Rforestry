@@ -9,9 +9,7 @@ Here, you can find the Python API reference of *Rforestry* classes.
 
 Random Forest Regressor
 -----------------------
-
-.. automodule:: forestry
-.. autoclass:: RandomForest
+.. autoclass:: Rforestry.RandomForest
    :members:
    :undoc-members:
 
@@ -24,21 +22,20 @@ Random Forest Regressor
       ~RandomForest.fit
       ~RandomForest.get_ci
       ~RandomForest.get_oob
-      ~RandomForest.get_split_props
+      ~RandomForest.get_split_proportions
       ~RandomForest.get_vi
-      ~RandomForest.get_params
+      ~RandomForest.get_parameters
       ~RandomForest.predict
       ~RandomForest.predict_info
       ~RandomForest.score
-      ~RandomForest.set_params
-      ~RandomForest.translate_tree_python
+      ~RandomForest.set_parameters
+      ~RandomForest.translate_tree
 
 
 Plotting
 ---------
 
-.. automodule:: forestry_shadow
-.. autoclass:: ShadowForestryTree
+.. autoclass:: Rforestry.ShadowForestryTree
    :members:
    :undoc-members:
 
