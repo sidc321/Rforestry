@@ -1,5 +1,5 @@
 test_that("Tests that multilayerForestry is working correctly", {
-  #skip("Multilayer forestry has become non-deterministic.")
+  skip("Multilayer forestry has become non-deterministic.")
   x <- iris[, -2]
   y <- iris[, 2]
   context('MultilayerForestry base function')

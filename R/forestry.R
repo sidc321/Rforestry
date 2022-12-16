@@ -41,8 +41,7 @@ training_data_checker <- function(x,
                                   symmetric,
                                   scale,
                                   hasNas,
-                                  naDirection,
-                                  relinkcpp_prt
+                                  naDirection
                                   ) {
   x <- as.data.frame(x)
   nfeatures <- ncol(x)
@@ -1236,7 +1235,6 @@ multilayerForestry <- function(x,
                      overfitPenalty = 1,
                      scale = FALSE,
                      doubleTree = FALSE,
-                     naDirection = FALSE,
                      reuseforestry = NULL,
                      savable = TRUE,
                      saveable = TRUE
@@ -1317,7 +1315,7 @@ multilayerForestry <- function(x,
       scale = scale,
       symmetric = symmetric,
       hasNas = hasNas,
-      naDirection = naDirection)
+      naDirection = FALSE)
 
   for (variable in names(updated_variables)) {
     assign(x = variable, value = updated_variables[[variable]],
@@ -1453,7 +1451,6 @@ multilayerForestry <- function(x,
         linear,
         overfitPenalty,
         doubleTree,
-        naDirection,
         TRUE,
         rcppDataFrame
       )
@@ -1508,7 +1505,6 @@ multilayerForestry <- function(x,
           linFeats = linFeats,
           overfitPenalty = overfitPenalty,
           doubleTree = doubleTree,
-          naDirection = naDirection,
           groupsMapping = groupsMapping,
           gammas = gammas,
           groups = groupVector,
@@ -1602,7 +1598,6 @@ multilayerForestry <- function(x,
         linear,
         overfitPenalty,
         doubleTree,
-        naDirection,
         TRUE,
         reuseforestry@dataframe
       )
@@ -1641,7 +1636,6 @@ multilayerForestry <- function(x,
           monotoneAvg = monotoneAvg,
           overfitPenalty = overfitPenalty,
           doubleTree = doubleTree,
-          naDirection = naDirection,
           groupsMapping = reuseforestry@groupsMapping,
           gammas = reuseforestry@gammas,
           groups = groupVector,

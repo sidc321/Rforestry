@@ -68,7 +68,7 @@ struct tree_info {
   // Contains the count of NA's which fell to the right for each split value
   // (-1 indicates leaf node, 0 indicates no NA's fell that way)
   std::vector< int > naDefaultDirection;
-  // Contains ontains the default direction for all NA values per split node if
+  // Contains the default direction for all NA values per split node if
   // naDirection == TRUE, -1 indicates left and 1 indicates right
   unsigned int seed;
   // The seed that the tree was given (this uniquely identifies each tree

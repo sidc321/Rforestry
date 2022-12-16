@@ -226,7 +226,6 @@ public:
     return _naDirection;
   }
 
-
   bool getlinear() {
     return _linear;
   }

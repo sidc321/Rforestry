@@ -431,7 +431,6 @@ SEXP rcpp_cppMultilayerBuildInterface(
     bool linear,
     double overfitPenalty,
     bool doubleTree,
-    bool naDirection,
     bool existing_dataframe_flag,
     SEXP existing_dataframe
 ){
@@ -465,8 +464,7 @@ SEXP rcpp_cppMultilayerBuildInterface(
         (size_t) maxObs,
         linear,
         (double) overfitPenalty,
-        doubleTree,
-        naDirection
+        doubleTree
       );
 
       // delete(testFullForest);
@@ -1825,8 +1823,7 @@ Rcpp::List rcpp_reconstruct_forests(
     (size_t) maxObs,
     (bool) linear,
     (double) overfitPenalty,
-    (bool) doubleTree,
-    (bool) naDirection
+    (bool) doubleTree
   );
 
   // Get the gammas

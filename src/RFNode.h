@@ -16,8 +16,6 @@ public:
   RFNode();
   virtual ~RFNode();
 
-  enum naSplitDirection {left = -1, right = 1, none = 0};
-
   void setLeafNode(
           size_t averagingSampleIndexSize,
           size_t splittingSampleIndexSize,
