@@ -33,8 +33,7 @@ training_data_checker(
   symmetric,
   scale,
   hasNas,
-  naDirection,
-  relinkcpp_prt
+  naDirection
 )
 }
 \arguments{
