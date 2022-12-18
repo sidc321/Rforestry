@@ -9,16 +9,8 @@ rcpp_cppBuildInterface <- function(x, y, catCols, linCols, numRows, numColumns, 
     .Call(`_Rforestry_rcpp_cppBuildInterface`, x, y, catCols, linCols, numRows, numColumns, ntree, replace, sampsize, mtry, splitratio, OOBhonest, doubleBootstrap, nodesizeSpl, nodesizeAvg, nodesizeStrictSpl, nodesizeStrictAvg, minSplitGain, maxDepth, interactionDepth, seed, nthread, verbose, middleSplit, maxObs, featureWeights, featureWeightsVariables, deepFeatureWeights, deepFeatureWeightsVariables, observationWeights, monotonicConstraints, groupMemberships, symmetricIndices, minTreesPerFold, foldSize, monotoneAvg, hasNas, naDirection, linear, symmetric, overfitPenalty, doubleTree, existing_dataframe_flag, existing_dataframe)
 }
 
-rcpp_cppMultilayerBuildInterface <- function(x, y, catCols, linCols, numRows, numColumns, ntree, nrounds, eta, replace, sampsize, mtry, splitratio, OOBhonest, doubleBootstrap, nodesizeSpl, nodesizeAvg, nodesizeStrictSpl, nodesizeStrictAvg, minSplitGain, maxDepth, seed, nthread, verbose, middleSplit, maxObs, featureWeights, featureWeightsVariables, deepFeatureWeights, deepFeatureWeightsVariables, observationWeights, monotonicConstraints, linear, overfitPenalty, doubleTree, existing_dataframe_flag, existing_dataframe) {
-    .Call(`_Rforestry_rcpp_cppMultilayerBuildInterface`, x, y, catCols, linCols, numRows, numColumns, ntree, nrounds, eta, replace, sampsize, mtry, splitratio, OOBhonest, doubleBootstrap, nodesizeSpl, nodesizeAvg, nodesizeStrictSpl, nodesizeStrictAvg, minSplitGain, maxDepth, seed, nthread, verbose, middleSplit, maxObs, featureWeights, featureWeightsVariables, deepFeatureWeights, deepFeatureWeightsVariables, observationWeights, monotonicConstraints, linear, overfitPenalty, doubleTree, existing_dataframe_flag, existing_dataframe)
-}
-
 rcpp_cppPredictInterface <- function(forest, x, aggregation, seed, nthread, exact, returnWeightMatrix, use_weights, use_hold_out_idx, tree_weights, hold_out_idx) {
     .Call(`_Rforestry_rcpp_cppPredictInterface`, forest, x, aggregation, seed, nthread, exact, returnWeightMatrix, use_weights, use_hold_out_idx, tree_weights, hold_out_idx)
-}
-
-rcpp_cppMultilayerPredictInterface <- function(multilayerForest, x, aggregation, seed, nthread, exact) {
-    .Call(`_Rforestry_rcpp_cppMultilayerPredictInterface`, multilayerForest, x, aggregation, seed, nthread, exact)
 }
 
 rcpp_OBBPredictInterface <- function(forest) {
@@ -45,24 +37,8 @@ rcpp_CppToR_translator <- function(forest) {
     .Call(`_Rforestry_rcpp_CppToR_translator`, forest)
 }
 
-rcpp_gammas_translator <- function(multilayerForest) {
-    .Call(`_Rforestry_rcpp_gammas_translator`, multilayerForest)
-}
-
-rcpp_residuals_translator <- function(multilayerForest) {
-    .Call(`_Rforestry_rcpp_residuals_translator`, multilayerForest)
-}
-
-rcpp_multilayer_CppToR_translator <- function(multilayerForest) {
-    .Call(`_Rforestry_rcpp_multilayer_CppToR_translator`, multilayerForest)
-}
-
 rcpp_reconstructree <- function(x, y, catCols, linCols, numRows, numColumns, R_forest, replace, sampsize, splitratio, OOBhonest, doubleBootstrap, mtry, nodesizeSpl, nodesizeAvg, nodesizeStrictSpl, nodesizeStrictAvg, minSplitGain, maxDepth, interactionDepth, seed, nthread, verbose, middleSplit, maxObs, minTreesPerFold, featureWeights, featureWeightsVariables, deepFeatureWeights, deepFeatureWeightsVariables, observationWeights, monotonicConstraints, groupMemberships, monotoneAvg, symmetricIndex, hasNas, naDirection, linear, symmetric, overfitPenalty, doubleTree) {
     .Call(`_Rforestry_rcpp_reconstructree`, x, y, catCols, linCols, numRows, numColumns, R_forest, replace, sampsize, splitratio, OOBhonest, doubleBootstrap, mtry, nodesizeSpl, nodesizeAvg, nodesizeStrictSpl, nodesizeStrictAvg, minSplitGain, maxDepth, interactionDepth, seed, nthread, verbose, middleSplit, maxObs, minTreesPerFold, featureWeights, featureWeightsVariables, deepFeatureWeights, deepFeatureWeightsVariables, observationWeights, monotonicConstraints, groupMemberships, monotoneAvg, symmetricIndex, hasNas, naDirection, linear, symmetric, overfitPenalty, doubleTree)
-}
-
-rcpp_reconstruct_forests <- function(x, y, catCols, linCols, numRows, numColumns, R_forests, R_residuals, nrounds, eta, replace, sampsize, splitratio, OOBhonest, doubleBootstrap, mtry, nodesizeSpl, nodesizeAvg, nodesizeStrictSpl, nodesizeStrictAvg, minSplitGain, maxDepth, seed, nthread, verbose, middleSplit, maxObs, minTreesPerFold, featureWeights, featureWeightsVariables, deepFeatureWeights, deepFeatureWeightsVariables, observationWeights, monotonicConstraints, groupMemberships, gammas, monotoneAvg, symmetricIndex, linear, symmetric, overfitPenalty, doubleTree, naDirection) {
-    .Call(`_Rforestry_rcpp_reconstruct_forests`, x, y, catCols, linCols, numRows, numColumns, R_forests, R_residuals, nrounds, eta, replace, sampsize, splitratio, OOBhonest, doubleBootstrap, mtry, nodesizeSpl, nodesizeAvg, nodesizeStrictSpl, nodesizeStrictAvg, minSplitGain, maxDepth, seed, nthread, verbose, middleSplit, maxObs, minTreesPerFold, featureWeights, featureWeightsVariables, deepFeatureWeights, deepFeatureWeightsVariables, observationWeights, monotonicConstraints, groupMemberships, gammas, monotoneAvg, symmetricIndex, linear, symmetric, overfitPenalty, doubleTree, naDirection)
 }
 
 rcpp_cppImputeInterface <- function(forest, x, seed) {

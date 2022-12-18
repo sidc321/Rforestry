@@ -369,6 +369,8 @@ forest_checker <- function(object) {
   }
 }
 
+
+
 # -- Random Forest Constructor -------------------------------------------------
 setClass(
   Class = "forestry",
@@ -419,59 +421,6 @@ setClass(
     foldSize = "numeric"
   )
 )
-
-setClass(
-  Class = "multilayerForestry",
-  slots = list(
-    forest = "externalptr",
-    dataframe = "externalptr",
-    processed_dta = "list",
-    R_forests = "list",
-    R_residuals = "list",
-    categoricalFeatureCols = "list",
-    categoricalFeatureMapping = "list",
-    ntree = "numeric",
-    nrounds = "numeric",
-    eta = "numeric",
-    replace = "logical",
-    sampsize = "numeric",
-    mtry = "numeric",
-    nodesizeSpl = "numeric",
-    nodesizeAvg = "numeric",
-    nodesizeStrictSpl = "numeric",
-    nodesizeStrictAvg = "numeric",
-    minSplitGain = "numeric",
-    maxDepth = "numeric",
-    interactionDepth = "numeric",
-    splitratio = "numeric",
-    OOBhonest = "logical",
-    doubleBootstrap = "logical",
-    middleSplit = "logical",
-    y = "vector",
-    maxObs = "numeric",
-    linear = "logical",
-    symmetric = "numeric",
-    linFeats = "numeric",
-    monotonicConstraints = "numeric",
-    monotoneAvg = "logical",
-    featureWeights = "numeric",
-    featureWeightsVariables = "numeric",
-    deepFeatureWeights = "numeric",
-    deepFeatureWeightsVariables = "numeric",
-    observationWeights = "numeric",
-    overfitPenalty = "numeric",
-    gammas = "numeric",
-    doubleTree = "logical",
-    naDirection = "logical",
-    groupsMapping = "list",
-    groups = "numeric",
-    scale = "logical",
-    colMeans = "numeric",
-    colSd = "numeric",
-    minTreesPerFold = "numeric"
-  )
-)
-
 
 #' @title forestry
 #' @rdname forestry
@@ -1183,477 +1132,7 @@ forestry <- function(x,
   return(forest)
 }
 
-# -- Multilayer Random Forest Constructor --------------------------------------
-#' @name multilayer-forestry
-#' @title Multilayer forestry
-#' @rdname multilayer-forestry
-#' @description Construct a gradient boosted ensemble with random forest base learners.
-#' @inheritParams forestry
-#' @param featureWeights weights used when subsampling features for nodes above or at interactionDepth.
-#' @param deepFeatureWeights weights used when subsampling features for nodes below interactionDepth.
-#' @param nrounds Number of iterations used for gradient boosting.
-#' @param eta Step size shrinkage used in gradient boosting update.
-#' @return A `multilayerForestry` object.
-#' @export
-multilayerForestry <- function(x,
-                     y,
-                     ntree = 500,
-                     nrounds = 1,
-                     eta = 0.3,
-                     replace = FALSE,
-                     sampsize = nrow(x),
-                     sample.fraction = NULL,
-                     mtry = ncol(x),
-                     nodesizeSpl = 3,
-                     nodesizeAvg = 3,
-                     nodesizeStrictSpl = max(round(nrow(x)/128), 1),
-                     nodesizeStrictAvg = max(round(nrow(x)/128), 1),
-                     minSplitGain = 0,
-                     maxDepth = 99,
-                     splitratio = 1,
-                     OOBhonest = FALSE,
-                     doubleBootstrap = if (OOBhonest)
-                       TRUE
-                     else
-                       FALSE,
-                     seed = as.integer(runif(1) * 1000),
-                     verbose = FALSE,
-                     nthread = 0,
-                     splitrule = "variance",
-                     middleSplit = TRUE,
-                     maxObs = length(y),
-                     linear = FALSE,
-                     symmetric = rep(0,ncol(x)),
-                     linFeats = 0:(ncol(x)-1),
-                     monotonicConstraints = rep(0, ncol(x)),
-                     groups = NULL,
-                     minTreesPerFold = 0,
-                     monotoneAvg = FALSE,
-                     featureWeights = rep(1, ncol(x)),
-                     deepFeatureWeights = featureWeights,
-                     observationWeights = NULL,
-                     overfitPenalty = 1,
-                     scale = FALSE,
-                     doubleTree = FALSE,
-                     reuseforestry = NULL,
-                     savable = TRUE,
-                     saveable = TRUE
-) {
 
-  # Make sure that all the parameters exist when passed to forestry
-  tryCatch({
-    check_args <- c(as.list(environment()))
-    rm(check_args)
-  },  error = function(err) {
-    err <- as.character(err)
-    err <- gsub("Error in as.list.environment(environment()): ","", err, fixed = TRUE)
-    stop(paste0("A parameter passed is not assigned: ", err))
-  })
-
-  # Check for named columns
-  if(is.matrix(x) && is.null(colnames(x))) {
-    message("x does not have column names. The check that columns are provided in the same order
-            when training and predicting will be skipped")
-  }
-  # only if sample.fraction is given, update sampsize
-  if (!is.null(sample.fraction))
-    sampsize <- ceiling(sample.fraction * nrow(x))
-  linFeats <- unique(linFeats)
-
-  # Should not scale if we have only one value of Y
-  if (sd(y) == 0) {
-    scale = FALSE
-  }
-
-  x <- as.data.frame(x)
-  hasNas <- any(is.na(x))
-  if (hasNas) {
-    stop("x has missing data.")
-  }
-
-  #Translating interactionVariables to featureWeights syntax
-  if(is.null(featureWeights)) {
-    interactionVariables <- numeric(0)
-    featureWeights <- rep(1, ncol(x))
-    featureWeights[interactionVariables + 1] <- 0
-  }
-  if(is.null(deepFeatureWeights)) {
-    deepFeatureWeights <- rep(1, ncol(x))
-  }
-  if(is.null(observationWeights)) {
-    observationWeights <- rep(1, nrow(x))
-  }
-
-  # Preprocess the data
-  updated_variables <-
-    training_data_checker(
-      x = x,
-      y = y,
-      ntree = ntree,
-      replace = replace,
-      sampsize = sampsize,
-      mtry = mtry,
-      nodesizeSpl = nodesizeSpl,
-      nodesizeAvg = nodesizeAvg,
-      nodesizeStrictSpl = nodesizeStrictSpl,
-      nodesizeStrictAvg = nodesizeStrictAvg,
-      minSplitGain = minSplitGain,
-      maxDepth = maxDepth,
-      interactionDepth = maxDepth, # Make maxdepth for multilayer
-      splitratio = splitratio,
-      OOBhonest = OOBhonest,
-      nthread = nthread,
-      middleSplit = middleSplit,
-      doubleTree = doubleTree,
-      linFeats = linFeats,
-      monotonicConstraints = monotonicConstraints,
-      featureWeights = featureWeights,
-      deepFeatureWeights = deepFeatureWeights,
-      observationWeights = observationWeights,
-      groups = groups,
-      linear = linear,
-      scale = scale,
-      symmetric = symmetric,
-      hasNas = hasNas,
-      naDirection = FALSE)
-
-  for (variable in names(updated_variables)) {
-    assign(x = variable, value = updated_variables[[variable]],
-           envir = environment())
-  }
-
-  sample_weights_check <- sample_weights_checker(featureWeights, mtry, ncol = ncol(x))
-  deep_sample_weights_check <- sample_weights_checker(deepFeatureWeights, mtry, ncol = ncol(x))
-  featureWeights <- sample_weights_check$featureWeights
-  featureWeightsVariables <- sample_weights_check$featureWeightsVariables
-  deepFeatureWeights <- deep_sample_weights_check$featureWeights
-  deepFeatureWeightsVariables <- deep_sample_weights_check$featureWeightsVariables
-
-  # Total number of obervations
-  nObservations <- length(y)
-  numColumns <- ncol(x)
-
-  # Create vectors with the column means and SD's for scaling
-  colMeans <- rep(0, ncol(x)+1)
-  colSd <- rep(0, ncol(x)+1)
-
-  groupsMapping <- list()
-  if (!is.null(groups)) {
-    groupsMapping <- list("groupValue" = levels(groups),
-                          "groupNumericValue" = 1:length(levels(groups)))
-
-  }
-  if (!is.null(groups)) {
-    groupVector <- as.integer(groups)
-  } else {
-    groupVector <- rep(0, nrow(x))
-  }
-
-  if (is.null(reuseforestry)) {
-    preprocessedData <- preprocess_training(x, y)
-    processed_x <- preprocessedData$x
-    categoricalFeatureCols <-
-      preprocessedData$categoricalFeatureCols
-    categoricalFeatureMapping <-
-      preprocessedData$categoricalFeatureMapping
-
-    categoricalFeatureCols_cpp <- unlist(categoricalFeatureCols)
-    if (is.null(categoricalFeatureCols_cpp)) {
-      categoricalFeatureCols_cpp <- vector(mode = "numeric", length = 0)
-    } else {
-      monotonicConstraints[categoricalFeatureCols_cpp] <- 0
-      categoricalFeatureCols_cpp <- categoricalFeatureCols_cpp - 1
-    }
-
-    if (scale) {
-      # Center and scale continous features and outcome
-      for (col_idx in  1:ncol(processed_x)) {
-        if ((col_idx-1) %in% categoricalFeatureCols_cpp) {
-          next
-        } else {
-          colMeans[col_idx] <- mean(processed_x[,col_idx], na.rm = TRUE)
-          colSd[col_idx] <- sd(processed_x[,col_idx], na.rm = TRUE)
-        }
-      }
-
-      # Scale columns of X
-      processed_x <- scale_center(processed_x,
-                                  (categoricalFeatureCols_cpp+1),
-                                  colMeans,
-                                  colSd)
-
-      # Center and scale Y
-      colMeans[ncol(processed_x)+1] <- mean(y, na.rm = TRUE)
-      colSd[ncol(processed_x)+1] <- sd(y, na.rm = TRUE)
-      y <- (y-colMeans[ncol(processed_x)+1]) / colSd[ncol(processed_x)+1]
-    }
-
-    # Get the symmetric feature if one is set
-    symmetricIndex <- 1
-    if (any(symmetric != 0)) {
-      symmetricIndex <- which(symmetric != 0)
-    }
-
-    # Create rcpp object
-    # Create a forest object
-    multilayerForestry <- tryCatch({
-      rcppDataFrame <- rcpp_cppDataFrameInterface(
-        processed_x,
-        y,
-        categoricalFeatureCols_cpp,
-        linFeats,
-        nObservations,
-        numColumns,
-        featureWeights = featureWeights,
-        featureWeightsVariables = featureWeightsVariables,
-        deepFeatureWeights =  deepFeatureWeights,
-        deepFeatureWeightsVariables = deepFeatureWeightsVariables,
-        observationWeights = observationWeights,
-        monotonicConstraints = monotonicConstraints,
-        groupMemberships = groupVector,
-        monotoneAvg = monotoneAvg,
-        symmetricIndices = symmetric
-      )
-
-      rcppForest <- rcpp_cppMultilayerBuildInterface(
-        processed_x,
-        y,
-        categoricalFeatureCols_cpp,
-        linFeats,
-        nObservations,
-        numColumns,
-        ntree,
-        nrounds,
-        eta,
-        replace,
-        sampsize,
-        mtry,
-        splitratio,
-        OOBhonest,
-        doubleBootstrap,
-        nodesizeSpl,
-        nodesizeAvg,
-        nodesizeStrictSpl,
-        nodesizeStrictAvg,
-        minSplitGain,
-        maxDepth,
-        seed,
-        nthread,
-        verbose,
-        middleSplit,
-        maxObs,
-        featureWeights,
-        featureWeightsVariables,
-        deepFeatureWeights,
-        deepFeatureWeightsVariables,
-        observationWeights,
-        monotonicConstraints,
-        linear,
-        overfitPenalty,
-        doubleTree,
-        TRUE,
-        rcppDataFrame
-      )
-      processed_dta <- list(
-        "processed_x" = processed_x,
-        "y" = y,
-        "categoricalFeatureCols_cpp" = categoricalFeatureCols_cpp,
-        "linearFeatureCols_cpp" = linFeats,
-        "nObservations" = nObservations,
-        "numColumns" = numColumns
-      )
-      R_forests <- list()
-      gammas <- rep(0,nrounds)
-      R_residuals <- list()
-
-      return(
-        new(
-          "multilayerForestry",
-          forest = rcppForest,
-          dataframe = rcppDataFrame,
-          processed_dta = processed_dta,
-          R_forests = R_forests,
-          R_residuals = R_residuals,
-          categoricalFeatureCols = categoricalFeatureCols,
-          categoricalFeatureMapping = categoricalFeatureMapping,
-          ntree = ntree * (doubleTree + 1),
-          nrounds = nrounds,
-          eta = eta,
-          replace = replace,
-          sampsize = sampsize,
-          mtry = mtry,
-          nodesizeSpl = nodesizeSpl,
-          nodesizeAvg = nodesizeAvg,
-          nodesizeStrictSpl = nodesizeStrictSpl,
-          nodesizeStrictAvg = nodesizeStrictAvg,
-          minSplitGain = minSplitGain,
-          maxDepth = maxDepth,
-          splitratio = splitratio,
-          OOBhonest = OOBhonest,
-          doubleBootstrap = doubleBootstrap,
-          middleSplit = middleSplit,
-          maxObs = maxObs,
-          featureWeights = featureWeights,
-          featureWeightsVariables = featureWeightsVariables,
-          deepFeatureWeights =  deepFeatureWeights,
-          deepFeatureWeightsVariables = deepFeatureWeightsVariables,
-          observationWeights = observationWeights,
-          monotonicConstraints = monotonicConstraints,
-          monotoneAvg = monotoneAvg,
-          linear = linear,
-          symmetric = symmetric,
-          linFeats = linFeats,
-          overfitPenalty = overfitPenalty,
-          doubleTree = doubleTree,
-          groupsMapping = groupsMapping,
-          gammas = gammas,
-          groups = groupVector,
-          colMeans = colMeans,
-          colSd = colSd,
-          scale = scale,
-          minTreesPerFold = minTreesPerFold
-        )
-      )
-    },
-    error = function(err) {
-      print(err)
-      return(NULL)
-    })
-
-  } else {
-    categoricalFeatureCols_cpp <-
-      unlist(reuseforestry@categoricalFeatureCols)
-    if (is.null(categoricalFeatureCols_cpp)) {
-      categoricalFeatureCols_cpp <- vector(mode = "numeric", length = 0)
-    } else {
-      monotonicConstraints[categoricalFeatureCols_cpp] <- 0
-      categoricalFeatureCols_cpp <- categoricalFeatureCols_cpp - 1
-    }
-
-    categoricalFeatureMapping <-
-      reuseforestry@categoricalFeatureMapping
-
-    if (scale) {
-      # Center and scale continous features and outcome
-      for (col_idx in  1:ncol(processed_x)) {
-        if ((col_idx-1) %in% categoricalFeatureCols_cpp) {
-          next
-        } else {
-          colMeans[col_idx] <- mean(processed_x[,col_idx], na.rm = TRUE)
-          colSd[col_idx] <- sd(processed_x[,col_idx], na.rm = TRUE)
-        }
-      }
-
-      # Scale columns of X
-      processed_x <- scale_center(processed_x,
-                                  (categoricalFeatureCols_cpp+1),
-                                  colMeans,
-                                  colSd)
-
-      # Center and scale Y
-      colMeans[ncol(processed_x)+1] <- mean(y, na.rm = TRUE)
-      colSd[ncol(processed_x)+1] <- sd(y, na.rm = TRUE)
-      y <- (y-colMeans[ncol(processed_x)+1]) / colSd[ncol(processed_x)+1]
-    }
-
-    # Get the symmetric feature if one is set
-    symmetricIndex <- 1
-    if (any(symmetric != 0)) {
-      symmetricIndex <- which(symmetric != 0)
-    }
-
-    # Create rcpp object
-    # Create a forest object
-    multilayerForestry <- tryCatch({
-      rcppForest <- rcpp_cppMultilayerBuildInterface(
-        x,
-        y,
-        categoricalFeatureCols_cpp,
-        linFeats,
-        nObservations,
-        numColumns,
-        ntree,
-        nrounds,
-        eta,
-        replace,
-        sampsize,
-        mtry,
-        splitratio,
-        OOBhonest,
-        doubleBootstrap,
-        nodesizeSpl,
-        nodesizeAvg,
-        nodesizeStrictSpl,
-        nodesizeStrictAvg,
-        minSplitGain,
-        maxDepth,
-        seed,
-        nthread,
-        verbose,
-        middleSplit,
-        maxObs,
-        featureWeights,
-        monotonicConstraints,
-        observationWeights,
-        linear,
-        overfitPenalty,
-        doubleTree,
-        TRUE,
-        reuseforestry@dataframe
-      )
-
-      return(
-        new(
-          "multilayerForestry",
-          forest = rcppForest,
-          dataframe = reuseforestry@dataframe,
-          processed_dta = reuseforestry@processed_dta,
-          R_forests = reuseforestry@R_forests,
-          R_residuals = reuseforestry@R_residuals,
-          categoricalFeatureCols = reuseforestry@categoricalFeatureCols,
-          categoricalFeatureMapping = categoricalFeatureMapping,
-          ntree = ntree * (doubleTree + 1),
-          replace = replace,
-          sampsize = sampsize,
-          mtry = mtry,
-          nodesizeSpl = nodesizeSpl,
-          nodesizeAvg = nodesizeAvg,
-          nodesizeStrictSpl = nodesizeStrictSpl,
-          nodesizeStrictAvg = nodesizeStrictAvg,
-          minSplitGain = minSplitGain,
-          maxDepth = maxDepth,
-          splitratio = splitratio,
-          OOBhonest = OOBhonest,
-          doubleBootstrap = doubleBootstrap,
-          middleSplit = middleSplit,
-          maxObs = maxObs,
-          featureWeights = featureWeights,
-          observationWeights = observationWeights,
-          linear = linear,
-          symmetric = symmetric,
-          linFeats = linFeats,
-          monotonicConstraints = monotonicConstraints,
-          monotoneAvg = monotoneAvg,
-          overfitPenalty = overfitPenalty,
-          doubleTree = doubleTree,
-          groupsMapping = reuseforestry@groupsMapping,
-          gammas = reuseforestry@gammas,
-          groups = groupVector,
-          colMeans = colMeans,
-          colSd = colSd,
-          scale = scale,
-          minTreesPerFold = minTreesPerFold
-        )
-      )
-    }, error = function(err) {
-      print(err)
-      return(NULL)
-    })
-  }
-  if(savable || saveable)
-    multilayerForestry <- make_savable(multilayerForestry)
-  return(multilayerForestry)
-}
 
 # -- Predict Method ------------------------------------------------------------
 #' predict-forestry
@@ -2037,73 +1516,6 @@ predict.forestry <- function(object,
     return(rcppPrediction)
   }
 }
-
-
-
-# -- Multilayer Predict Method -------------------------------------------------------
-#' predict-multilayer-forestry
-#' @name predict-multilayer-forestry
-#' @rdname predict-multilayer-forestry
-#' @description Return the prediction from the forest.
-#' @param object A `multilayerForestry` object.
-#' @param newdata A data frame of testing predictors.
-#' @param aggregation How shall the leaf be aggregated. The default is to return
-#'   the mean of the leave `average`. Other options are `weightMatrix` which
-#'   returns the adaptive nearest neighbor weights used to construct the predictions.
-#' @param seed random seed
-#' @param nthread The number of threads with which to run the predictions with.
-#'   This will default to the number of threads with which the forest was trained
-#'   with.
-#' @param exact This specifies whether the forest predictions should be aggregated
-#'   in a reproducible ordering. Due to the non-associativity of floating point
-#'   addition, when we predict in parallel, predictions will be aggregated in
-#'   varied orders as different threads finish at different times.
-#'   By default, exact is TRUE unless N > 100,000 or a custom aggregation
-#'   function is used.
-#' @param ... additional arguments.
-#' @return A vector of predicted responses.
-#' @export
-predict.multilayerForestry <- function(object,
-                                       newdata,
-                                       aggregation = "average",
-                                       seed = as.integer(runif(1) * 10000),
-                                       nthread = 0,
-                                       exact = NULL,
-                                       ...) {
-    forest_checker(object)
-
-    if (is.null(exact)) {
-      if (nrow(newdata) > 1e5 || aggregation != "average") {
-        exact = FALSE
-      } else {
-        exact = TRUE
-      }
-    }
-
-   # Preprocess the data. We only run the data checker if ridge is turned on,
-   # because even in the case where there were no NAs in train, we still want to predict.
-    if(object@linear) {
-      testing_data_checker(newdata, FALSE)
-    }
-
-    processed_x <- preprocess_testing(newdata,
-                                      object@categoricalFeatureCols,
-                                      object@categoricalFeatureMapping)
-
-    rcppPrediction <- tryCatch({
-      rcpp_cppMultilayerPredictInterface(object@forest, processed_x,
-                                         aggregation, seed, nthread, exact)
-    }, error = function(err) {
-      print(err)
-      return(NULL)
-    })
-
-    if (aggregation == "average") {
-      return(rcppPrediction$prediction)
-    } else if (aggregation == "weightMatrix") {
-      return(rcppPrediction)
-    }
-  }
 
 
 
@@ -3080,7 +2492,7 @@ CppToR_translator <- function(object) {
 #' @rdname relinkCPP
 #' @description When a `foresty` object is saved and then reloaded the Cpp
 #'   pointers for the data set and the Cpp forest have to be reconstructed
-#' @param object an object of class `forestry` or class `multilayerForestry`
+#' @param object an object of class `forestry`
 #' @return Relinks the pointer to the correct C++ object.
 #' @export
 relinkCPP_prt <- function(object) {
@@ -3088,141 +2500,92 @@ relinkCPP_prt <- function(object) {
     # 2.) reconnect the forest.
 
 
-    tryCatch({
-      # Now we have to decide whether we use reconstruct tree or reconstructforests
-      if (inherits(object,"forestry")) {
-        if(!length(object@R_forest))
-          stop("Forest was saved without first calling `forest <- make_savable(forest)`. ",
-               "This forest cannot be reconstructed.")
+  tryCatch({
+    # Now we have to decide whether we use reconstruct tree or reconstructforests
+    if (!length(object@R_forest))
+      stop(
+        "Forest was saved without first calling `forest <- make_savable(forest)`. ",
+        "This forest cannot be reconstructed."
+      )
 
-        # If tree has scaling, we need to scale + center the X and Y before
-        # giving to C++
-        if (object@scale) {
-          processed_x <- scale_center(object@processed_dta$processed_x,
-                                      (unname(object@processed_dta$categoricalFeatureCols_cpp)+1),
-                                      object@colMeans,
-                                      object@colSd)
+    # If tree has scaling, we need to scale + center the X and Y before
+    # giving to C++
+    if (object@scale) {
+      processed_x <- scale_center(object@processed_dta$processed_x,
+                                  (
+                                    unname(object@processed_dta$categoricalFeatureCols_cpp) + 1
+                                  ),
+                                  object@colMeans,
+                                  object@colSd)
 
-          processed_y <- (object@processed_dta$y-object@colMeans[ncol(processed_x)+1]) /
-            object@colSd[ncol(processed_x)+1]
-        } else {
-          processed_x <- object@processed_dta$processed_x
-          processed_y <- object@processed_dta$y
-        }
-
-
-        # In this case we use the tree constructor
-        forest_and_df_ptr <- rcpp_reconstructree(
-          x = processed_x,
-          y = processed_y,
-          catCols = object@processed_dta$categoricalFeatureCols_cpp,
-          linCols = object@processed_dta$linearFeatureCols_cpp,
-          numRows = object@processed_dta$nObservations,
-          numColumns = object@processed_dta$numColumns,
-          R_forest = object@R_forest,
-          replace = object@replace,
-          sampsize = object@sampsize,
-          splitratio = object@splitratio,
-          OOBhonest = object@OOBhonest,
-          doubleBootstrap = object@doubleBootstrap,
-          mtry = object@mtry,
-          nodesizeSpl = object@nodesizeSpl,
-          nodesizeAvg = object@nodesizeAvg,
-          nodesizeStrictSpl = object@nodesizeStrictSpl,
-          nodesizeStrictAvg = object@nodesizeStrictAvg,
-          minSplitGain = object@minSplitGain,
-          maxDepth = object@maxDepth,
-          interactionDepth = object@interactionDepth,
-          seed = sample(.Machine$integer.max, 1),
-          nthread = 0, # will use all threads available.
-          verbose = FALSE,
-          middleSplit = object@middleSplit,
-          hasNas = object@hasNas,
-          naDirection = object@naDirection,
-          maxObs = object@maxObs,
-          minTreesPerFold = object@minTreesPerFold,
-          featureWeights = object@featureWeights,
-          featureWeightsVariables = object@featureWeightsVariables,
-          deepFeatureWeights = object@deepFeatureWeights,
-          deepFeatureWeightsVariables = object@deepFeatureWeightsVariables,
-          observationWeights = object@observationWeights,
-          monotonicConstraints = object@monotonicConstraints,
-          groupMemberships = as.integer(object@groups),
-          monotoneAvg = object@monotoneAvg,
-          linear = object@linear,
-          symmetric = object@symmetric,
-          symmetricIndex = as.integer(ifelse(any(object@symmetric != 0), which(object@symmetric != 0), 0)),
-          overfitPenalty = object@overfitPenalty,
-          doubleTree = object@doubleTree
-        )
-        object@forest <- forest_and_df_ptr$forest_ptr
-        object@dataframe <- forest_and_df_ptr$data_frame_ptr
-      } else if (inherits(object,"multilayerForestry")) {
-        #print("Got past filtering")
-
-        if(!length(object@R_forests))
-          stop("Forest was saved without first calling `forest <- make_savable(forest)`. ",
-               "This forest cannot be reconstructed.")
-        # Now we use the forest constructor
-        forest_and_df_ptr <- rcpp_reconstruct_forests(
-          x = object@processed_dta$processed_x,
-          y = object@processed_dta$y,
-          catCols = object@processed_dta$categoricalFeatureCols_cpp,
-          linCols = object@processed_dta$linearFeatureCols_cpp,
-          numRows = object@processed_dta$nObservations,
-          numColumns = object@processed_dta$numColumns,
-          R_forests = object@R_forests,   # Now we pass R_forests
-          R_residuals = object@R_residuals,
-          nrounds = object@nrounds,
-          eta = object@eta,
-          replace = object@replace,
-          sampsize = object@sampsize,
-          splitratio = object@splitratio,
-          OOBhonest = object@OOBhonest,
-          doubleBootstrap = object@doubleBootstrap,
-          mtry = object@mtry,
-          nodesizeSpl = object@nodesizeSpl,
-          nodesizeAvg = object@nodesizeAvg,
-          nodesizeStrictSpl = object@nodesizeStrictSpl,
-          nodesizeStrictAvg = object@nodesizeStrictAvg,
-          minSplitGain = object@minSplitGain,
-          maxDepth = object@maxDepth,
-          seed = sample(.Machine$integer.max, 1),  # We might want to save this later
-          nthread = 0, # will use all threads available.
-          verbose = FALSE,
-          middleSplit = object@middleSplit,
-          naDirection = object@naDirection,
-          maxObs = object@maxObs,
-          minTreesPerFold = object@minTreesPerFold,
-          featureWeights = object@featureWeights,
-          featureWeightsVariables = object@featureWeightsVariables,
-          deepFeatureWeights = object@deepFeatureWeights,
-          deepFeatureWeightsVariables = object@deepFeatureWeightsVariables,
-          observationWeights = object@observationWeights,
-          monotonicConstraints = object@monotonicConstraints,
-          groupMemberships = as.integer(object@groups),
-          monotoneAvg = object@monotoneAvg,
-          gammas = object@gammas,
-          linear = object@linear,
-          symmetric = object@symmetric,
-          symmetricIndex = as.integer(ifelse(any(object@symmetric != 0), which(object@symmetric != 0), 0)),
-          overfitPenalty = object@overfitPenalty,
-          doubleTree = object@doubleTree
-        )
-        object@forest <- forest_and_df_ptr$forest_ptr
-        object@dataframe <- forest_and_df_ptr$data_frame_ptr
-      } else {
-        stop("We can only load an object of class forestry or multilayerForestry")
-      }
+      processed_y <-
+        (object@processed_dta$y - object@colMeans[ncol(processed_x) + 1]) /
+        object@colSd[ncol(processed_x) + 1]
+    } else {
+      processed_x <- object@processed_dta$processed_x
+      processed_y <- object@processed_dta$y
+    }
 
 
-    }, error = function(err) {
-      print('Problem when trying to create the forest object in Cpp')
-      print(err)
-      return(NA)
-    })
+    # In this case we use the tree constructor
+    forest_and_df_ptr <- rcpp_reconstructree(
+      x = processed_x,
+      y = processed_y,
+      catCols = object@processed_dta$categoricalFeatureCols_cpp,
+      linCols = object@processed_dta$linearFeatureCols_cpp,
+      numRows = object@processed_dta$nObservations,
+      numColumns = object@processed_dta$numColumns,
+      R_forest = object@R_forest,
+      replace = object@replace,
+      sampsize = object@sampsize,
+      splitratio = object@splitratio,
+      OOBhonest = object@OOBhonest,
+      doubleBootstrap = object@doubleBootstrap,
+      mtry = object@mtry,
+      nodesizeSpl = object@nodesizeSpl,
+      nodesizeAvg = object@nodesizeAvg,
+      nodesizeStrictSpl = object@nodesizeStrictSpl,
+      nodesizeStrictAvg = object@nodesizeStrictAvg,
+      minSplitGain = object@minSplitGain,
+      maxDepth = object@maxDepth,
+      interactionDepth = object@interactionDepth,
+      seed = sample(.Machine$integer.max, 1),
+      nthread = 0,
+      # will use all threads available.
+      verbose = FALSE,
+      middleSplit = object@middleSplit,
+      hasNas = object@hasNas,
+      naDirection = object@naDirection,
+      maxObs = object@maxObs,
+      minTreesPerFold = object@minTreesPerFold,
+      featureWeights = object@featureWeights,
+      featureWeightsVariables = object@featureWeightsVariables,
+      deepFeatureWeights = object@deepFeatureWeights,
+      deepFeatureWeightsVariables = object@deepFeatureWeightsVariables,
+      observationWeights = object@observationWeights,
+      monotonicConstraints = object@monotonicConstraints,
+      groupMemberships = as.integer(object@groups),
+      monotoneAvg = object@monotoneAvg,
+      linear = object@linear,
+      symmetric = object@symmetric,
+      symmetricIndex = as.integer(ifelse(
+        any(object@symmetric != 0), which(object@symmetric != 0), 0
+      )),
+      overfitPenalty = object@overfitPenalty,
+      doubleTree = object@doubleTree
+    )
+    object@forest <- forest_and_df_ptr$forest_ptr
+    object@dataframe <- forest_and_df_ptr$data_frame_ptr
 
-    return(object)
+
+  },
+  error = function(err) {
+    print('Problem when trying to create the forest object in Cpp')
+    print(err)
+    return(NA)
+  })
+
+  return(object)
 }
 
 
@@ -3264,16 +2627,7 @@ relinkCPP_prt <- function(object) {
 #' @aliases make_savable,forestry-method
 #' @export
 make_savable <- function(object) {
-    # We check if it is either a forestry object, or a multilayer forestry object
-    # and save it accordingly
-    if (inherits(object, "forestry")) {
-      object@R_forest <- CppToR_translator(object@forest)
-    } else if (inherits(object,"multilayerForestry")) {
-      object@R_forests <- rcpp_multilayer_CppToR_translator(object@forest)
-      object@gammas <- rcpp_gammas_translator(object@forest)
-      object@R_residuals <- rcpp_residuals_translator(object@forest)
-    }
-
+    object@R_forest <- CppToR_translator(object@forest)
     return(object)
 }
 
