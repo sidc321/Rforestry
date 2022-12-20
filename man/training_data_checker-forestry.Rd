@@ -32,7 +32,8 @@ training_data_checker(
   linear,
   symmetric,
   scale,
-  hasNas
+  hasNas,
+  naDirection
 )
 }
 \arguments{
@@ -155,6 +156,12 @@ the covariates and outcome before doing the regression. This can help with
 stability, so by default is TRUE.}
 
 \item{hasNas}{indicates if there is any missingness in x.}
+
+\item{naDirection}{Sets a default direction for missing values in each split
+node during training. It test placing all missing values to the left and
+right, then selects the direction that minimizes loss. If no missing values
+exist, then a default direction is randomly selected in proportion to the
+distribution of observations on the left and right. (Default = FALSE)}
 }
 \value{
 A list of parameters after checking the selected parameters are valid.

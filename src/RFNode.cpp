@@ -13,7 +13,7 @@ std::mutex mutex_weightMatrix;
 RFNode::RFNode():
   _splitFeature(0), _splitValue(0),_trinary(false), _predictWeight(std::numeric_limits<double>::quiet_NaN()),
   _leftChild(nullptr),_rightChild(nullptr),_naLeftCount(0), _naRightCount(0),
-  _averageCount(0), _splitCount(0) {}
+  _naDefaultDirection(0), _averageCount(0), _splitCount(0) {}
 
 RFNode::~RFNode() {
   //  std::cout << "RFNode() destructor is called." << std::endl;
@@ -57,7 +57,8 @@ void RFNode::setSplitNode(
   bool trinary,
   size_t naLeftCount,
   size_t naCenterCount,
-  size_t naRightCount
+  size_t naRightCount,
+  int naDefaultDirection
 ) {
   // Split node constructor
   _splitCount = 0;
@@ -68,6 +69,7 @@ void RFNode::setSplitNode(
   _rightChild = std::move(rightChild);
   _naLeftCount = naLeftCount;
   _naRightCount = naRightCount;
+  _naDefaultDirection = naDefaultDirection;
   _trinary = trinary;
   _nodeId = -1;
 }
@@ -173,6 +175,7 @@ void RFNode::predict(
   DataFrame* trainingData,
   arma::Mat<double>* weightMatrix,
   bool linear,
+  bool naDirection,
   double lambda,
   unsigned int seed,
   size_t nodesizeStrictAvg,
@@ -335,15 +338,25 @@ void RFNode::predict(
         if (std::isnan(currentValue)) {
           size_t draw;
 
-          // If we have a missing feature value, if no NAs were observed when
-          // splitting send to left/right with probability proportional to
-          // number of observations in left/right child node else send
-          // right/left with probability in proportion to NA's which went
-          // left/right when splitting
-          if ((naLeftCount == 0) && (naRightCount == 0)) {
-            draw = discrete_dist_nonmissing(random_number_generator);
+          // If naDirection is set to true, follow the split node's default
+          // direction for NAs.
+          if (naDirection) {
+            draw = getNaDefaultDirection();
+            // naDefaultDirection is -1 for left and 1 for right
+            if (draw == -1) {
+              draw = 0;
+            }
           } else {
-            draw = discrete_dist(random_number_generator);
+            // If we have a missing feature value, if no NAs were observed when
+            // splitting send to left/right with probability proportional to
+            // number of observations in left/right child node else send
+            // right/left with probability in proportion to NA's which went
+            // left/right when splitting
+            if ((naLeftCount == 0) && (naRightCount == 0)) {
+              draw = discrete_dist_nonmissing(random_number_generator);
+            } else {
+              draw = discrete_dist(random_number_generator);
+            }
           }
 
           // Have to push to three indices when we have trinary splits
@@ -393,11 +406,22 @@ void RFNode::predict(
               (*rightPartitionIndex).push_back(*it);
             }
           } else {
-            if ((naLeftCount == 0) && (naRightCount == 0)) {
-              draw = discrete_dist_nonmissing(random_number_generator);
+            // If naDirection is set to true, follow the split node's default
+            // direction for NAs.
+            if (naDirection) {
+              draw = getNaDefaultDirection();
+              // naDefaultDirection is -1 for left and 1 for right
+              if (draw == -1) {
+                draw = 0;
+              }
             } else {
-              draw = discrete_dist(random_number_generator);
+              if ((naLeftCount == 0) && (naRightCount == 0)) {
+                draw = discrete_dist_nonmissing(random_number_generator);
+              } else {
+                draw = discrete_dist(random_number_generator);
+              }
             }
+
             // Now push to index
             if (draw == 0) {
               (*leftPartitionIndex).push_back(*it);
@@ -571,6 +595,7 @@ void RFNode::predict(
           trainingData,
           weightMatrix,
           linear,
+          naDirection,
           lambda,
           seed,
           nodesizeStrictAvg,
@@ -589,6 +614,7 @@ void RFNode::predict(
           trainingData,
           weightMatrix,
           linear,
+          naDirection,
           lambda,
           seed,
           nodesizeStrictAvg,
@@ -688,13 +714,11 @@ void RFNode::write_node_info(
     treeInfo->split_val.push_back(0);
     treeInfo->naLeftCount.push_back(-1);
     treeInfo->naRightCount.push_back(-1);
-
+    treeInfo->naDefaultDirection.push_back(0);
 
     treeInfo->num_avg_samples.push_back(getAverageCount());
     treeInfo->num_spl_samples.push_back(getSplitCount());
     treeInfo->values.push_back(getPredictWeight());
-
-
   } else {
     // If it is a usual node: remember split var and split value and recursively
     // call write_node_info on the left and the right child.
@@ -702,7 +726,7 @@ void RFNode::write_node_info(
     treeInfo->split_val.push_back(getSplitValue());
     treeInfo->naLeftCount.push_back(getNaLeftCount());
     treeInfo->naRightCount.push_back(getNaRightCount());
-
+    treeInfo->naDefaultDirection.push_back(getNaDefaultDirection());
 
     getLeftChild()->write_node_info(treeInfo, trainingData);
     getRightChild()->write_node_info(treeInfo, trainingData);

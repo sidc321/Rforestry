@@ -42,6 +42,7 @@ forestryTree::forestryTree(
   bool splitMiddle,
   size_t maxObs,
   bool hasNas,
+  bool naDirection,
   bool linear,
   bool symmetric,
   double overfitPenalty,
@@ -121,6 +122,7 @@ forestryTree::forestryTree(
   this->_minNodeSizeToSplitSpt = minNodeSizeToSplitSpt;
   this->_minSplitGain = minSplitGain;
   this->_hasNas = hasNas;
+  this->_naDirection = naDirection;
   this->_maxDepth = maxDepth;
   this->_interactionDepth = interactionDepth;
   this->_averagingSampleIndex = std::move(averagingSampleIndex);
@@ -226,7 +228,8 @@ forestryTree::forestryTree(
     monotonic_details,
     symmetric,
     true,
-    symmetric_details
+    symmetric_details,
+    naDirection
   );
 }
 
@@ -264,6 +267,7 @@ void forestryTree::predict(
     DataFrame* trainingData,
     arma::Mat<double>* weightMatrix,
     bool linear,
+    bool naDirection,
     unsigned int seed,
     size_t nodesizeStrictAvg,
     std::vector<size_t>* OOBIndex
@@ -287,6 +291,7 @@ void forestryTree::predict(
                        trainingData,
                        weightMatrix,
                        linear,
+                       naDirection,
                        getOverfitPenalty(),
                        seed,
                        nodesizeStrictAvg,
@@ -354,7 +359,7 @@ void splitDataIntoTwoParts(
     std::vector<size_t>* sampleIndex,
     size_t splitFeature,
     double splitValue,
-    int naDirection,
+    int naBestDirection,
     std::vector<size_t>* leftPartitionIndex,
     std::vector<size_t>* rightPartitionIndex,
     bool categoical,
@@ -409,13 +414,13 @@ void splitDataIntoTwoParts(
     }
 
     // Now instead of splitting with distance to Y values, we send all NA indices
-    // right if naDirection == 1, left if naDirection == -1
-    if (naDirection == -1) {
+    // right if naBestDirection == 1, left if naBestDirection == -1
+    if (naBestDirection == -1) {
       for (const auto& index : naIndices) {
         leftPartitionIndex->push_back(index);
         naLeftCount++;
       }
-    } else if (naDirection == 1) {
+    } else if (naBestDirection == 1) {
       for (const auto& index : naIndices) {
         rightPartitionIndex->push_back(index);
         naRightCount++;
@@ -757,7 +762,7 @@ void splitData(
     std::vector<size_t>* splittingSampleIndex,
     size_t splitFeature,
     double splitValue,
-    int naDirection,
+    int naBestDirection,
     std::vector<size_t>* averagingLeftPartitionIndex,
     std::vector<size_t>* averagingRightPartitionIndex,
     std::vector<size_t>* splittingLeftPartitionIndex,
@@ -777,7 +782,7 @@ void splitData(
     averagingSampleIndex,
     splitFeature,
     splitValue,
-    naDirection,
+    naBestDirection,
     averagingLeftPartitionIndex,
     averagingRightPartitionIndex,
     categoical,
@@ -793,7 +798,7 @@ void splitData(
     splittingSampleIndex,
     splitFeature,
     splitValue,
-    naDirection,
+    naBestDirection,
     splittingLeftPartitionIndex,
     splittingRightPartitionIndex,
     categoical,
@@ -897,7 +902,8 @@ void forestryTree::recursivePartition(
     monotonic_info monotone_details,
     bool trinary,
     bool centerSplit,
-    symmetric_info symmetric_details
+    symmetric_info symmetric_details,
+    bool naDirection
 ){
   if ((*averagingSampleIndex).size() < getMinNodeSizeAvg() ||
       (*splittingSampleIndex).size() < getMinNodeSizeSpt() ||
@@ -1192,6 +1198,27 @@ void forestryTree::recursivePartition(
       }
     }
 
+    // If no missing exist at the split node, randomly select a direction with
+    // probability in proportion to the number of observations on the left and
+    // right.
+    if (naDirection && naLeftCount == 0 && naRightCount == 0) {
+      std::vector<size_t> naSampling = {
+        averagingLeftPartitionIndex.size(),
+        averagingRightPartitionIndex.size()
+      };
+      std::discrete_distribution<size_t> discrete_dist(
+          naSampling.begin(), naSampling.end()
+      );
+      std::mt19937_64 random_number_generator;
+      random_number_generator.seed(getSeed());
+      size_t draw = discrete_dist(random_number_generator);
+      if (draw == 0) {
+        bestSplitNaDir = -1;
+      } else {
+        bestSplitNaDir = 1;
+      }
+    }
+
     // Recursively split on the left child node
     recursivePartition(
       leftChild.get(),
@@ -1210,7 +1237,8 @@ void forestryTree::recursivePartition(
       monotonic_details_left,
       trinary,
       centerSplit,
-      symmetric_details_left
+      symmetric_details_left,
+      naDirection
     );
 
     // Recursively split on the right child node
@@ -1231,7 +1259,8 @@ void forestryTree::recursivePartition(
       monotonic_details_right,
       trinary,
       false,
-      symmetric_details_right
+      symmetric_details_right,
+      naDirection
     );
 
     (*rootNode).setSplitNode(
@@ -1242,7 +1271,8 @@ void forestryTree::recursivePartition(
         trinary,
         naLeftCount,
         trinary ? naCenterCount : 0,
-        naRightCount
+        naRightCount,
+        bestSplitNaDir
     );
 
   }
@@ -1867,6 +1897,7 @@ void forestryTree::getOOBPrediction(
     trainingData,
     weightMatrix,
     false,
+    getNaDirection(),
     44,
     nodesizeStrictAvg,
     use_training_idx ? &indexInTrain : &OOBIndex
@@ -1961,6 +1992,7 @@ void forestryTree::getShuffledOOBPrediction(
       trainingData,
       &curWeightMatrix,
       false,
+      getNaDirection(),
       44,
       nodesizeStrictAvg
     );
@@ -2004,6 +2036,7 @@ void forestryTree::reconstruct_tree(
     size_t maxDepth,
     size_t interactionDepth,
     bool hasNas,
+    bool naDirection,
     bool linear,
     double overfitPenalty,
     unsigned int seed,
@@ -2012,6 +2045,7 @@ void forestryTree::reconstruct_tree(
     std::vector<double> split_vals,
     std::vector<int> naLeftCounts,
     std::vector<int> naRightCounts,
+    std::vector<int> naDefaultDirections,
     std::vector<size_t> averagingSampleIndex,
     std::vector<size_t> splittingSampleIndex,
     std::vector<double> predictWeights
@@ -2026,6 +2060,7 @@ void forestryTree::reconstruct_tree(
   _maxDepth = maxDepth;
   _interactionDepth = interactionDepth;
   _hasNas = hasNas;
+  _naDirection = naDirection;
   _linear = linear;
   _overfitPenalty = overfitPenalty;
   _nodeCount = 0;
@@ -2053,6 +2088,7 @@ void forestryTree::reconstruct_tree(
     &split_vals,
     &naLeftCounts,
     &naRightCounts,
+    &naDefaultDirections,
     &predictWeights
   );
 
@@ -2066,6 +2102,7 @@ void forestryTree::recursive_reconstruction(
   std::vector<double> * split_vals,
   std::vector<int> * naLeftCounts,
   std::vector<int> * naRightCounts,
+  std::vector<int> * naDefaultDirections,
   std::vector<double> * weights
 ) {
   int var_id = (*var_ids)[0];
@@ -2077,6 +2114,8 @@ void forestryTree::recursive_reconstruction(
     (*naLeftCounts).erase((*naLeftCounts).begin());
     size_t naRightCount = (*naRightCounts)[0];
     (*naRightCounts).erase((*naRightCounts).begin());
+    int naDefaultDirection = (*naDefaultDirections)[0];
+    (*naDefaultDirections).erase((*naDefaultDirections).begin());
 
   if(var_id < 0){
     // This is a terminal node
@@ -2117,6 +2156,7 @@ void forestryTree::recursive_reconstruction(
       split_vals,
       naLeftCounts,
       naRightCounts,
+      naDefaultDirections,
       weights
       );
 
@@ -2126,6 +2166,7 @@ void forestryTree::recursive_reconstruction(
       split_vals,
       naLeftCounts,
       naRightCounts,
+      naDefaultDirections,
       weights
     );
 
@@ -2137,7 +2178,8 @@ void forestryTree::recursive_reconstruction(
         false,
         naLeftCount,
         0,
-        naRightCount
+        naRightCount,
+        naDefaultDirection
     );
 
     return;

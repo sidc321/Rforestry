@@ -42,6 +42,7 @@ public:
     size_t minTreesPerFold,
     size_t foldSize,
     bool hasNas,
+    bool naDirection,
     bool linear,
     bool symmetric,
     double overfitPenalty,
@@ -80,6 +81,7 @@ public:
       std::unique_ptr< std::vector< std::vector<double> >  > & split_vals,
       std::unique_ptr< std::vector< std::vector<int> >  > & naLeftCounts,
       std::unique_ptr< std::vector< std::vector<int> >  > & naRightCounts,
+      std::unique_ptr< std::vector< std::vector<int> >  > & naDefaultDirections,
       std::unique_ptr< std::vector< std::vector<size_t> >  > & averagingSampleIndex,
       std::unique_ptr< std::vector< std::vector<size_t> >  > & splittingSampleIndex,
       std::unique_ptr< std::vector< std::vector<double> >  > & weights);
@@ -220,6 +222,10 @@ public:
     return _hasNas;
   }
 
+  bool getNaDirection() {
+    return _naDirection;
+  }
+
   bool getlinear() {
     return _linear;
   }
@@ -264,6 +270,7 @@ private:
   size_t _minTreesPerFold;
   size_t _foldSize;
   bool _hasNas;
+  bool _naDirection;
   bool _linear;
   bool _symmetric;
   double _overfitPenalty;

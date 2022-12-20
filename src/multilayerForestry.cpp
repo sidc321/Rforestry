@@ -62,7 +62,6 @@ multilayerForestry::multilayerForestry(
   this->_linear = linear;
   this->_overfitPenalty = overfitPenalty;
   this->_doubleTree = doubleTree;
-
   addForests(ntree);
 }
 
@@ -166,7 +165,8 @@ void multilayerForestry::addForests(size_t ntree) {
       _linear,
       false, // Set symmetric = FALSE
       _overfitPenalty,
-      _doubleTree
+      _doubleTree,
+      false
     );
 
     multilayerForests[o] = residualForest;

@@ -33,7 +33,8 @@ public:
       bool trinary,
       size_t naLeftCount,
       size_t naCenterCount,
-      size_t naRightCount
+      size_t naRightCount,
+      int naDefaultDirection
   );
 
   void setRidgeCoefficients(
@@ -62,6 +63,7 @@ public:
     DataFrame* trainingData,
     arma::Mat<double>* weightMatrix,
     bool linear,
+    bool naDirection,
     double lambda,
     unsigned int seed,
     size_t nodesizeStrictAvg,
@@ -127,6 +129,10 @@ public:
     return _naRightCount;
   }
 
+  int getNaDefaultDirection() {
+    return _naDefaultDirection;
+  }
+
   size_t getNodeId() {
     return _nodeId;
   }
@@ -169,6 +175,7 @@ private:
   std::unique_ptr< RFNode > _rightChild;
   size_t _naLeftCount;
   size_t _naRightCount;
+  int _naDefaultDirection;
   size_t _averageCount;
   size_t _splitCount;
   size_t _nodeId;
