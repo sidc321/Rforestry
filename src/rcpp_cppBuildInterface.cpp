@@ -31,8 +31,7 @@ SEXP rcpp_cppDataFrameInterface(
     Rcpp::NumericVector observationWeights,
     Rcpp::NumericVector monotonicConstraints,
     Rcpp::NumericVector groupMemberships,
-    bool monotoneAvg,
-    Rcpp::NumericVector symmetricIndices
+    bool monotoneAvg
 ){
 
   try {
@@ -104,12 +103,6 @@ SEXP rcpp_cppDataFrameInterface(
         )
     );
 
-    std::unique_ptr< std::vector<size_t> > symmetricIndicesRcpp (
-        new std::vector<size_t>(
-            Rcpp::as< std::vector<size_t> >(symmetricIndices)
-        )
-    );
-
     DataFrame* trainingData = new DataFrame(
         std::move(featureDataRcpp),
         std::move(outcomeDataRcpp),
@@ -124,8 +117,7 @@ SEXP rcpp_cppDataFrameInterface(
         std::move(observationWeightsRcpp),
         std::move(monotonicConstraintsRcpp),
         std::move(groupMembershipsRcpp),
-        (bool) monotoneAvg,
-        std::move(symmetricIndicesRcpp)
+        (bool) monotoneAvg
     );
 
     Rcpp::XPtr<DataFrame> ptr(trainingData, true) ;
@@ -174,14 +166,12 @@ SEXP rcpp_cppBuildInterface(
   Rcpp::NumericVector observationWeights,
   Rcpp::NumericVector monotonicConstraints,
   Rcpp::NumericVector groupMemberships,
-  Rcpp::NumericVector symmetricIndices,
   int minTreesPerFold,
   int foldSize,
   bool monotoneAvg,
   bool hasNas,
   bool naDirection,
   bool linear,
-  bool symmetric,
   double overfitPenalty,
   bool doubleTree,
   bool existing_dataframe_flag,
@@ -219,7 +209,6 @@ SEXP rcpp_cppBuildInterface(
         hasNas,
         naDirection,
         linear,
-        symmetric,
         (double) overfitPenalty,
         doubleTree
       );
@@ -310,12 +299,6 @@ SEXP rcpp_cppBuildInterface(
           )
       );
 
-      std::unique_ptr< std::vector<size_t> > symmetricIndicesRcpp (
-          new std::vector<size_t>(
-              Rcpp::as< std::vector<size_t> >(symmetricIndices)
-          )
-      );
-
       DataFrame* trainingData = new DataFrame(
           std::move(featureDataRcpp),
           std::move(outcomeDataRcpp),
@@ -330,8 +313,7 @@ SEXP rcpp_cppBuildInterface(
           std::move(observationWeightsRcpp),
           std::move(monotoneConstraintsRcpp),
           std::move(groupMembershipsRcpp),
-          (bool) monotoneAvg,
-          std::move(symmetricIndicesRcpp)
+          (bool) monotoneAvg
       );
 
       forestry* testFullForest = new forestry(
@@ -360,7 +342,6 @@ SEXP rcpp_cppBuildInterface(
         hasNas,
         naDirection,
         linear,
-        symmetric,
         (double) overfitPenalty,
         doubleTree
       );
@@ -838,11 +819,9 @@ Rcpp::List rcpp_reconstructree(
   Rcpp::NumericVector monotonicConstraints,
   Rcpp::NumericVector groupMemberships,
   bool monotoneAvg,
-  int symmetricIndex,
   bool hasNas,
   bool naDirection,
   bool linear,
-  Rcpp::NumericVector symmetric,
   double overfitPenalty,
   bool doubleTree
 ){
@@ -993,12 +972,6 @@ Rcpp::List rcpp_reconstructree(
       )
   );
 
-  std::unique_ptr< std::vector<size_t> > symmetricIndicesRcpp (
-      new std::vector<size_t>(
-          Rcpp::as< std::vector<size_t> >(groupMemberships)
-      )
-  );
-
   DataFrame* trainingData = new DataFrame(
     std::move(featureDataRcpp),
     std::move(outcomeDataRcpp),
@@ -1013,8 +986,7 @@ Rcpp::List rcpp_reconstructree(
     std::move(observationWeightsRcpp),
     std::move(monotonicConstraintsRcpp),
     std::move(groupMembershipsRcpp),
-    (bool) monotoneAvg,
-    std::move(symmetricIndicesRcpp)
+    (bool) monotoneAvg
   );
 
   forestry* testFullForest = new forestry(
@@ -1043,7 +1015,6 @@ Rcpp::List rcpp_reconstructree(
     (bool) hasNas,
     (bool) naDirection,
     (bool) linear,
-    (bool) symmetric,
     (double) overfitPenalty,
     doubleTree
   );

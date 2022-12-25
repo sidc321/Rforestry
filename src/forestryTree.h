@@ -35,7 +35,6 @@ public:
     bool hasNas,
     bool naDirection,
     bool linear,
-    bool symmetric,
     double overfitPenalty,
     unsigned int seed
   );
@@ -122,9 +121,6 @@ public:
     std::shared_ptr< arma::Mat<double> > stotal,
     bool monotone_splits,
     monotonic_info monotone_details,
-    bool trinary,
-    bool centerSplit,
-    symmetric_info symmetric_details,
     bool naDirection
   );
 
@@ -133,8 +129,6 @@ public:
       double &bestSplitValue,
       double &bestSplitLoss,
       int &bestSplitNaDir,
-      std::vector<double> &bestSplitLeftWts,
-      std::vector<double> &bestSplitRightWts,
       arma::Mat<double> &bestSplitGL,
       arma::Mat<double> &bestSplitGR,
       arma::Mat<double> &bestSplitSL,
@@ -147,13 +141,11 @@ public:
       bool splitMiddle,
       size_t maxObs,
       bool linear,
-      bool trinary,
       double overfitPenalty,
       std::shared_ptr< arma::Mat<double> > gtotal,
       std::shared_ptr< arma::Mat<double> > stotal,
       bool monotone_splits,
-      monotonic_info &monotone_details,
-      symmetric_info &symmetric_details
+      monotonic_info &monotone_details
   );
 
   void initializelinear(

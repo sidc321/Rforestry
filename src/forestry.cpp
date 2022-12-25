@@ -54,7 +54,6 @@ forestry::forestry(
   bool hasNas,
   bool naDirection,
   bool linear,
-  bool symmetric,
   double overfitPenalty,
   bool doubleTree
 ){
@@ -86,7 +85,6 @@ forestry::forestry(
   this->_naDirection = naDirection;
   this->_minTreesPerFold = minTreesPerFold;
   this->_foldSize = foldSize;
-  this->_symmetric = symmetric;
 
   if (splitRatio > 1 || splitRatio < 0) {
     throw std::runtime_error("splitRatio shoule be between 0 and 1.");
@@ -297,7 +295,6 @@ void forestry::addTrees(size_t ntree) {
                 gethasNas(),
                 getNaDirection(),
                 getlinear(),
-                getSymmetric(),
                 getOverfitPenalty(),
                 myseed
               )
@@ -324,7 +321,6 @@ void forestry::addTrees(size_t ntree) {
                     gethasNas(),
                     getNaDirection(),
                     getlinear(),
-                    getSymmetric(),
                     getOverfitPenalty(),
                     myseed
                  );

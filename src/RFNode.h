@@ -20,8 +20,6 @@ public:
           size_t averagingSampleIndexSize,
           size_t splittingSampleIndexSize,
           size_t nodeId,
-          bool trinary,
-          std::vector<double> weights,
           double predictWeight
   );
 
@@ -30,9 +28,7 @@ public:
       double splitValue,
       std::unique_ptr< RFNode > leftChild,
       std::unique_ptr< RFNode > rightChild,
-      bool trinary,
       size_t naLeftCount,
-      size_t naCenterCount,
       size_t naRightCount,
       int naDefaultDirection
   );
@@ -137,14 +133,6 @@ public:
     return _nodeId;
   }
 
-  std::vector<double> getWeights() {
-    return _weights;
-  }
-
-  bool getTrinary() {
-    return _trinary;
-  }
-
   std::vector<size_t>* getAveragingIndex() {
     return _averagingSampleIndex.get();
   }
@@ -167,10 +155,8 @@ private:
   std::unique_ptr< std::vector<size_t> > _splittingSampleIndex;
   size_t _splitFeature;
   double _splitValue;
-  bool _trinary;
   double _predictWeight;
   arma::Mat<double> _ridgeCoefficients;
-  std::vector<double> _weights;
   std::unique_ptr< RFNode > _leftChild;
   std::unique_ptr< RFNode > _rightChild;
   size_t _naLeftCount;
