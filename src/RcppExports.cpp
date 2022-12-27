@@ -138,17 +138,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// rcpp_VariableImportanceInterface
-Rcpp::List rcpp_VariableImportanceInterface(SEXP forest);
-RcppExport SEXP _Rforestry_rcpp_VariableImportanceInterface(SEXP forestSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type forest(forestSEXP);
-    rcpp_result_gen = Rcpp::wrap(rcpp_VariableImportanceInterface(forest));
-    return rcpp_result_gen;
-END_RCPP
-}
 // rcpp_getObservationSizeInterface
 double rcpp_getObservationSizeInterface(SEXP df);
 RcppExport SEXP _Rforestry_rcpp_getObservationSizeInterface(SEXP dfSEXP) {
@@ -251,7 +240,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_Rforestry_rcpp_cppPredictInterface", (DL_FUNC) &_Rforestry_rcpp_cppPredictInterface, 11},
     {"_Rforestry_rcpp_OBBPredictInterface", (DL_FUNC) &_Rforestry_rcpp_OBBPredictInterface, 1},
     {"_Rforestry_rcpp_OBBPredictionsInterface", (DL_FUNC) &_Rforestry_rcpp_OBBPredictionsInterface, 8},
-    {"_Rforestry_rcpp_VariableImportanceInterface", (DL_FUNC) &_Rforestry_rcpp_VariableImportanceInterface, 1},
     {"_Rforestry_rcpp_getObservationSizeInterface", (DL_FUNC) &_Rforestry_rcpp_getObservationSizeInterface, 1},
     {"_Rforestry_rcpp_AddTreeInterface", (DL_FUNC) &_Rforestry_rcpp_AddTreeInterface, 2},
     {"_Rforestry_rcpp_CppToR_translator", (DL_FUNC) &_Rforestry_rcpp_CppToR_translator, 1},

@@ -1662,13 +1662,16 @@ getOOBpreds <- function(object,
 #'  when each feature is shuffled.
 #' @param object A `forestry` object.
 #' @param noWarning flag to not display warnings
+#' @param seed A parameter to seed the random number generator for shuffling
+#'   the features of X.
 #' @note No seed is passed to this function so it is
 #'   not possible in the current implementation to replicate the vector
 #'   permutations used when measuring feature importance.
 #' @return The variable importance of the forest.
 #' @export
 getVI <- function(object,
-                  noWarning) {
+                  noWarning,
+                  seed = NULL) {
   forest_checker(object)
     # Keep warning for small sample size
     if (!object@replace &&
@@ -1683,15 +1686,34 @@ getVI <- function(object,
       return(NA)
     }
 
-    rcppVI <- tryCatch({
-      return(rcpp_VariableImportanceInterface(object@forest))
-    }, error = function(err) {
-      print(err)
-      return(NA)
-    })
+    if (!is.null(seed)) {
+      set.seed(seed)
+    }
 
-    return(rcppVI)
-  }
+    # In order to call predict, need categorical variables changed back to strings
+    x = object@processed_dta$processed_x
+    dummyIndex <- 1
+    for (categoricalFeatureCol in unlist(object@categoricalFeatureCols)) {
+      # levels
+      map = data.frame(strings = object@categoricalFeatureMapping[[dummyIndex]]$uniqueFeatureValues)
+      x[, categoricalFeatureCol] <- sapply(x[, categoricalFeatureCol], function(i){return(map$strings[i])})
+      dummyIndex <- dummyIndex + 1
+    }
+
+    vi <- rep(NA, object@processed_dta$numColumns)
+    oob_mse <- mean((predict(object, aggregation = "oob") - object@processed_dta$y)**2)
+    for (feat_i in 1:object@processed_dta$numColumns) {
+      x_mod = x
+      shuffled = x[sample(1:object@processed_dta$nObservations),feat_i]
+      # all.equal(sort(shuffled), sort(x[,feat_i]))
+      x_mod[,feat_i] = shuffled
+      mse_i = mean((predict(object, newdata = x_mod, aggregation = "oob", seed = 1)
+                    - object@processed_dta$y)**2)
+      vi[feat_i] = sqrt(mse_i)/sqrt(oob_mse) - 1
+    }
+
+    return(vi)
+}
 
 # -- Calculate Confidence Interval estimates for a new feature -----------------
 #' getCI-forestry

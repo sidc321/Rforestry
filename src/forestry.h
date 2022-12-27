@@ -91,21 +91,6 @@ public:
       bool doubleOOB = false
   );
 
-  void calculateVariableImportance();
-
-  std::vector<double> getVariableImportance() {
-    calculateVariableImportance();
-    calculateOOBError();
-
-    double OOB = getOOBError();
-    std::vector<double> OOBPercentages(getTrainingData()->getNumColumns());
-    //Find percentage changes in OOB error
-    for (size_t i = 0; i < getTrainingData()->getNumColumns(); i++) {
-      OOBPercentages[i] = ((*_variableImportance)[i] / OOB) - 1;
-    }
-    return OOBPercentages;
-  }
-
   double getOOBError() {
     calculateOOBError();
     return _OOBError;
@@ -259,7 +244,6 @@ private:
   size_t _nthread;
   double _OOBError;
   std::vector<double> _OOBpreds;
-  std::unique_ptr< std::vector<double> > _variableImportance;
   bool _splitMiddle;
   size_t _maxObs;
   size_t _minTreesPerFold;

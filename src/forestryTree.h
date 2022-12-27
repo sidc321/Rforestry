@@ -194,15 +194,6 @@ public:
     const std::vector<size_t>& training_idx
   );
 
-  void getShuffledOOBPrediction(
-      std::vector<double> &outputOOBPrediction,
-      std::vector<size_t> &outputOOBCount,
-      DataFrame* trainingData,
-      size_t shuffleFeature,
-      std::mt19937_64& random_number_generator,
-      size_t nodesizeStrictAvg
-  );
-
   size_t getMtry() {
     return _mtry;
   }
