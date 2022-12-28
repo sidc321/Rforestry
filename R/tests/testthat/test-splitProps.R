@@ -20,6 +20,6 @@ test_that("Tests that the getSplitProps() function is working", {
 
   skip_if_not_mac()
   context("Test exact values of split proportions")
-  expect_equal(unname(p["Sepal.Width"]),  0.289135326262, tolerance = 5e-2)
+  expect_equal(unname(p["Sepal.Width"]),  0.4289624, tolerance = 5e-2)
 
 })

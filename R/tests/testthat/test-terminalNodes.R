@@ -21,5 +21,5 @@ test_that("Tests that terminal nodes are correct", {
 
   # Test predict
   full_predictions <- predict(forest, x[c(5, 100, 104),], aggregation = 'terminalNodes')$terminalNodes
-  expect_equal(full_predictions, matrix(c(1,5,9,12), ncol = 1))
+  expect_equal(full_predictions, matrix(c(3,9,19,23), ncol = 1))
 })
