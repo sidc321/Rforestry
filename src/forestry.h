@@ -44,7 +44,6 @@ public:
     bool hasNas,
     bool naDirection,
     bool linear,
-    bool symmetric,
     double overfitPenalty,
     bool doubleTree
   );
@@ -230,10 +229,6 @@ public:
     return _linear;
   }
 
-  bool getSymmetric() {
-    return _symmetric;
-  }
-
   double getOverfitPenalty() {
     return _overfitPenalty;
   }
@@ -272,7 +267,6 @@ private:
   bool _hasNas;
   bool _naDirection;
   bool _linear;
-  bool _symmetric;
   double _overfitPenalty;
   bool _doubleTree;
 };
