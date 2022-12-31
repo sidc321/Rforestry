@@ -21,10 +21,6 @@ rcpp_OBBPredictionsInterface <- function(forest, x, existing_df, doubleOOB, retu
     .Call(`_Rforestry_rcpp_OBBPredictionsInterface`, forest, x, existing_df, doubleOOB, returnWeightMatrix, exact, use_training_idx, training_idx)
 }
 
-rcpp_VariableImportanceInterface <- function(forest) {
-    .Call(`_Rforestry_rcpp_VariableImportanceInterface`, forest)
-}
-
 rcpp_getObservationSizeInterface <- function(df) {
     .Call(`_Rforestry_rcpp_getObservationSizeInterface`, df)
 }
