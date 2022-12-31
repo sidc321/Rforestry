@@ -1705,7 +1705,6 @@ getVI <- function(object,
     for (feat_i in 1:object@processed_dta$numColumns) {
       x_mod = x
       shuffled = x[sample(1:object@processed_dta$nObservations),feat_i]
-      # all.equal(sort(shuffled), sort(x[,feat_i]))
       x_mod[,feat_i] = shuffled
       mse_i = mean((predict(object, newdata = x_mod, aggregation = "oob", seed = 1)
                     - object@processed_dta$y)**2)
