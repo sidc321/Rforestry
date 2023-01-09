@@ -1309,8 +1309,6 @@ void forestryTree::getOOBhonestIndex(
   );
   OOBIndex.resize((unsigned long) (it - OOBIndex.begin()));
 
-  //std::cout << "OOB index inside get OOB HonestIndex" << std::endl;
-  //  print_vector(OOBIndex);
   for (
       std::vector<size_t>::iterator it_ = OOBIndex.begin();
       it_ != OOBIndex.end();

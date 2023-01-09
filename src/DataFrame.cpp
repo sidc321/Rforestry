@@ -9,7 +9,6 @@ DataFrame::DataFrame():
   _monotonicConstraints(nullptr), _groupMemberships(nullptr){}
 
 DataFrame::~DataFrame() {
-//  std::cout << "DataFrame() destructor is called." << std::endl;
 }
 
 DataFrame::DataFrame(

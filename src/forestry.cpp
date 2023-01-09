@@ -20,12 +20,6 @@ forestry::forestry():
   _nthread(0), _OOBError(0), _splitMiddle(0),_minTreesPerFold(0), _doubleTree(0){};
 
 forestry::~forestry(){
-//  for (std::vector<forestryTree*>::iterator it = (*_forest).begin();
-//       it != (*_forest).end();
-//       ++it) {
-//    delete(*it);
-//  }
-//  std::cout << "forestry() destructor is called." << std::endl;
 };
 
 forestry::forestry(
@@ -346,7 +340,6 @@ void forestry::addTrees(size_t ntree) {
             }
 
           } catch (std::runtime_error &err) {
-            // Rcpp::Rcerr << err.what() << std::endl;
           }
 
         }
@@ -1008,7 +1001,6 @@ void forestry::reconstructTrees(
     for(int i=0; i<(split_vals->size()); i++ ) {
     #endif
 
-    // for (size_t i=0; i<split_vals->size(); i++) {
       try{
         forestryTree *oneTree = new forestryTree();
 
@@ -1135,6 +1127,4 @@ std::vector<std::vector<double>>* forestry::neighborhoodImpute(
           (*xNew)[j][i] = maxPosition;
         }}}
   return xNew;
-  //return weightMatrix;
-
 }

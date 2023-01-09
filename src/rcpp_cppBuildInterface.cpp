@@ -213,7 +213,6 @@ SEXP rcpp_cppBuildInterface(
         doubleTree
       );
 
-      // delete(testFullForest);
       Rcpp::XPtr<forestry> ptr(testFullForest, true) ;
       R_RegisterCFinalizerEx(
         ptr,
@@ -345,8 +344,6 @@ SEXP rcpp_cppBuildInterface(
         (double) overfitPenalty,
         doubleTree
       );
-
-      // delete(testFullForest);
       Rcpp::XPtr<forestry> ptr(testFullForest, true) ;
       R_RegisterCFinalizerEx(
         ptr,
@@ -686,37 +683,16 @@ Rcpp::List rcpp_CppToR_translator(
     );
     (*testFullForest).fillinTreeInfo(forest_dta);
 
-    //   Print statements for debugging
-    // std::cout << "hello\n";
-    // std::cout.flush();
-
     // Return the lis of list. For each tree an element in the first list:
     Rcpp::List list_to_return;
 
     for(size_t i=0; i!=forest_dta->size(); i++){
       Rcpp::IntegerVector var_id = Rcpp::wrap(((*forest_dta)[i]).var_id);
-
-      // std::cout << "var_id\n";
-      // std::cout.flush();
-
       Rcpp::NumericVector split_val = Rcpp::wrap(((*forest_dta)[i]).split_val);
-
-      // std::cout << "split_val\n";
-      // std::cout.flush();
-
-
       Rcpp::IntegerVector averagingSampleIndex =
 	      Rcpp::wrap(((*forest_dta)[i]).averagingSampleIndex);
-
-      // std::cout << "averagingSampleIndex\n";
-      // std::cout.flush();
-
       Rcpp::IntegerVector splittingSampleIndex =
 	      Rcpp::wrap(((*forest_dta)[i]).splittingSampleIndex);
-
-      // std::cout << "splittingSampleIndex\n";
-      // std::cout.flush();
-
       Rcpp::IntegerVector naLeftCounts =
         Rcpp::wrap(((*forest_dta)[i]).naLeftCount);
 
@@ -742,18 +718,8 @@ Rcpp::List rcpp_CppToR_translator(
 			   Rcpp::Named("seed") = (*forest_dta)[i].seed, // Add the seeds to the list we return
                Rcpp::Named("weights") = predictWeights
         );
-
-      // std::cout << "finished list\n";
-      // std::cout.flush();
-
       list_to_return.push_back(list_i);
     }
-
-    // std::cout << "hello1\n";
-    // std::cout.flush();
-
-
-
     return list_to_return;
 
   } catch(std::runtime_error const& err) {
@@ -1012,7 +978,6 @@ Rcpp::List rcpp_reconstructree(
                                    predictWeights
                                    );
 
-  // delete(testFullForest);
   Rcpp::XPtr<forestry> ptr(testFullForest, true);
   R_RegisterCFinalizerEx(
     ptr,
@@ -1069,7 +1034,5 @@ std::vector< std::vector<double> > rcpp_cppImputeInterface(
     &featureData,
     &weightMatrixT
   );
-  //auto returnX = Rcpp::as<Rcpp::NumericMatrix>(imputedX);
   return *imputedX;
-  //return weightMatrixT;
 }
