@@ -15,9 +15,7 @@ RFNode::RFNode():
   _leftChild(nullptr),_rightChild(nullptr),_naLeftCount(0), _naRightCount(0),
   _naDefaultDirection(0), _averageCount(0), _splitCount(0) {}
 
-RFNode::~RFNode() {
-  //  std::cout << "RFNode() destructor is called." << std::endl;
-};
+RFNode::~RFNode(){};
 
 void RFNode::setLeafNode(
         size_t averagingSampleIndexSize,
@@ -96,7 +94,7 @@ void RFNode::setRidgeCoefficients(
     arma::Mat<double> y(outcomePoints.size(),
                         1);
     y.col(0) = arma::conv_to<arma::Col<double> >::from(outcomePoints);
-    //Compute XtX + lambda * I * Y = C
+    // Compute XtX + lambda * I * Y = C
     arma::Mat<double> coefficients = (x.t() * x +
                                       identity * lambda).i() * x.t() * y;
 
@@ -136,7 +134,7 @@ void RFNode::ridgePredict(
     index++;
   }
 
-  //Multiply xNew * coefficients = result
+  // Multiply xNew * coefficients = result
   arma::Mat<double> predictions = xn * coefficients;
 
   for (size_t i = 0; i < updateIndex->size(); i++) {
@@ -219,7 +217,6 @@ void RFNode::predict(
           it != (*updateIndex).end();
           ++it ) {
         // Set the row which we update in the weightMatrix
-        //
         size_t idx = *it;
         if (OOBIndex) {
           idx = (*OOBIndex)[*it];
@@ -533,17 +530,93 @@ void RFNode::predict(
   }
 }
 
+void RFNode::getPath(
+    std::vector<size_t> &path,
+    std::vector<double>*  xNew,
+    DataFrame* trainingData,
+    unsigned int seed
+){
+  RFNode* currentNode = this;
+  while (!currentNode->is_leaf()) {
+    // Add the id of the current node to the path
+    path.push_back(currentNode->getNodeId());
+    path[0]++;
+    size_t splitFeature = currentNode->getSplitFeature();
+    std::vector<size_t> categorialCols = *(*trainingData).getCatCols();
+    bool categorical_split = (std::find(categorialCols.begin(),
+                                        categorialCols.end(),
+                                        splitFeature) != categorialCols.end());
+    size_t naLeftCount = currentNode->getNaLeftCount();
+    size_t naRightCount = currentNode->getNaRightCount();
+
+    std::vector<size_t> naSampling;
+    if (!categorical_split) {
+      naSampling = {naLeftCount, naRightCount};
+    }
+    std::vector<size_t> naSampling_no_miss;
+    if (!categorical_split) {
+      naSampling_no_miss = {
+        currentNode->getLeftChild()->getAverageCountAlways(),
+        currentNode->getRightChild()->getAverageCountAlways()};
+    }
+
+    std::discrete_distribution<size_t> discrete_dist(
+        naSampling.begin(), naSampling.end()
+    );
+    std::discrete_distribution<size_t> discrete_dist_nonmissing(
+        naSampling_no_miss.begin(), naSampling_no_miss.end()
+    );
+    std::mt19937_64 random_number_generator;
+    random_number_generator.seed(seed);
+
+    double currentValue = (*xNew)[splitFeature];
+    if (categorical_split){
+      if (std::isnan(currentValue)){
+        size_t draw;
+        if ((naLeftCount == 0) && (naRightCount == 0)) {
+          draw = discrete_dist_nonmissing(random_number_generator);
+        } else {
+          draw = discrete_dist(random_number_generator);
+        }
+        if (draw == 0) {
+          currentNode = currentNode->getLeftChild();
+        } else {
+          currentNode = currentNode->getRightChild();
+        }
+      } else if (currentValue == currentNode->getSplitValue()) {
+        currentNode = currentNode->getLeftChild();
+      } else {
+        currentNode = currentNode->getRightChild();
+      }
+    } else {
+      if (std::isnan(currentValue)){
+        size_t draw;
+        if ((naLeftCount == 0) && (naRightCount == 0)) {
+          draw = discrete_dist_nonmissing(random_number_generator);
+        } else {
+          draw = discrete_dist(random_number_generator);
+        }
+        if (draw == 0) {
+          currentNode = currentNode->getLeftChild();
+        } else {
+          currentNode = currentNode->getRightChild();
+        }
+      } else {
+        if (currentValue < currentNode->getSplitValue()) {
+          currentNode = currentNode->getLeftChild();
+        } else {
+          currentNode = currentNode->getRightChild();
+        }
+      }
+    }
+  }
+
+  path.push_back(currentNode->getNodeId());
+  path[0]++;
+}
+
 bool RFNode::is_leaf() {
   int ave_ct = getAverageCount();
-  //int spl_ct = getSplitCount();
-  // if (
-  //     (ave_ct == 0 && spl_ct != 0) ||(ave_ct != 0 && spl_ct == 0)
-  // ) {
-  //   throw std::runtime_error(
-  //       "Average count or Split count is 0, while the other is not!"
-  //       );
-  // }
-  //return !(ave_ct == 0 && spl_ct == 0);
   return !(ave_ct == 0);
 }
 

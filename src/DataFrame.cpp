@@ -8,9 +8,7 @@ DataFrame::DataFrame():
   _deepFeatureWeightsVariables(nullptr), _observationWeights(nullptr),
   _monotonicConstraints(nullptr), _groupMemberships(nullptr){}
 
-DataFrame::~DataFrame() {
-//  std::cout << "DataFrame() destructor is called." << std::endl;
-}
+DataFrame::~DataFrame(){};
 
 DataFrame::DataFrame(
   std::shared_ptr< std::vector< std::vector<double> > > featureData,
