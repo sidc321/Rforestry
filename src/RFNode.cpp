@@ -531,6 +531,91 @@ void RFNode::predict(
   }
 }
 
+void RFNode::getPath(
+    std::vector<size_t> &path,
+    std::vector<double>*  xNew,
+    DataFrame* trainingData,
+    unsigned int seed
+){
+  RFNode* currentNode = this;
+  while (!currentNode->is_leaf()) {
+    // Add the id of the current node to the path
+    path.push_back(currentNode->getNodeId());
+    path[0]++;
+    size_t splitFeature = currentNode->getSplitFeature();
+    std::vector<size_t> categorialCols = *(*trainingData).getCatCols();
+    bool categorical_split = (std::find(categorialCols.begin(),
+                                        categorialCols.end(),
+                                        splitFeature) != categorialCols.end());
+    size_t naLeftCount = currentNode->getNaLeftCount();
+    size_t naRightCount = currentNode->getNaRightCount();
+
+    std::vector<size_t> naSampling;
+    if (!categorical_split) {
+      naSampling = {naLeftCount, naRightCount};
+    }
+    std::vector<size_t> naSampling_no_miss;
+    if (!categorical_split) {
+      naSampling_no_miss = {
+        currentNode->getLeftChild()->getAverageCountAlways(),
+        currentNode->getRightChild()->getAverageCountAlways()};
+    }
+
+    std::discrete_distribution<size_t> discrete_dist(
+        naSampling.begin(), naSampling.end()
+    );
+    std::discrete_distribution<size_t> discrete_dist_nonmissing(
+        naSampling_no_miss.begin(), naSampling_no_miss.end()
+    );
+    std::mt19937_64 random_number_generator;
+    random_number_generator.seed(seed);
+
+    double currentValue = (*xNew)[splitFeature];
+    if (categorical_split){
+      if (std::isnan(currentValue)){
+        size_t draw;
+        if ((naLeftCount == 0) && (naRightCount == 0)) {
+          draw = discrete_dist_nonmissing(random_number_generator);
+        } else {
+          draw = discrete_dist(random_number_generator);
+        }
+        if (draw == 0) {
+          currentNode = currentNode->getLeftChild();
+        } else {
+          currentNode = currentNode->getRightChild();
+        }
+      } else if (currentValue == currentNode->getSplitValue()) {
+        currentNode = currentNode->getLeftChild();
+      } else {
+        currentNode = currentNode->getRightChild();
+      }
+    } else {
+      if (std::isnan(currentValue)){
+        size_t draw;
+        if ((naLeftCount == 0) && (naRightCount == 0)) {
+          draw = discrete_dist_nonmissing(random_number_generator);
+        } else {
+          draw = discrete_dist(random_number_generator);
+        }
+        if (draw == 0) {
+          currentNode = currentNode->getLeftChild();
+        } else {
+          currentNode = currentNode->getRightChild();
+        }
+      } else {
+        if (currentValue < currentNode->getSplitValue()) {
+          currentNode = currentNode->getLeftChild();
+        } else {
+          currentNode = currentNode->getRightChild();
+        }
+      }
+    }
+  }
+
+  path.push_back(currentNode->getNodeId());
+  path[0]++;
+}
+
 bool RFNode::is_leaf() {
   int ave_ct = getAverageCount();
   return !(ave_ct == 0);

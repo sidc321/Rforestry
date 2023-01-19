@@ -39,7 +39,6 @@ public:
           double lambda
   );
 
-
   void ridgePredict(
       std::vector<double> &outputPrediction,
       std::vector< std::vector<double> > &outputCoefficients,
@@ -64,6 +63,13 @@ public:
     unsigned int seed,
     size_t nodesizeStrictAvg,
     std::vector<size_t>* OOBIndex = NULL
+  );
+
+  void getPath(
+      std::vector<size_t> &path,
+      std::vector<double>* xNew,
+      DataFrame* trainingData,
+      unsigned int seed
   );
 
   void write_node_info(
