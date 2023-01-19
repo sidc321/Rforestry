@@ -19,8 +19,7 @@ forestry::forestry():
   _maxDepth(0), _interactionDepth(0), _forest(nullptr), _seed(0), _verbose(0),
   _nthread(0), _OOBError(0), _splitMiddle(0),_minTreesPerFold(0), _doubleTree(0){};
 
-forestry::~forestry(){
-};
+forestry::~forestry(){};
 
 forestry::forestry(
   DataFrame* trainingData,

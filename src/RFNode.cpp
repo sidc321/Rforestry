@@ -15,8 +15,7 @@ RFNode::RFNode():
   _leftChild(nullptr),_rightChild(nullptr),_naLeftCount(0), _naRightCount(0),
   _naDefaultDirection(0), _averageCount(0), _splitCount(0) {}
 
-RFNode::~RFNode() {
-};
+RFNode::~RFNode(){};
 
 void RFNode::setLeafNode(
         size_t averagingSampleIndexSize,
