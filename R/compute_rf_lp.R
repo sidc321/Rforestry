@@ -1,7 +1,8 @@
 #' @include forestry.R
+#' @importFrom stats runif sd
+NULL
 
 # ---Computing lp distances-----------------------------------------------------
-#' comptute_lp
 #' @name compute_lp-forestry
 #' @title compute lp distances
 #' @rdname compute_lp-forestry
@@ -44,7 +45,6 @@
 #'                           newdata = x_test,
 #'                           feature = "Petal.Length",
 #'                           p = 2)
-#' @export
 compute_lp <- function(object,
                        newdata,
                        feature,
@@ -78,7 +78,7 @@ compute_lp <- function(object,
   if (!is.null(trainingIdx)) {
     args.predict$trainingIdx <- trainingIdx
   }
-  y_weights <- do.call(predict,args.predict)$weightMatrix
+  y_weights <- do.call(Rforestry::predict, args.predict)$weightMatrix
 
   if (is.factor(newdata[1, feature])) {
     # Get categorical feature mapping
