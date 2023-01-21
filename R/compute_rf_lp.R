@@ -78,7 +78,7 @@ compute_lp <- function(object,
   if (!is.null(trainingIdx)) {
     args.predict$trainingIdx <- trainingIdx
   }
-  y_weights <- do.call(Rforestry::predict, args.predict)$weightMatrix
+  y_weights <- do.call(predict, args.predict)$weightMatrix
 
   if (is.factor(newdata[1, feature])) {
     # Get categorical feature mapping
