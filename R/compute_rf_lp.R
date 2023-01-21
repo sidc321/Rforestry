@@ -45,6 +45,7 @@ NULL
 #'                           newdata = x_test,
 #'                           feature = "Petal.Length",
 #'                           p = 2)
+#'@export
 compute_lp <- function(object,
                        newdata,
                        feature,
