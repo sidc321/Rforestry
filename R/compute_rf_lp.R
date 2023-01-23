@@ -1,5 +1,5 @@
 #' @include forestry.R
-#' @importFrom stats runif sd
+#' @importFrom stats runif sd predict
 NULL
 
 # ---Computing lp distances-----------------------------------------------------
