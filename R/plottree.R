@@ -1,4 +1,6 @@
 #' @include forestry.R
+#' @importFrom stats predict
+NULL
 
 # ---plots a tree ----------------------------------------------------------
 #' plot

@@ -1,5 +1,6 @@
 #' @useDynLib Rforestry, .registration = TRUE
 #' @importFrom Rcpp sourceCpp
+#' @importFrom stats predict
 NULL
 
 #' @include R_preprocessing.R

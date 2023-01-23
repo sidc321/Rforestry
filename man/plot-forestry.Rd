@@ -26,6 +26,9 @@ A plot of the specified tree in the forest.
 \description{
 plots a tree in the forest.
 }
+\details{
+plot
+}
 \examples{
 set.seed(292315)
 rf <- forestry(x = iris[,-1],
