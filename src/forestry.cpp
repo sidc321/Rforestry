@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <thread>
 #include <mutex>
-#include <RcppArmadillo.h>
+#include <armadillo>
 #define DOPARELLEL true
 
 
@@ -324,9 +324,7 @@ void forestry::addTrees(size_t ntree) {
             #endif
 
             if (isVerbose()) {
-              Rcpp::Rcout << "Finish training tree # " << (i + 1) << std::endl;
-              R_FlushConsole();
-              R_ProcessEvents();
+              std::cout << "Finish training tree # " << (i + 1) << std::endl;
             }
 
             (*getForest()).emplace_back(oneTree);
@@ -419,7 +417,7 @@ std::unique_ptr< std::vector<double> > forestry::predict(
   }
 
   if (isVerbose()) {
-    RcppThread::Rcout << "Prediction parallel using " << nthreadToUse << " threads"
+    std::cout << "Prediction parallel using " << nthreadToUse << " threads"
               << std::endl;
     if (use_weights) {
       RcppThread::Rcout << "Weights given by" << std::endl;
@@ -546,7 +544,7 @@ std::unique_ptr< std::vector<double> > forestry::predict(
             }
 
           } catch (std::runtime_error &err) {
-            Rcpp::Rcerr << err.what() << std::endl;
+            std::cerr << err.what() << std::endl;
           }
       }
   #if DOPARELLEL
@@ -666,7 +664,7 @@ std::vector<double> forestry::predictOOB(
         nthreadToUse = std::thread::hardware_concurrency();
       }
       if (isVerbose()) {
-        RcppThread::Rcout << "Calculating OOB parallel using " << nthreadToUse << " threads"
+        std::cout << "Calculating OOB parallel using " << nthreadToUse << " threads"
                           << std::endl;
       }
       std::vector<std::thread> allThreads(nthreadToUse);
@@ -832,7 +830,7 @@ void forestry::calculateOOBError(
     nthreadToUse = std::thread::hardware_concurrency();
   }
   if (isVerbose()) {
-    RcppThread::Rcout << "Calculating OOB parallel using " << nthreadToUse << " threads"
+    std::cout << "Calculating OOB parallel using " << nthreadToUse << " threads"
               << std::endl;
   }
 
@@ -940,7 +938,7 @@ void forestry::fillinTreeInfo(
       forest_dta->push_back(*treeInfo_i);
 
     } catch (std::runtime_error &err) {
-      Rcpp::Rcerr << err.what() << std::endl;
+      std::cerr << err.what() << std::endl;
 
     }
 
@@ -1034,7 +1032,7 @@ void forestry::reconstructTrees(
         (*getForest()).emplace_back(oneTree);
         _ntree = _ntree + 1;
       } catch (std::runtime_error &err) {
-        Rcpp::Rcerr << err.what() << std::endl;
+        std::cerr << err.what() << std::endl;
       }
   }
   #if DOPARELLEL

@@ -9,7 +9,7 @@
 #include "DataFrame.h"
 #include "RFNode.h"
 #include "utils.h"
-#include <RcppArmadillo.h>
+#include <armadillo>
 
 double calculateRSS(
         DataFrame* trainingData,

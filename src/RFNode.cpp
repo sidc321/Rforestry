@@ -1,7 +1,7 @@
 // [[Rcpp::depends(RcppThread)]]
 // [[Rcpp::plugins(cpp11)]]
 #include "RFNode.h"
-#include <RcppArmadillo.h>
+#include <armadillo>
 #include <RcppThread.h>
 #include <mutex>
 #include <thread>
