@@ -1,7 +1,7 @@
 #include "forestryTree.h"
 #include "utils.h"
 #include "treeSplitting.h"
-#include <RcppArmadillo.h>
+#include <armadillo>
 #include <RcppThread.h>
 #include <cmath>
 #include <set>
