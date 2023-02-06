@@ -39,9 +39,12 @@ jobs:
           images: | 
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
+            type=ref,event=branch,enable=${{ github.ref != format('refs/heads/{0}', 'master') }}
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value={{date 'YYYYMMDD'}},enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=Rforestry/python_build_env
+            org.opencontainers.image.description=Python build environment 
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v3
