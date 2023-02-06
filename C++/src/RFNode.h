@@ -16,25 +16,27 @@ public:
   RFNode();
   virtual ~RFNode();
 
-    void setLeafNode(
-            size_t averagingSampleIndexSize,
-            size_t splittingSampleIndexSize,
-            size_t nodeId,
-            bool trinary,
-            std::vector<double> weights,
-            double predictWeight
-    );
+  void setLeafNode(
+          size_t averagingSampleIndexSize,
+          size_t splittingSampleIndexSize,
+          size_t nodeId,
+          double predictWeight
+  );
 
   void setSplitNode(
       size_t splitFeature,
       double splitValue,
       std::unique_ptr< RFNode > leftChild,
       std::unique_ptr< RFNode > rightChild,
-      size_t nodeId,
-      bool trinary,
       size_t naLeftCount,
-      size_t naCenterCount,
-      size_t naRightCount
+      size_t naRightCount,
+      int naDefaultDirection
+  );
+
+  void setRidgeCoefficients(
+          std::vector<size_t>* averagingIndices,
+          DataFrame* trainingData,
+          double lambda
   );
 
   void ridgePredict(
@@ -46,33 +48,28 @@ public:
       double lambda
   );
 
-    void setRidgeCoefficients(
-            std::vector<size_t>* averagingIndices,
-            DataFrame* trainingData,
-            double lambda
-    );
-
-    void getPath(
-        std::vector<size_t> &path,
-        std::vector<double>*  xNew,
-        DataFrame* trainingData,
-        unsigned int seed
-        );
-
   void predict(
     std::vector<double> &outputPrediction,
     std::vector<int>* terminalNodes,
     std::vector< std::vector<double> > &outputCoefficients,
     std::vector<size_t>* updateIndex,
-    std::vector<size_t>* averagingDataIndex,
+    std::vector<size_t>* predictionAveragingIndices,
     std::vector< std::vector<double> >* xNew,
     DataFrame* trainingData,
     arma::Mat<double>* weightMatrix,
     bool linear,
+    bool naDirection,
     double lambda,
     unsigned int seed,
     size_t nodesizeStrictAvg,
     std::vector<size_t>* OOBIndex = NULL
+  );
+
+  void getPath(
+      std::vector<size_t> &path,
+      std::vector<double>* xNew,
+      DataFrame* trainingData,
+      unsigned int seed
   );
 
   void write_node_info(
@@ -134,20 +131,12 @@ public:
     return _naRightCount;
   }
 
+  int getNaDefaultDirection() {
+    return _naDefaultDirection;
+  }
+
   size_t getNodeId() {
     return _nodeId;
-  }
-
-  std::vector<double> getWeights() {
-    return _weights;
-  }
-
-  bool getTrinary() {
-    return _trinary;
-  }
-
-  double getPredictWeight() {
-      return _predictWeight;
   }
 
   std::vector<size_t>* getAveragingIndex() {
@@ -158,23 +147,27 @@ public:
     return _splittingSampleIndex.get();
   }
 
+  double getPredictWeight() {
+      return _predictWeight;
+  }
+
   arma::Mat<double> getRidgeCoefficients() {
       return _ridgeCoefficients;
   }
+
 
 private:
   std::unique_ptr< std::vector<size_t> > _averagingSampleIndex;
   std::unique_ptr< std::vector<size_t> > _splittingSampleIndex;
   size_t _splitFeature;
   double _splitValue;
-  bool _trinary;
   double _predictWeight;
   arma::Mat<double> _ridgeCoefficients;
-  std::vector<double> _weights;
   std::unique_ptr< RFNode > _leftChild;
   std::unique_ptr< RFNode > _rightChild;
   size_t _naLeftCount;
   size_t _naRightCount;
+  int _naDefaultDirection;
   size_t _averageCount;
   size_t _splitCount;
   size_t _nodeId;
