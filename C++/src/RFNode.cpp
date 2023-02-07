@@ -700,6 +700,10 @@ void RFNode::write_node_info(
     treeInfo->naRightCount.push_back(getNaRightCount());
     treeInfo->naDefaultDirection.push_back(getNaDefaultDirection());
 
+    // Also write child id's
+    treeInfo->left_child_id.push_back( (int) getLeftChild()->getNodeId());
+    treeInfo->right_child_id.push_back( (int) getRightChild()->getNodeId());
+
     getLeftChild()->write_node_info(treeInfo, trainingData);
     getRightChild()->write_node_info(treeInfo, trainingData);
   }

@@ -55,6 +55,10 @@ struct tree_info {
   std::vector< int > naDefaultDirection;
   // Contains the default direction for all NA values per split node if
   // naDirection == TRUE, -1 indicates left and 1 indicates right
+  std::vector< int > right_child_id
+  // Contains the index of the right child node
+  std::vector< int > left_child_id
+  // Contains the index of the left child node
   unsigned int seed;
   // The seed that the tree was given (this uniquely identifies each tree
   // so that we can tell them apart. Very important for prediction when
