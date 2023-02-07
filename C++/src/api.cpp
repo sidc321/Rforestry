@@ -107,7 +107,7 @@ void* get_data (
     }
 
 
-    // Deep feature indecies based
+    // Deep feature indices based
     std::unique_ptr< std::vector<size_t> > deep_feature_weight_vars (
             new std::vector<size_t> (countDeepFtWeightVars)
     );
@@ -147,16 +147,6 @@ void* get_data (
     }
 
 
-    // symmetric variable indices
-    std::unique_ptr< std::vector<size_t> > symmetric_constraints (
-            new std::vector<size_t> (countSym)
-    );
-
-    for (size_t i = 0; i < countSym; i++) {
-        symmetric_constraints->at(i) = symmetricIndices[i];
-    }
-
-
     DataFrame* test_df = new DataFrame(
             std::move(featureData),
             std::move(outcomeData),
@@ -171,8 +161,7 @@ void* get_data (
             std::move(obs_weights),
             std::move(monotone_constraints),
             std::move(groups),
-            monotoneAvg,
-            std::move(symmetric_constraints)
+            monotoneAvg
     );
 
     return test_df;
@@ -203,7 +192,6 @@ void* train_forest(
         size_t minTreesPerGroup,
         bool hasNas,
         bool linear,
-        bool symmetric,
         double overfitPenalty,
         bool doubleTree
 ){
@@ -232,7 +220,6 @@ void* train_forest(
             minTreesPerGroup,
             hasNas,
             linear,
-            symmetric,
             overfitPenalty,
             doubleTree
     ));
@@ -298,7 +285,7 @@ void predict_forest(
     if (returnWeightMatrix) {
 
         weightMatrix.zeros(num_test_rows, dta_frame->getNumRows());                
-        forest->predict_forestry(
+        forest->predict(
                 predi_data,
                 predictions,
                 &weightMatrix,
@@ -322,7 +309,7 @@ void predict_forest(
     } else if (linear) {
 
         coefficients.zeros(dta_frame->getNumRows(), dta_frame->getLinCols()->size() + 1);
-        forest->predict_forestry(
+        forest->predict(
                 predi_data,
                 predictions,
                 nullptr,
@@ -345,7 +332,7 @@ void predict_forest(
 
     } else {
 
-        forest->predict_forestry(
+        forest->predict(
             predi_data,
             predictions,
             nullptr,
@@ -410,7 +397,7 @@ void predictOOB_forest(
     if (returnWeightMatrix) {
         weightMatrix.zeros(dta_frame->getNumRows(), dta_frame->getNumRows());  
         
-        forest->predictOOB_forestry(
+        forest->predictOOB(
                 predi_data,
                 predictions,
                 &weightMatrix,
@@ -428,7 +415,7 @@ void predictOOB_forest(
     }
 
     else {
-        forest->predictOOB_forestry(
+        forest->predictOOB(
             predi_data,
             predictions,
             nullptr,
@@ -441,18 +428,6 @@ void predictOOB_forest(
 
 }
 
-std::vector<double>* getVI(void* forest_pt){
-    forestry* forest = reinterpret_cast<forestry *>(forest_pt);
-    forest->calculateVariableImportance();
-
-    std::vector<double> VI = forest->getVariableImportance();
-
-    std::vector<double>* variableImportances(
-            new std::vector<double>(VI)
-    );
-
-    return variableImportances;
-}
 
 int getTreeNodeCount(void* forest_ptr,
                      int tree_idx) {
@@ -543,13 +518,11 @@ void fill_tree_info(void* forest_ptr,
     }
 
     treeInfo[num_nodes*8] = info_holder->seed;
-
-
 }
 
 std::vector<size_t>* get_path(void* forest_ptr,
-                           double* obs_ptr,
-                           int tree_idx) {
+                              double* obs_ptr,
+                              int tree_idx) {
     forestry* forest = reinterpret_cast<forestry *>(forest_ptr);
 
     std::vector<double>* observationDta = new std::vector<double>(forest->getTrainingData()->getNumColumns());
@@ -607,7 +580,6 @@ void* py_reconstructree(void* data_ptr,
         size_t minTreesPerGroup,
         bool hasNas,
         bool linear,
-        bool symmetric,
         double overfitPenalty,
         bool doubleTree,
         size_t* tree_counts,
@@ -615,6 +587,7 @@ void* py_reconstructree(void* data_ptr,
         int* features,
         int* na_left_count,
         int* na_right_count,
+        int* na_default_directions,
         size_t* split_idx,
         size_t* average_idx,
         double* predict_weights,
@@ -646,7 +619,6 @@ void* py_reconstructree(void* data_ptr,
             minTreesPerGroup,
             hasNas,
             linear,
-            symmetric,
             overfitPenalty,
             doubleTree
     ));
@@ -674,6 +646,9 @@ void* py_reconstructree(void* data_ptr,
     std::unique_ptr< std::vector< std::vector<int> > > naRightCounts(
         new std::vector< std::vector<int> >
     );
+    std::unique_ptr< std::vector< std::vector<int> > > naDefaultDirections(
+            new std::vector< std::vector<int> >
+    );
     std::unique_ptr< std::vector< std::vector<size_t> > > averagingSampleIndex(
         new std::vector< std::vector<size_t> >
     );
@@ -694,6 +669,7 @@ void* py_reconstructree(void* data_ptr,
     splittingSampleIndex->reserve(ntree);
     naLeftCounts->reserve(ntree);
     naRightCounts->reserve(ntree);
+    naDefaultDirections->reserve(ntree);
     treeSeeds->reserve(ntree);
     predictWeights->reserve(ntree);
 
@@ -704,6 +680,7 @@ void* py_reconstructree(void* data_ptr,
         std::vector<double> cur_split_vals(tree_counts[3*i], 0);
         std::vector<int> curNaLeftCounts(tree_counts[3*i], 0);
         std::vector<int> curNaRightCounts(tree_counts[3*i], 0);
+        std::vector<int> curNaDefaultDirections(tree_counts[3*i], 0);
         std::vector<size_t> curSplittingSampleIndex(tree_counts[3*i+1], 0);
         std::vector<size_t> curAveragingSampleIndex(tree_counts[3*i+2], 0);
         std::vector<double> cur_predict_weights(tree_counts[3*i], 0);
@@ -713,6 +690,7 @@ void* py_reconstructree(void* data_ptr,
             cur_split_vals.at(j) = thresholds[ind];
             curNaLeftCounts.at(j) = na_left_count[ind];
             curNaRightCounts.at(j) = na_right_count[ind];
+            curNaDefaultDirections.at(j) = na_default_directions[ind];
             cur_predict_weights.at(j) = predict_weights[ind];
 
             ind++;
@@ -732,6 +710,7 @@ void* py_reconstructree(void* data_ptr,
         split_vals->push_back(cur_split_vals);
         naLeftCounts->push_back(curNaLeftCounts);
         naRightCounts->push_back(curNaRightCounts);
+        naDefaultDirections->push_back(curNaDefaultDirections);
         splittingSampleIndex->push_back(curSplittingSampleIndex);
         averagingSampleIndex->push_back(curAveragingSampleIndex);
         predictWeights->push_back(cur_predict_weights);
@@ -745,6 +724,7 @@ void* py_reconstructree(void* data_ptr,
                                    split_vals,
                                    naLeftCounts,
                                    naRightCounts,
+                                   naDefaultDirections,
                                    averagingSampleIndex,
                                    splittingSampleIndex,
                                    predictWeights
