@@ -189,8 +189,10 @@ void* train_forest(
         bool verbose,
         bool splitMiddle,
         size_t maxObs,
-        size_t minTreesPerGroup,
+        size_t minTreesPerFold,
+        size_t foldSize,
         bool hasNas,
+        bool naDirection,
         bool linear,
         double overfitPenalty,
         bool doubleTree
@@ -217,8 +219,10 @@ void* train_forest(
             verbose,
             splitMiddle,
             maxObs,
-            minTreesPerGroup,
+            minTreesPerFold,
+            foldSize,
             hasNas,
+            naDirection,
             linear,
             overfitPenalty,
             doubleTree
