@@ -16,7 +16,6 @@ class ProcessedDta:  # pylint: disable=too-many-instance-attributes
     deep_feature_weights: Optional[np.ndarray] = None
     deep_feature_weights_variables: Optional[str] = None
     observation_weights: Optional[str] = None
-    symmetric: Optional[str] = None
     monotonic_constraints: Optional[str] = None
     linear_feature_cols: np.ndarray = field(default_factory=lambda: np.array(0))
     groups_mapping: Optional[Dict[str, Any]] = None
@@ -24,6 +23,7 @@ class ProcessedDta:  # pylint: disable=too-many-instance-attributes
     col_means: np.ndarray = field(default_factory=lambda: np.array(0))
     col_sd: np.ndarray = field(default_factory=lambda: np.array(0))
     has_nas: bool = False
+    na_direction : bool = False
     n_observations: int = 0
     num_columns: int = 0
     feat_names: Optional[np.ndarray] = None

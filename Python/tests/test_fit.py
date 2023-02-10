@@ -71,15 +71,5 @@ def test_fit():
     ):
         forest.fit(X, y, lin_feats=lin_feats)
 
-    forest.set_parameters(linear=True)
-    with pytest.raises(
-        ValueError,
-        match=(
-            "Symmetric forests cannot be combined with linear aggregation. "
-            "Please set either symmetric = False or linear = False"
-        ),
-    ):
-        forest.fit(X, y, symmetric=[0, 1, 2, 3])
-
 
 test_fit()
