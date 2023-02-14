@@ -93,9 +93,7 @@ compute_lp <- function(object,
     # processed_x <- preprocess_testing(newdata,
     #                                   object@categoricalFeatureCols,
     #                                   object@categoricalFeatureMapping)
-    feat_ind <- which(sapply(mapping, "[[", 1) == 
-                        which(names(train_set) == feature))
-    factor_vals <- mapping[[feat_ind]][2][[1]]
+    factor_vals <- mapping[[1]][2][[1]]
     map <- function(x) {
       return(which(factor_vals == x)[1])
     }
