@@ -222,6 +222,10 @@ public:
       arma::Mat<double>* weightMatrix
   );
 
+  void setDataframe(DataFrame * newDf) {
+      _trainingData = std::move(newDf);
+  }
+
 private:
   DataFrame* _trainingData;
   size_t _ntree;

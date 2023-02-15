@@ -951,38 +951,6 @@ class RandomForest:
 
         return result
 
-
-    def decision_path(self, X: Union[pd.DataFrame, pd.Series, np.ndarray], tree_idx: int = 0) -> np.ndarray:
-        """
-        Gets the decision path in the forest.
-
-        :param X: Testing samples. For each observation in X, we will get its decision path.
-        :type X: *pandas.DataFrame, pandas.Series, numpy.ndarray, 2d list of shape [nsamples, ncols]*
-        :param tree_idx: The index of the tree in the forest where the path will be found.
-        :type tree_idx: *int, optional, default=0*
-        :return: A node indicator matrix, where each entry denotes the id of the corresponding
-         node.
-        :rtype: numpy.ndarray
-
-        """
-
-        X = pd.DataFrame(X)
-
-        result = np.empty(len(X.index), dtype=object)
-        for i in range(len(X.index)):
-            obs = X.iloc[i, :].values
-            path_ptr = extension.get_path(self.forest, obs, tree_idx)
-
-            path_length = int(extension.vector_get_size_t(path_ptr, 0))
-            path_array = np.empty(path_length, dtype=np.intc)
-
-            for j in range(path_length):
-                path_array[j] = int(extension.vector_get_size_t(path_ptr, j + 1))
-
-            result[i] = path_array
-
-        return result
-
     def score(
         self, X: Union[pd.DataFrame, pd.Series, List], y: np.ndarray, sample_weight: Optional[np.ndarray] = None
     ) -> float:

@@ -254,7 +254,7 @@ void predict_forest(
     forestry* forest = reinterpret_cast<forestry *>(forest_pt);
     DataFrame* dta_frame = reinterpret_cast<DataFrame *>(dataframe_pt);
 
-    forest->_trainingData = dta_frame;
+    forest->setDataframe(dta_frame);
 
     // Create Data
     size_t ncol = dta_frame->getNumColumns();
@@ -520,32 +520,6 @@ void fill_tree_info(void* forest_ptr,
     }
 
     treeInfo[num_nodes*8] = info_holder->seed;
-}
-
-std::vector<size_t>* get_path(void* forest_ptr,
-                              double* obs_ptr,
-                              int tree_idx) {
-    forestry* forest = reinterpret_cast<forestry *>(forest_ptr);
-
-    std::vector<double>* observationDta = new std::vector<double>(forest->getTrainingData()->getNumColumns());
-
-    for (size_t i = 0; i < forest->getTrainingData()->getNumColumns(); i++) {
-        observationDta->at(i) = obs_ptr[i];
-    }
-
-    forestryTree* tree = (forest->getForest()->at(tree_idx)).get();
-    
-    std::vector<size_t> path;
-    path.push_back(0);
-
-    tree->getRoot()->getPath(path, observationDta, forest->getTrainingData(), forest->getSeed());    
-
-    std::vector<size_t>* node_ids(
-            new std::vector<size_t> (path)
-    );
-
-    return node_ids;
-
 }
 
 double get_prediction(void* prediction_ptr, int i){

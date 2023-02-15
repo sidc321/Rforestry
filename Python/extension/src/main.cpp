@@ -312,21 +312,6 @@ PYBIND11_MODULE(extension, m)
 
         Some other explanation about the get_data function.
     )pbdoc");
-    m.def("vector_get", &vector_get, R"pbdoc(
-        Some help text here
-
-        Some other explanation about the get_vector function.
-    )pbdoc");
-    m.def("vector_get_int", &vector_get_int, R"pbdoc(
-        Some help text here
-
-        Some other explanation about the get_vector_int function.
-    )pbdoc");
-    m.def("vector_get_size_t", &vector_get_size_t, R"pbdoc(
-        Some help text here
-
-        Some other explanation about the get_vector_get_size_t function.
-    )pbdoc");
     m.def("get_prediction", &get_prediction, R"pbdoc(
         Some help text here
 
@@ -346,11 +331,6 @@ PYBIND11_MODULE(extension, m)
         Some help text here
 
         Some other explanation about the getTreeNodeCount function.
-    )pbdoc");
-    m.def("get_path", &get_path, R"pbdoc(
-        Some help text here
-
-        Some other explanation about the get_path function.
     )pbdoc");
     m.def("reconstruct_tree", &py_reconstructree_wrapper, R"pbdoc(
         Some help text here
