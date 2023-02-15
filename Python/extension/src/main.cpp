@@ -315,21 +315,6 @@ PYBIND11_MODULE(extension, m)
 
         Some other explanation about the get_data function.
     )pbdoc");
-    m.def("get_prediction", &get_prediction, R"pbdoc(
-        Some help text here
-
-        Some other explanation about the get_prediction function.
-    )pbdoc");
-    m.def("get_weight_matrix", &get_weightMatrix, R"pbdoc(
-        Some help text here
-
-        Some other explanation about the get_weightMatrix function.
-    )pbdoc");
-    m.def("get_tree_node_count", &getTreeNodeCount, R"pbdoc(
-        Some help text here
-
-        Some other explanation about the getTreeNodeCount function.
-    )pbdoc");
     m.def("reconstruct_tree", &py_reconstructree_wrapper, R"pbdoc(
         Some help text here
 

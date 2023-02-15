@@ -256,6 +256,8 @@ void predict_forest(
 
     forest->setDataframe(dta_frame);
 
+    std::unique_ptr< std::vector<double> > testForestPrediction;
+
     // Create Data
     size_t ncol = dta_frame->getNumColumns();
     std::vector< std::vector<double> >* predi_data {
@@ -286,10 +288,9 @@ void predict_forest(
 
     if (returnWeightMatrix) {
 
-        weightMatrix.zeros(num_test_rows, dta_frame->getNumRows());                
-        forest->predict(
+        weightMatrix.zeros(num_test_rows, dta_frame->getNumRows());
+        testForestPrediction = forest->predict(
                 predi_data,
-                predictions,
                 &weightMatrix,
                 nullptr,
                 nullptr,
@@ -297,7 +298,7 @@ void predict_forest(
                 nthread,
                 exact,
                 false,
-                nullptr
+                std::vector<size_t>()
         );
 
         size_t idx = 0;
@@ -311,9 +312,8 @@ void predict_forest(
     } else if (linear) {
 
         coefficients.zeros(dta_frame->getNumRows(), dta_frame->getLinCols()->size() + 1);
-        forest->predict(
+        testForestPrediction = forest->predict(
                 predi_data,
-                predictions,
                 nullptr,
                 &coefficients,
                 nullptr,
@@ -334,9 +334,8 @@ void predict_forest(
 
     } else {
 
-        forest->predict(
+        testForestPrediction = forest->predict(
             predi_data,
-            predictions,
             nullptr,
             nullptr,
             nullptr,
@@ -353,6 +352,7 @@ void predict_forest(
     delete(weights);
 
 
+    predictions = testForestPrediction.get();
     // predict_info* predictionResults = new predict_info;
     // predictionResults->predictions = testForestPrediction;
     // predictionResults->weightMatrix = &weightMatrix;
@@ -405,7 +405,7 @@ void predictOOB_forest(
                 nullptr,
                 doubleOOB,
                 exact,
-                nullptr
+                std::vector<size_t>()
         );
 
         size_t idx = 0;
@@ -424,7 +424,7 @@ void predictOOB_forest(
             nullptr,
             doubleOOB,
             exact,
-            nullptr
+            std::vector<size_t>()
         );
     }
 
