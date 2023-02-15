@@ -322,11 +322,6 @@ PYBIND11_MODULE(extension, m)
 
         Some other explanation about the get_weightMatrix function.
     )pbdoc");
-    m.def("get_vi", &getVI, R"pbdoc(
-        Some help text here
-    
-        Some other explanation about the getVI function.
-    )pbdoc");
     m.def("get_tree_node_count", &getTreeNodeCount, R"pbdoc(
         Some help text here
 

@@ -379,7 +379,7 @@ void predictOOB_forest(
 
     forestry* forest = reinterpret_cast<forestry *>(forest_pt);
     DataFrame* dta_frame = reinterpret_cast<DataFrame *>(dataframe_pt);
-    forest->_trainingData = dta_frame;
+    forest->setDataframe(dta_frame);
 
     //Create Data
     size_t ncol = dta_frame->getNumColumns();
