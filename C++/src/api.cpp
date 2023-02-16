@@ -298,7 +298,7 @@ void predict_forest(
                 nthread,
                 exact,
                 false,
-                std::vector<size_t>()
+                nullptr
         );
 
         size_t idx = 0;
@@ -352,14 +352,7 @@ void predict_forest(
     delete(weights);
 
 
-    predictions = testForestPrediction.get();
-    // predict_info* predictionResults = new predict_info;
-    // predictionResults->predictions = testForestPrediction;
-    // predictionResults->weightMatrix = &weightMatrix;
-    // predictionResults->terminalNodes = &terminalNodes;
-    // predictionResults->coefficients = &coefficients;
-
-    // return (void*)predictionResults;
+    predictions = *testForestPrediction.get();
 }
 
 
