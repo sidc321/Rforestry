@@ -642,8 +642,6 @@ void RFNode::printSubtree(int indentSpace) {
               << " Weight = "
               << getPredictWeight()
               << std::endl;
-    R_FlushConsole();
-    R_ProcessEvents();
 
   } else {
 
@@ -663,8 +661,6 @@ void RFNode::printSubtree(int indentSpace) {
               << getPredictWeight()
               << std::endl;
 
-    R_FlushConsole();
-    R_ProcessEvents();
     // Recursively calling its children
     (*getLeftChild()).printSubtree(indentSpace+2);
     (*getRightChild()).printSubtree(indentSpace+2);

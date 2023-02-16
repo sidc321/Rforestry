@@ -960,7 +960,7 @@ void findBestSplitRidge(
         currentSplitValue = epsilon_lower;
       }
     }
-    //Rcpp::Rcout << currentRSS << " " << currentSplitValue << "\n";
+    //std::cout << currentRSS << " " << currentSplitValue << "\n";
     updateBestSplit(
       bestSplitLossAll,
       bestSplitValueAll,

@@ -258,7 +258,7 @@ void forestryTree::predict(
                        seed,
                        nodesizeStrictAvg,
                        OOBIndex);
-  //Rcpp::Rcout << "Seed is" << seed << ".\n";
+  //std::cout << "Seed is" << seed << ".\n";
 }
 
 

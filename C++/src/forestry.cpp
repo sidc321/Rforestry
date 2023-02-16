@@ -189,9 +189,6 @@ void forestry::addTrees(size_t ntree) {
   if (isVerbose()) {
     std::cout << "Training parallel using " << nthreadToUse << " threads"
               << std::endl;
-    R_FlushConsole();
-    R_ProcessEvents();
-    R_CheckUserInterrupt();
   }
 
   std::vector<std::thread> allThreads(nthreadToUse);
@@ -322,9 +319,7 @@ void forestry::addTrees(size_t ntree) {
             #endif
 
             if (isVerbose()) {
-              Rcpp::Rcout << "Finish training tree # " << (i + 1) << std::endl;
-              R_FlushConsole();
-              R_ProcessEvents();
+              std::cout << "Finish training tree # " << (i + 1) << std::endl;
             }
 
             (*getForest()).emplace_back(oneTree);
@@ -544,7 +539,7 @@ std::unique_ptr< std::vector<double> > forestry::predict(
             }
 
           } catch (std::runtime_error &err) {
-            Rcpp::Rcerr << err.what() << std::endl;
+            std::cerr << err.what() << std::endl;
           }
       }
   #if DOPARELLEL
@@ -722,7 +717,7 @@ std::vector<double> forestry::predictOOB(
                   }
 
                 } catch (std::runtime_error &err) {
-                  // Rcpp::Rcerr << err.what() << std::endl;
+                  // std::cerr << err.what() << std::endl;
                 }
               }
     #if DOPARELLEL
@@ -879,7 +874,7 @@ void forestry::calculateOOBError(
             }
 
           } catch (std::runtime_error &err) {
-            // Rcpp::Rcerr << err.what() << std::endl;
+            // std::cerr << err.what() << std::endl;
           }
         }
   #if DOPARELLEL
@@ -938,7 +933,7 @@ void forestry::fillinTreeInfo(
       forest_dta->push_back(*treeInfo_i);
 
     } catch (std::runtime_error &err) {
-      Rcpp::Rcerr << err.what() << std::endl;
+      std::cerr << err.what() << std::endl;
 
     }
 
@@ -1032,7 +1027,7 @@ void forestry::reconstructTrees(
         (*getForest()).emplace_back(oneTree);
         _ntree = _ntree + 1;
       } catch (std::runtime_error &err) {
-        Rcpp::Rcerr << err.what() << std::endl;
+        std::cerr << err.what() << std::endl;
       }
   }
   #if DOPARELLEL
