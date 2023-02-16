@@ -22,22 +22,6 @@ find_library(ARMADILLO_LIBRARY armadillo
         )
 message(STATUS "ARMADILLO_LIBRARY => ${ARMADILLO_LIBRARY}")
 
-#### Rcpp
-
-find_path(RCPP_INCLUDE_DIR Rcpp.h
-        HINTS "/usr/local/lib/R/site-library/Rcpp" "/usr/lib/R/site-library/Rcpp" "/usr/lib64/R/library/Rcpp" $ENV{RCPP_DIR}
-        PATH_SUFFIXES include
-        REQUIRED
-        )
-message(STATUS "RCPP_INCLUDE_DIR => ${RCPP_INCLUDE_DIR}")
-
-find_library(RCPP_LIBRARY Rcpp.so
-        HINTS "/usr/local/lib/R/site-library/Rcpp" "/usr/lib/R/site-library/Rcpp" "/usr/lib64/R/library/Rcpp" $ENV{RCPP_DIR}
-        PATH_SUFFIXES lib${LIB_SUFFIX} lib64 lib libs
-        REQUIRED
-        )
-message(STATUS "RCPP_LIBRARY => ${RCPP_LIBRARY}")
-
 #### R
 
 find_path(R_INCLUDE_DIR R.h
@@ -54,27 +38,11 @@ find_library(R_LIBRARY libR.so
         )
 message(STATUS "R_LIBRARY => ${R_LIBRARY}")
 
-#### RcppArmadillo
-
-find_path(RCPPARMADILLO_INCLUDE_DIR RcppArmadillo.h
-        HINTS "/usr/local/lib/R/site-library/RcppArmadillo" "/usr/lib/R/site-library/RcppArmadillo" "/usr/lib64/R/library/RcppArmadillo" $ENV{RCPPARMADILLO_DIR}
-        PATH_SUFFIXES include
-        REQUIRED
-        )
-message(STATUS "RCPPARMADILLO_INCLUDE_DIR => ${RCPPARMADILLO_INCLUDE_DIR}")
-
-find_library(RCPPARMADILLO_LIBRARY RcppArmadillo.so
-        HINTS "/usr/local/lib/R/site-library/RcppArmadillo" "/usr/lib/R/site-library/RcppArmadillo" "/usr/lib64/R/library/RcppArmadillo" $ENV{RCPPARMADILLO_DIR}
-        PATH_SUFFIXES lib${LIB_SUFFIX} lib64 lib libs
-        REQUIRED
-        )
-message(STATUS "RCPPARMADILLO_LIBRARY => ${RCPPARMADILLO_LIBRARY}")
-
 
 
 
 message(STATUS "ARMADILLO_LIBRARY_DIR => ${Armadillo_LIBRARY_DIR}")
-include_directories("include" ${Armadillo_LIBRARY_DIR} ${RCPP_INCLUDE_DIR} ${R_INCLUDE_DIR} ${RCPPARMADILLO_INCLUDE_DIR})
+include_directories("include" ${Armadillo_LIBRARY_DIR} ${R_INCLUDE_DIR})
 
 add_subdirectory(pybind11)
 #pybind11_add_module(extension src/main.cpp include/forestry.cpp include/forestryTree.cpp include/DataFrame.cpp)
@@ -83,7 +51,7 @@ add_subdirectory(pybind11)
 add_library(extension MODULE src/main.cpp include/forestry.cpp include/forestryTree.cpp include/DataFrame.cpp include/treeSplitting.cpp include/RFNode.cpp)
 #add_library(extension MODULE src/main.cpp)
 
-target_link_libraries(extension PRIVATE pybind11::module pybind11::lto pybind11::windows_extras PUBLIC ${ARMADILLO_LIBRARY} ${RCPP_LIBRARY} ${R_LIBRARY} ${RCPPARMADILLO_LIBRARY})
+target_link_libraries(extension PRIVATE pybind11::module pybind11::lto pybind11::windows_extras PUBLIC ${ARMADILLO_LIBRARY} ${R_LIBRARY})
 
 pybind11_extension(extension)
 if(NOT MSVC AND NOT ${CMAKE_BUILD_TYPE} MATCHES Debug|RelWithDebInfo)
@@ -95,7 +63,7 @@ set_target_properties(extension PROPERTIES CXX_VISIBILITY_PRESET "hidden" CUDA_V
 
 ###
 
-target_include_directories(extension PUBLIC ${ARMADILLO_INCLUDE_DIR} ${RCPP_INCLUDE_DIR} ${R_INCLUDE_DIR} ${RCPPARMADILLO_INCLUDE_DIR})
+target_include_directories(extension PUBLIC ${ARMADILLO_INCLUDE_DIR} ${R_INCLUDE_DIR})
 
 # EXAMPLE_VERSION_INFO is defined by setup.py and passed into the C++ code as a
 # define (VERSION_INFO) here.
