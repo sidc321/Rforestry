@@ -23,7 +23,7 @@ class ProcessedDta:  # pylint: disable=too-many-instance-attributes
     col_means: np.ndarray = field(default_factory=lambda: np.array(0))
     col_sd: np.ndarray = field(default_factory=lambda: np.array(0))
     has_nas: bool = False
-    na_direction : bool = False
+    na_direction: bool = False
     n_observations: int = 0
     num_columns: int = 0
     feat_names: Optional[np.ndarray] = None
