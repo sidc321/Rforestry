@@ -24,7 +24,7 @@ def test_fit():
         match=re.escape(
             (
                 "fit() takes 3 positional arguments but 4 positional arguments "
-                "(and 6 keyword-only arguments) were given"
+                "(and 5 keyword-only arguments) were given"
             )
         ),
     ):
