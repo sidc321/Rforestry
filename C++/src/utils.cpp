@@ -1,5 +1,4 @@
 #include "utils.h"
-#include <Rcpp.h>
 #include <vector>
 #include <string>
 #include <iostream>
