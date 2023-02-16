@@ -374,6 +374,9 @@ void predictOOB_forest(
     DataFrame* dta_frame = reinterpret_cast<DataFrame *>(dataframe_pt);
     forest->setDataframe(dta_frame);
 
+    // For now put trainingIdx empty
+    std::vector<size_t> training_idx_use;
+
     //Create Data
     size_t ncol = dta_frame->getNumColumns();
     std::vector< std::vector<double> >* predi_data {
@@ -398,7 +401,7 @@ void predictOOB_forest(
                 nullptr,
                 doubleOOB,
                 exact,
-                nullptr
+                training_idx_use
         );
 
         size_t idx = 0;
@@ -417,7 +420,7 @@ void predictOOB_forest(
             nullptr,
             doubleOOB,
             exact,
-            nullptr
+            training_idx_use
         );
     }
 
