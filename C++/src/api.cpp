@@ -398,7 +398,7 @@ void predictOOB_forest(
                 nullptr,
                 doubleOOB,
                 exact,
-                std::vector<size_t>()
+                nullptr
         );
 
         size_t idx = 0;
@@ -417,7 +417,7 @@ void predictOOB_forest(
             nullptr,
             doubleOOB,
             exact,
-            std::vector<size_t>()
+            nullptr
         );
     }
 
