@@ -2,7 +2,6 @@
 #include "utils.h"
 #include "treeSplitting.h"
 #include <armadillo>
-#include <RcppThread.h>
 #include <cmath>
 #include <set>
 #include <map>

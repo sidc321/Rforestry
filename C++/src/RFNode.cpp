@@ -1,8 +1,6 @@
-// [[Rcpp::depends(RcppThread)]]
 // [[Rcpp::plugins(cpp11)]]
 #include "RFNode.h"
 #include <armadillo>
-#include <RcppThread.h>
 #include <mutex>
 #include <thread>
 #include "utils.h"
@@ -636,7 +634,7 @@ void RFNode::printSubtree(int indentSpace) {
   if (is_leaf()) {
 
     // Print count of samples in the leaf node
-    RcppThread::Rcout << std::string((unsigned long) indentSpace, ' ')
+    std::cout << std::string((unsigned long) indentSpace, ' ')
               << "Leaf Node: # of split samples = "
               << getSplitCount()
               << ", # of average samples = "
@@ -650,7 +648,7 @@ void RFNode::printSubtree(int indentSpace) {
   } else {
 
     // Print split feature and split value
-    RcppThread::Rcout << std::string((unsigned long) indentSpace, ' ')
+    std::cout << std::string((unsigned long) indentSpace, ' ')
               << "Tree Node: split feature = "
               << getSplitFeature()
               << ", split value = "

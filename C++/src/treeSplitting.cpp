@@ -4,7 +4,6 @@
 #include "RFNode.h"
 #include "utils.h"
 #include <armadillo>
-#include <RcppThread.h>
 #include <cmath>
 #include <set>
 #include <map>
