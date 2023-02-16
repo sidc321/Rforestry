@@ -32,7 +32,7 @@ def test_get_parameters(forest):
     assert forest.get_parameters()
     assert forest.get_parameters()["ntree"] == 500
     assert forest.get_parameters()["double_bootstrap"]
-    assert len(forest.get_parameters().keys()) == 27
+    assert len(forest.get_parameters().keys()) == 29
 
 
 def test_set_parameters(forest):

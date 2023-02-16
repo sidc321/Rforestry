@@ -292,6 +292,11 @@ void fill_tree_info_wrapper(void *forest_ptr,
     copy_vector_to_numpy_array(av_info_vector, av_info);
 }
 
+size_t getTreeNodeCount(void *forest_ptr,
+                        int tree_idx){
+    return get_node_count(forest_ptr,tree_idx);
+}
+
 PYBIND11_MODULE(extension, m)
 {
     m.doc() = R"pbdoc(
@@ -315,6 +320,11 @@ PYBIND11_MODULE(extension, m)
         Some help text here
 
         Some other explanation about the get_data function.
+    )pbdoc");
+    m.def("get_tree_node_count", &getTreeNodeCount, R"pbdoc(
+        Some help text here
+
+        Some other explanation about the getTreeNodeCount function.
     )pbdoc");
     m.def("reconstruct_tree", &py_reconstructree_wrapper, R"pbdoc(
         Some help text here

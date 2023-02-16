@@ -650,6 +650,11 @@ void* py_reconstructree(void* data_ptr,
 
 }
 
+size_t get_node_count(void* forest_pt, int tree_idx) {
+    forestry* forest = reinterpret_cast<forestry *>(forest_pt);
+    return(forest->getForest()->at(tree_idx)->getNodeCount());
+}
+
 void delete_forestry(void* forest_pt, void* dataframe_pt){
     delete(reinterpret_cast<DataFrame* >(dataframe_pt));
     delete(reinterpret_cast<forestry* >(forest_pt));
