@@ -1,4 +1,4 @@
-#include "DataFrame.h"
+#include "dataFrame.h"
 
 DataFrame::DataFrame():
   _featureData(nullptr), _outcomeData(nullptr), _rowNumbers(nullptr),

@@ -6,7 +6,7 @@
 #include <string>
 #include <random>
 #include <chrono>
-#include "DataFrame.h"
+#include "dataFrame.h"
 #include "RFNode.h"
 #include "utils.h"
 #include <armadillo>

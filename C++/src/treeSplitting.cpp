@@ -1,6 +1,6 @@
 #include "treeSplitting.h"
 #include "forestryTree.h"
-#include "DataFrame.h"
+#include "dataFrame.h"
 #include "RFNode.h"
 #include "utils.h"
 #include <armadillo>

@@ -4,7 +4,7 @@
 #include <iostream>
 #include <random>
 #include "forestry.h"
-#include "DataFrame.h"
+#include "dataFrame.h"
 #include "utils.h"
 #include "forestryTree.h"
 

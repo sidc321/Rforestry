@@ -2,7 +2,7 @@
 #define HTECPP_RF_H
 
 #include "forestryTree.h"
-#include "DataFrame.h"
+#include "dataFrame.h"
 #include "forestryTree.h"
 #include "utils.h"
 #include <armadillo>
