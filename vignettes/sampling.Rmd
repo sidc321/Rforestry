@@ -1,0 +1,36 @@
+---
+title: "Rforestry Sampling Procedures"
+author: "Sam Antonyan"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Honest Trees
+
+Training forests often results in overfitting. This can be often caused because the same data was used for creating trees and making predictions. In order to avoid this, the data for each tree is divided into two disjoint subsets: *splitting set* and *averaging set*. The *splitting set* is used to partition the data at each node, and the *splitting set* is used to find the mean value in leaf nodes. Trees with this structure are called **honest**. The two versions of honesty implemented are **Standard Honesty** and **Out Of Bag Honesty**.
+
+### Standard Honesty
+
+In the standard version of honesty, the user specifies the **splitratio** hyperparameter, which is the proportion of the training dataset used as the splitting dataset. It is a ratio between 0 and 1. If **splitratio** is 1 (the default), then both the splitting set and the averaging set use the entire data. If the ratio is 0, then the splitting set is empty, and the entire dataset is used for the averaging set (This is not a good usage, however, since there will be no data available for splitting). 
+
+### Out Of Bag Honesty
+
+*Out Of Bag Honesty* can be used by setting the **OOBhonest** hyperparameter to true. In this version of honesty, the training data is first sampled with replacement. In order to specify the sample size, the user can use **sampsize** or **sample.fraction** hyperparameters, where **sampsize** is the number of samples to be drawn from the training data, and **sample.fraction** is the proportion of the training data to be used for sampling. If **sample.fraction** is given, **sampsize** is ignored. By default, the entire dataset is used when sampling with replacement.
+
+Afterwards, the sampled data is used as the splitting set, and the out-of-bag observations for each tree are used as the honest (averaging) set. This setting also changes how predictions are constructed. When predicting for observations that are out-of-sample (using *predict(..., aggregation = "average")*), all the trees in the forest are used to construct predictions. When predicting for an observation that was in-sample (using *predict(..., aggregation = "oob")*), only the trees for which that observation was not in the averaging set are used to construct the prediction for that observation. *aggregation="oob"* (out-of-bag) ensures that the outcome value for an observation is never used to construct predictions for a given observation even when it is in sample. This property does not hold in standard honesty, which relies on an asymptotic subsampling argument. By default, when *OOBhonest = TRUE*, the out-of-bag observations for each tree are resamples with replacement to be used for the honest (averaging) set. This results in a third set of observations that are left out of both the splitting and averaging set, we call these the double out-of-bag (**doubleOOB**) observations. In order to get the predictions of only the trees in which each observation fell into this *doubleOOB* set, one can run *predict(... , aggregation = "doubleOOB")*. In order to not do this second bootstrap sample, the **doubleBootstrap** flag can be set to FALSE.
+
+
+# Groups
+
+Training with groups can be used to describe certain traits in observation data that is common in a group. To do that, the training data is first divided into *G* disjoint groups. Those groups are provided by the user using the **groups** hyperparameter. Afterwards, the groups for each tree are assigned or either the *averaging set*, or the *splitting set*. Just like before, this can be done in two ways: using *Out Of Bag Honesty* (**OOBhonest = TRUE**), or by providing the **splitratio** hyperparameter. When using *Out Of Bag Honesty*, we sample through the list of groups with replacement, adding the in-sample groups to the splitting set, and the out-of-sample groups to the averaging set. On the other hand, if *splitratio* is provided (and **OOBhonest = FALSE**), we sample *splitratio* groups without replacement, again adding the in-sample groups to the splitting set, and the out-of-sample groups to the averaging set.
+
+Afterwards, we sample again at the observation level. If we are using *Out Of Bag Honesty*, we take two bootstrap samples of individual observations from each of the *splitting* and *averaging* groups. Those two samples will be used as the *splitting* and *averaging* sets of the tree. If we are not using bootstrap samples for the tree, we take two subsamples from the two groupings of the data.
+
+Similar to previous examples, When predicting for in-sample observations (using *predict(..., aggregation = "oob")*), only trees for which the observation's respective group is left out are used for aggregation. In addition, when predicting for observations that are out-of-sample (using *predict(..., aggregation = "average")*), all the trees in the forest are used for aggregation.
+
+OOB - only not in averaging set
+doubeoob - both averaging and splitting
+
