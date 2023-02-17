@@ -6,7 +6,7 @@
 #include <string>
 #include <random>
 #include <chrono>
-#include "DataFrame.h"
+#include "dataFrame.h"
 #include "RFNode.h"
 #include "utils.h"
 #include <armadillo>
@@ -33,8 +33,8 @@ public:
     bool splitMiddle,
     size_t maxObs,
     bool hasNas,
+    bool naDirection,
     bool linear,
-    bool symmetric,
     double overfitPenalty,
     unsigned int seed
   );
@@ -62,6 +62,7 @@ public:
     DataFrame* trainingData,
     arma::Mat<double>* weightMatrix = NULL,
     bool linear = false,
+    bool naDirection = false,
     unsigned int seed = 44,
     size_t nodesizeStrictAvg = 1,
     std::vector<size_t>* OOBIndex = NULL
@@ -71,17 +72,39 @@ public:
       DataFrame* trainingData
   );
 
-  void reconstruct_tree(size_t mtry, size_t minNodeSizeSpt, size_t minNodeSizeAvg, size_t minNodeSizeToSplitSpt,
-                        size_t minNodeSizeToSplitAvg, double minSplitGain, size_t maxDepth,
-                        size_t interactionDepth, bool hasNas, bool linear, double overfitPenalty,
-                        unsigned int seed, std::vector<size_t> categoricalFeatureCols, std::vector<int> var_ids,
-                        std::vector<double> split_vals, std::vector<int> naLeftCounts,
-                        std::vector<int> naRightCounts, std::vector<size_t> averagingSampleIndex,
-                        std::vector<size_t> splittingSampleIndex, std::vector<double> predictWeights);
+  void reconstruct_tree(
+      size_t mtry,
+      size_t minNodeSizeSpt,
+      size_t minNodeSizeAvg,
+      size_t minNodeSizeToSplitSpt,
+      size_t minNodeSizeToSplitAvg,
+      double minSplitGain,
+      size_t maxDepth,
+      size_t interactionDepth,
+      bool hasNas,
+      bool naDirection,
+      bool linear,
+      double overfitPenalty,
+      unsigned int seed,
+      std::vector<size_t> categoricalFeatureColsRcpp,
+      std::vector<int> var_ids,
+      std::vector<double> split_vals,
+      std::vector<int> naLeftCounts,
+      std::vector<int> naRightCounts,
+      std::vector<int> naDefaultDirections,
+      std::vector<size_t> averagingSampleIndex,
+      std::vector<size_t> splittingSampleIndex,
+      std::vector<double> predictWeights);
 
-  void recursive_reconstruction(RFNode *currentNode, std::vector<int> *var_ids, std::vector<double> *split_vals,
-                                std::vector<int> *naLeftCounts, std::vector<int> *naRightCounts,
-                                std::vector<double> *weights);
+  void recursive_reconstruction(
+      RFNode* currentNode,
+      std::vector<int> * var_ids,
+      std::vector<double> * split_vals,
+      std::vector<int> * naLeftCounts,
+      std::vector<int> * naRightCounts,
+      std::vector<int> * naDefaultDirections,
+      std::vector<double> * weights
+  );
 
   void recursivePartition(
     RFNode* rootNode,
@@ -98,9 +121,7 @@ public:
     std::shared_ptr< arma::Mat<double> > stotal,
     bool monotone_splits,
     monotonic_info monotone_details,
-    bool trinary,
-    bool centerSplit,
-    symmetric_info symmetric_details
+    bool naDirection
   );
 
   void selectBestFeature(
@@ -108,8 +129,6 @@ public:
       double &bestSplitValue,
       double &bestSplitLoss,
       int &bestSplitNaDir,
-      std::vector<double> &bestSplitLeftWts,
-      std::vector<double> &bestSplitRightWts,
       arma::Mat<double> &bestSplitGL,
       arma::Mat<double> &bestSplitGR,
       arma::Mat<double> &bestSplitSL,
@@ -122,13 +141,11 @@ public:
       bool splitMiddle,
       size_t maxObs,
       bool linear,
-      bool trinary,
       double overfitPenalty,
       std::shared_ptr< arma::Mat<double> > gtotal,
       std::shared_ptr< arma::Mat<double> > stotal,
       bool monotone_splits,
-      monotonic_info &monotone_details,
-      symmetric_info &symmetric_details
+      monotonic_info &monotone_details
   );
 
   void initializelinear(
@@ -145,23 +162,24 @@ public:
 
   void getOOBindex(
     std::vector<size_t> &outputOOBIndex,
-    size_t nRows
+    std::vector<size_t> &allIndex
   );
 
   void getDoubleOOBIndex(
       std::vector<size_t> &outputOOBIndex,
-      size_t nRows
+      std::vector<size_t> &allIndex
   );
 
   void getOOBhonestIndex(
       std::vector<size_t> &outputOOBIndex,
-      size_t nRows
+      std::vector<size_t> &allIndex
   );
 
   void getOOGIndex(
       std::vector<size_t> &outputOOBIndex,
       std::vector<size_t> groupMemberships,
-      size_t nRows
+      std::vector<size_t> &allIndex,
+      bool doubleOOB
   );
 
   void getOOBPrediction(
@@ -172,16 +190,8 @@ public:
     bool doubleOOB,
     size_t nodesizeStrictAvg,
     std::vector< std::vector<double> >* xNew,
-    arma::Mat<double>* weightMatrix
-  );
-
-  void getShuffledOOBPrediction(
-      std::vector<double> &outputOOBPrediction,
-      std::vector<size_t> &outputOOBCount,
-      DataFrame* trainingData,
-      size_t shuffleFeature,
-      std::mt19937_64& random_number_generator,
-      size_t nodesizeStrictAvg
+    arma::Mat<double>* weightMatrix,
+    const std::vector<size_t>& training_idx
   );
 
   size_t getMtry() {
@@ -240,8 +250,12 @@ public:
     return _hasNas;
   }
 
+  bool getNaDirection() {
+    return _naDirection;
+  }
+
   void assignNodeId(size_t& node_i) {
-    node_i = _nodeCount++;
+    node_i = ++_nodeCount;
   }
 
   size_t getNodeCount() {
@@ -261,6 +275,7 @@ private:
   std::unique_ptr< std::vector<size_t> > _splittingSampleIndex;
   std::unique_ptr< RFNode > _root;
   bool _hasNas;
+  bool _naDirection;
   bool _linear;
   double _overfitPenalty;
   unsigned int _seed;

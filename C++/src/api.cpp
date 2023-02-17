@@ -4,7 +4,7 @@
 #include <iostream>
 #include <random>
 #include "forestry.h"
-#include "DataFrame.h"
+#include "dataFrame.h"
 #include "utils.h"
 #include "forestryTree.h"
 
@@ -27,8 +27,6 @@ void* get_data (
         int* mon_constraints,
         size_t* groupMemberships,
         bool monotoneAvg,
-        size_t* symmetricIndices,
-        size_t countSym,
         size_t numRows,
         size_t numColumns,
         unsigned int seed
@@ -107,7 +105,7 @@ void* get_data (
     }
 
 
-    // Deep feature indecies based
+    // Deep feature indices based
     std::unique_ptr< std::vector<size_t> > deep_feature_weight_vars (
             new std::vector<size_t> (countDeepFtWeightVars)
     );
@@ -147,16 +145,6 @@ void* get_data (
     }
 
 
-    // symmetric variable indices
-    std::unique_ptr< std::vector<size_t> > symmetric_constraints (
-            new std::vector<size_t> (countSym)
-    );
-
-    for (size_t i = 0; i < countSym; i++) {
-        symmetric_constraints->at(i) = symmetricIndices[i];
-    }
-
-
     DataFrame* test_df = new DataFrame(
             std::move(featureData),
             std::move(outcomeData),
@@ -171,8 +159,7 @@ void* get_data (
             std::move(obs_weights),
             std::move(monotone_constraints),
             std::move(groups),
-            monotoneAvg,
-            std::move(symmetric_constraints)
+            monotoneAvg
     );
 
     return test_df;
@@ -200,10 +187,11 @@ void* train_forest(
         bool verbose,
         bool splitMiddle,
         size_t maxObs,
-        size_t minTreesPerGroup,
+        size_t minTreesPerFold,
+        size_t foldSize,
         bool hasNas,
+        bool naDirection,
         bool linear,
-        bool symmetric,
         double overfitPenalty,
         bool doubleTree
 ){
@@ -229,10 +217,11 @@ void* train_forest(
             verbose,
             splitMiddle,
             maxObs,
-            minTreesPerGroup,
+            minTreesPerFold,
+            foldSize,
             hasNas,
+            naDirection,
             linear,
-            symmetric,
             overfitPenalty,
             doubleTree
     ));
@@ -265,7 +254,9 @@ void predict_forest(
     forestry* forest = reinterpret_cast<forestry *>(forest_pt);
     DataFrame* dta_frame = reinterpret_cast<DataFrame *>(dataframe_pt);
 
-    forest->_trainingData = dta_frame;
+    forest->setDataframe(dta_frame);
+
+    std::unique_ptr< std::vector<double> > testForestPrediction;
 
     // Create Data
     size_t ncol = dta_frame->getNumColumns();
@@ -297,10 +288,9 @@ void predict_forest(
 
     if (returnWeightMatrix) {
 
-        weightMatrix.zeros(num_test_rows, dta_frame->getNumRows());                
-        forest->predict_forestry(
+        weightMatrix.zeros(num_test_rows, dta_frame->getNumRows());
+        testForestPrediction = forest->predict(
                 predi_data,
-                predictions,
                 &weightMatrix,
                 nullptr,
                 nullptr,
@@ -322,9 +312,8 @@ void predict_forest(
     } else if (linear) {
 
         coefficients.zeros(dta_frame->getNumRows(), dta_frame->getLinCols()->size() + 1);
-        forest->predict_forestry(
+        testForestPrediction = forest->predict(
                 predi_data,
-                predictions,
                 nullptr,
                 &coefficients,
                 nullptr,
@@ -345,9 +334,8 @@ void predict_forest(
 
     } else {
 
-        forest->predict_forestry(
+        testForestPrediction = forest->predict(
             predi_data,
-            predictions,
             nullptr,
             nullptr,
             nullptr,
@@ -364,13 +352,7 @@ void predict_forest(
     delete(weights);
 
 
-    // predict_info* predictionResults = new predict_info;
-    // predictionResults->predictions = testForestPrediction;
-    // predictionResults->weightMatrix = &weightMatrix;
-    // predictionResults->terminalNodes = &terminalNodes;
-    // predictionResults->coefficients = &coefficients;
-
-    // return (void*)predictionResults;
+    predictions = *testForestPrediction.get();
 }
 
 
@@ -390,7 +372,10 @@ void predictOOB_forest(
 
     forestry* forest = reinterpret_cast<forestry *>(forest_pt);
     DataFrame* dta_frame = reinterpret_cast<DataFrame *>(dataframe_pt);
-    forest->_trainingData = dta_frame;
+    forest->setDataframe(dta_frame);
+
+    // For now put trainingIdx empty
+    std::vector<size_t> training_idx_use;
 
     //Create Data
     size_t ncol = dta_frame->getNumColumns();
@@ -408,14 +393,15 @@ void predictOOB_forest(
     arma::Mat<double> weightMatrix;
 
     if (returnWeightMatrix) {
-        weightMatrix.zeros(dta_frame->getNumRows(), dta_frame->getNumRows());  
-        
-        forest->predictOOB_forestry(
+        weightMatrix.zeros(dta_frame->getNumRows(), dta_frame->getNumRows());
+
+        predictions = forest->predictOOB(
                 predi_data,
-                predictions,
                 &weightMatrix,
+                nullptr,
                 doubleOOB,
-                exact
+                exact,
+                training_idx_use
         );
 
         size_t idx = 0;
@@ -428,82 +414,19 @@ void predictOOB_forest(
     }
 
     else {
-        forest->predictOOB_forestry(
+        predictions = forest->predictOOB(
             predi_data,
-            predictions,
+            nullptr,
             nullptr,
             doubleOOB,
-            exact
+            exact,
+            training_idx_use
         );
     }
 
     delete(predi_data);
 
 }
-
-std::vector<double>* getVI(void* forest_pt){
-    forestry* forest = reinterpret_cast<forestry *>(forest_pt);
-    forest->calculateVariableImportance();
-
-    std::vector<double> VI = forest->getVariableImportance();
-
-    std::vector<double>* variableImportances(
-            new std::vector<double>(VI)
-    );
-
-    return variableImportances;
-}
-
-int getTreeNodeCount(void* forest_ptr,
-                     int tree_idx) {
-    forestry* forest = reinterpret_cast<forestry *>(forest_ptr);
-
-    return ((int) forest->getForest()->at(tree_idx)->getNodeCount());
-}
-
-// std::vector<double>* get_tree_info(void* forest_ptr,
-//                                 void* dataframe_ptr,
-//                                 int tree_idx){
-//     forestry* forest = reinterpret_cast<forestry *>(forest_ptr);
-//     DataFrame* dta_frame = reinterpret_cast<DataFrame *>(dataframe_ptr);
-//     forest->_trainingData = dta_frame;
-
-//     std::unique_ptr<tree_info> info_holder;
-
-//     info_holder = forest->getForest()->at(tree_idx)->getTreeInfo(forest->getTrainingData());
-//     int num_nodes = forest->getForest()->at(tree_idx)->getNodeCount();
-    
-//     std::vector<double>* treeInfo(
-//             new std::vector<double>(num_nodes*8)
-//     );
-
-//     for (int i = 0; i < num_nodes; i++) {
-//         treeInfo->at(i) = (double)info_holder->left_child_id.at(i);
-//         treeInfo->at(num_nodes+i) = (double)info_holder->right_child_id.at(i);
-//         treeInfo->at(num_nodes*2+i) = (double)info_holder->var_id.at(i);
-//         treeInfo->at(num_nodes*3+i) = (double)info_holder->num_avg_samples.at(i);
-//         treeInfo->at(num_nodes*4+i) = info_holder->split_val.at(i);
-//         treeInfo->at(num_nodes*5+i) = info_holder->values.at(i);
-//         treeInfo->at(num_nodes*6+i) = info_holder->naLeftCount.at(i);
-//         treeInfo->at(num_nodes*7+i) = info_holder->naLeftCount.at(i);
-//     }
-
-//     treeInfo->push_back((info_holder->splittingSampleIndex).size());
-//     for (size_t i = 0; i < (info_holder->splittingSampleIndex).size(); i++){
-//         treeInfo->push_back(info_holder->splittingSampleIndex.at(i));
-//     }
-
-//     treeInfo->push_back((info_holder->averagingSampleIndex).size());
-//     for (size_t i = 0; i < (info_holder->averagingSampleIndex).size(); i++){
-//         treeInfo->push_back(info_holder->averagingSampleIndex.at(i));
-//     }
-
-//     treeInfo->push_back(info_holder->seed);
-
-//     return treeInfo;
-    
-
-// }
 
 void fill_tree_info(void* forest_ptr,
                     int tree_idx,
@@ -543,44 +466,6 @@ void fill_tree_info(void* forest_ptr,
     }
 
     treeInfo[num_nodes*8] = info_holder->seed;
-
-
-}
-
-std::vector<size_t>* get_path(void* forest_ptr,
-                           double* obs_ptr,
-                           int tree_idx) {
-    forestry* forest = reinterpret_cast<forestry *>(forest_ptr);
-
-    std::vector<double>* observationDta = new std::vector<double>(forest->getTrainingData()->getNumColumns());
-
-    for (size_t i = 0; i < forest->getTrainingData()->getNumColumns(); i++) {
-        observationDta->at(i) = obs_ptr[i];
-    }
-
-    forestryTree* tree = (forest->getForest()->at(tree_idx)).get();
-    
-    std::vector<size_t> path;
-    path.push_back(0);
-
-    tree->getRoot()->getPath(path, observationDta, forest->getTrainingData(), forest->getSeed());    
-
-    std::vector<size_t>* node_ids(
-            new std::vector<size_t> (path)
-    );
-
-    return node_ids;
-
-}
-
-double get_prediction(void* prediction_ptr, int i){
-    predict_info* predictionResults = reinterpret_cast<predict_info* >(prediction_ptr);
-    return predictionResults->predictions->at(i);
-}
-
-double get_weightMatrix(void* prediction_ptr, size_t i, size_t j){
-    predict_info* predictionResults = reinterpret_cast<predict_info* >(prediction_ptr);
-    return predictionResults->weightMatrix->at(i, j);
 }
 
 
@@ -604,10 +489,11 @@ void* py_reconstructree(void* data_ptr,
         bool verbose,
         bool splitMiddle,
         size_t maxObs,
-        size_t minTreesPerGroup,
+        size_t minTreesPerFold,
+        size_t foldSize,
         bool hasNas,
+        bool naDirection,
         bool linear,
-        bool symmetric,
         double overfitPenalty,
         bool doubleTree,
         size_t* tree_counts,
@@ -615,6 +501,7 @@ void* py_reconstructree(void* data_ptr,
         int* features,
         int* na_left_count,
         int* na_right_count,
+        int* na_default_directions,
         size_t* split_idx,
         size_t* average_idx,
         double* predict_weights,
@@ -643,10 +530,11 @@ void* py_reconstructree(void* data_ptr,
             verbose,
             splitMiddle,
             maxObs,
-            minTreesPerGroup,
+            minTreesPerFold,
+            foldSize,
             hasNas,
+            naDirection,
             linear,
-            symmetric,
             overfitPenalty,
             doubleTree
     ));
@@ -674,6 +562,9 @@ void* py_reconstructree(void* data_ptr,
     std::unique_ptr< std::vector< std::vector<int> > > naRightCounts(
         new std::vector< std::vector<int> >
     );
+    std::unique_ptr< std::vector< std::vector<int> > > naDefaultDirections(
+            new std::vector< std::vector<int> >
+    );
     std::unique_ptr< std::vector< std::vector<size_t> > > averagingSampleIndex(
         new std::vector< std::vector<size_t> >
     );
@@ -694,6 +585,7 @@ void* py_reconstructree(void* data_ptr,
     splittingSampleIndex->reserve(ntree);
     naLeftCounts->reserve(ntree);
     naRightCounts->reserve(ntree);
+    naDefaultDirections->reserve(ntree);
     treeSeeds->reserve(ntree);
     predictWeights->reserve(ntree);
 
@@ -704,6 +596,7 @@ void* py_reconstructree(void* data_ptr,
         std::vector<double> cur_split_vals(tree_counts[3*i], 0);
         std::vector<int> curNaLeftCounts(tree_counts[3*i], 0);
         std::vector<int> curNaRightCounts(tree_counts[3*i], 0);
+        std::vector<int> curNaDefaultDirections(tree_counts[3*i], 0);
         std::vector<size_t> curSplittingSampleIndex(tree_counts[3*i+1], 0);
         std::vector<size_t> curAveragingSampleIndex(tree_counts[3*i+2], 0);
         std::vector<double> cur_predict_weights(tree_counts[3*i], 0);
@@ -713,6 +606,7 @@ void* py_reconstructree(void* data_ptr,
             cur_split_vals.at(j) = thresholds[ind];
             curNaLeftCounts.at(j) = na_left_count[ind];
             curNaRightCounts.at(j) = na_right_count[ind];
+            curNaDefaultDirections.at(j) = na_default_directions[ind];
             cur_predict_weights.at(j) = predict_weights[ind];
 
             ind++;
@@ -732,6 +626,7 @@ void* py_reconstructree(void* data_ptr,
         split_vals->push_back(cur_split_vals);
         naLeftCounts->push_back(curNaLeftCounts);
         naRightCounts->push_back(curNaRightCounts);
+        naDefaultDirections->push_back(curNaDefaultDirections);
         splittingSampleIndex->push_back(curSplittingSampleIndex);
         averagingSampleIndex->push_back(curAveragingSampleIndex);
         predictWeights->push_back(cur_predict_weights);
@@ -745,6 +640,7 @@ void* py_reconstructree(void* data_ptr,
                                    split_vals,
                                    naLeftCounts,
                                    naRightCounts,
+                                   naDefaultDirections,
                                    averagingSampleIndex,
                                    splittingSampleIndex,
                                    predictWeights
@@ -752,6 +648,11 @@ void* py_reconstructree(void* data_ptr,
 
     return forest;
 
+}
+
+size_t get_node_count(void* forest_pt, int tree_idx) {
+    forestry* forest = reinterpret_cast<forestry *>(forest_pt);
+    return(forest->getForest()->at(tree_idx)->getNodeCount());
 }
 
 void delete_forestry(void* forest_pt, void* dataframe_pt){

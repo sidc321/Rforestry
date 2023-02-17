@@ -8,36 +8,6 @@ from .base_validator import BaseValidator
 
 
 class FitValidator(BaseValidator):
-    def validate_symmetric(self, *args, **kwargs):
-        _self = args[0]
-
-        x = pd.DataFrame(kwargs.get("x", args[1])).copy()
-        _, ncols = x.shape
-
-        if "symmetric" not in kwargs:
-            symmetric = np.zeros(ncols, dtype=np.ulonglong)
-        else:
-            symmetric = np.array(kwargs["symmetric"], dtype=np.ulonglong)
-
-        if any(i != 0 for i in symmetric):
-            if _self.linear:
-                raise ValueError(
-                    "Symmetric forests cannot be combined with linear aggregation. "
-                    "Please set either symmetric = False or linear = False"
-                )
-            if x.isnull().values.any():
-                raise ValueError(
-                    "Symmetric forests cannot be combined with missing values. "
-                    "Please impute the missing features before training a forest with symmetry"
-                )
-
-            if any(j not in (0, 1) for j in symmetric):
-                raise ValueError("Entries of the symmetric argument must be zero one")
-
-            if sum(j > 0 for j in symmetric) > 10:
-                warnings.warn("Running symmetric splits in more than 10 features is very slow")
-
-        return symmetric
 
     def validate_monotonic_constraints(self, *args, **kwargs):
         _self = args[0]
@@ -173,8 +143,6 @@ class FitValidator(BaseValidator):
             raise ValueError("You cannot sample without replacement with size more than total number of observations.")
         if preprocessing.get_mtry(_self, x) > ncols:
             raise ValueError("mtry cannot exceed total amount of features in x.")
-
-        kwargs["symmetric"] = self.validate_symmetric(*args, **kwargs)
 
         kwargs["monotonic_constraints"] = self.validate_monotonic_constraints(*args, **kwargs)
 

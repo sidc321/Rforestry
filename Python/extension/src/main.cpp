@@ -66,8 +66,6 @@ void *get_data_wrapper(
     py::array_t<int> mon_constraints,
     py::array_t<size_t> groupMemberships,
     bool monotoneAvg,
-    py::array_t<size_t> symmetricIndices,
-    size_t countSym,
     size_t numRows,
     size_t numColumns,
     unsigned int seed)
@@ -88,8 +86,6 @@ void *get_data_wrapper(
         static_cast<int *>(mon_constraints.request().ptr),
         static_cast<size_t *>(groupMemberships.request().ptr),
         monotoneAvg,
-        static_cast<size_t *>(symmetricIndices.request().ptr),
-        countSym,
         numRows,
         numColumns,
         seed);
@@ -115,10 +111,11 @@ void *py_reconstructree_wrapper(void *data_ptr,
                                 bool verbose,
                                 bool splitMiddle,
                                 size_t maxObs,
-                                size_t minTreesPerGroup,
+                                size_t minTreesPerFold,
+                                size_t foldSize,
                                 bool hasNas,
+                                bool naDirection,
                                 bool linear,
-                                bool symmetric,
                                 double overfitPenalty,
                                 bool doubleTree,
                                 py::array_t<size_t> tree_counts,
@@ -126,6 +123,7 @@ void *py_reconstructree_wrapper(void *data_ptr,
                                 py::array_t<int> features,
                                 py::array_t<int> na_left_count,
                                 py::array_t<int> na_right_count,
+                                py::array_t<int> na_default_directions,
                                 py::array_t<size_t> split_idx,
                                 py::array_t<size_t> average_idx,
                                 py::array_t<double> predict_weights,
@@ -151,10 +149,11 @@ void *py_reconstructree_wrapper(void *data_ptr,
                              verbose,
                              splitMiddle,
                              maxObs,
-                             minTreesPerGroup,
+                             minTreesPerFold,
+                             foldSize,
                              hasNas,
+                             naDirection,
                              linear,
-                             symmetric,
                              overfitPenalty,
                              doubleTree,
                              static_cast<size_t *>(tree_counts.request().ptr),
@@ -162,6 +161,7 @@ void *py_reconstructree_wrapper(void *data_ptr,
                              static_cast<int *>(features.request().ptr),
                              static_cast<int *>(na_left_count.request().ptr),
                              static_cast<int *>(na_right_count.request().ptr),
+                             static_cast<int *>(na_default_directions.request().ptr),
                              static_cast<size_t *>(split_idx.request().ptr),
                              static_cast<size_t *>(average_idx.request().ptr),
                              static_cast<double *>(predict_weights.request().ptr),
@@ -292,6 +292,11 @@ void fill_tree_info_wrapper(void *forest_ptr,
     copy_vector_to_numpy_array(av_info_vector, av_info);
 }
 
+size_t getTreeNodeCount(void *forest_ptr,
+                        int tree_idx){
+    return get_node_count(forest_ptr,tree_idx);
+}
+
 PYBIND11_MODULE(extension, m)
 {
     m.doc() = R"pbdoc(
@@ -316,45 +321,10 @@ PYBIND11_MODULE(extension, m)
 
         Some other explanation about the get_data function.
     )pbdoc");
-    m.def("vector_get", &vector_get, R"pbdoc(
-        Some help text here
-
-        Some other explanation about the get_vector function.
-    )pbdoc");
-    m.def("vector_get_int", &vector_get_int, R"pbdoc(
-        Some help text here
-
-        Some other explanation about the get_vector_int function.
-    )pbdoc");
-    m.def("vector_get_size_t", &vector_get_size_t, R"pbdoc(
-        Some help text here
-
-        Some other explanation about the get_vector_get_size_t function.
-    )pbdoc");
-    m.def("get_prediction", &get_prediction, R"pbdoc(
-        Some help text here
-
-        Some other explanation about the get_prediction function.
-    )pbdoc");
-    m.def("get_weight_matrix", &get_weightMatrix, R"pbdoc(
-        Some help text here
-
-        Some other explanation about the get_weightMatrix function.
-    )pbdoc");
-    m.def("get_vi", &getVI, R"pbdoc(
-        Some help text here
-    
-        Some other explanation about the getVI function.
-    )pbdoc");
     m.def("get_tree_node_count", &getTreeNodeCount, R"pbdoc(
         Some help text here
 
         Some other explanation about the getTreeNodeCount function.
-    )pbdoc");
-    m.def("get_path", &get_path, R"pbdoc(
-        Some help text here
-
-        Some other explanation about the get_path function.
     )pbdoc");
     m.def("reconstruct_tree", &py_reconstructree_wrapper, R"pbdoc(
         Some help text here

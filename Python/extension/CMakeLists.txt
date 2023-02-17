@@ -6,27 +6,34 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O3 -ftemplate-depth=1024")
 
 project(forestry)
 
-
+#### Armadillo
 
 find_path(ARMADILLO_INCLUDE_DIR armadillo
-        HINTS ${ARMADILLO_DIR} $ENV{ARMADILLO_DIR}
+        HINTS $ENV{ARMADILLO_DIR}
         PATH_SUFFIXES include
+        REQUIRED
         )
+message(STATUS "ARMADILLO_INCLUDE_DIR => ${ARMADILLO_INCLUDE_DIR}")
 
-find_library(ARMADILLO_LIBRARY NAMES armadillo
-        HINTS ${ARMADILLO_DIR} $ENV{ARMADILLO_DIR}
+find_library(ARMADILLO_LIBRARY armadillo
+        HINTS $ENV{ARMADILLO_DIR}
         PATH_SUFFIXES lib${LIB_SUFFIX} lib64 lib
+        REQUIRED
         )
+message(STATUS "ARMADILLO_LIBRARY => ${ARMADILLO_LIBRARY}")
 
-include_directories(${Armadillo_LIBRARY_DIR})
-include_directories(include)
 
+
+
+message(STATUS "ARMADILLO_LIBRARY_DIR => ${Armadillo_LIBRARY_DIR}")
+include_directories("include" ${Armadillo_LIBRARY_DIR})
 
 add_subdirectory(pybind11)
-#pybind11_add_module(extension src/main.cpp include/forestry.cpp include/forestryTree.cpp include/DataFrame.cpp)
+#pybind11_add_module(extension src/main.cpp include/forestry.cpp include/forestryTree.cpp include/dataFrame.cpp include/sampling.cpp)
 
 ###
-add_library(extension MODULE src/main.cpp include/forestry.cpp include/forestryTree.cpp include/DataFrame.cpp include/treeSplitting.cpp include/RFNode.cpp)
+add_library(extension MODULE src/main.cpp include/forestry.cpp include/forestryTree.cpp include/dataFrame.cpp include/treeSplitting.cpp include/RFNode.cpp include/sampling.cpp)
+#add_library(extension MODULE src/main.cpp)
 
 target_link_libraries(extension PRIVATE pybind11::module pybind11::lto pybind11::windows_extras PUBLIC ${ARMADILLO_LIBRARY})
 
@@ -41,7 +48,6 @@ set_target_properties(extension PROPERTIES CXX_VISIBILITY_PRESET "hidden" CUDA_V
 ###
 
 target_include_directories(extension PUBLIC ${ARMADILLO_INCLUDE_DIR})
-#TARGET_LINK_LIBRARIES(extension ${ARMADILLO_LIBRARY})
 
 # EXAMPLE_VERSION_INFO is defined by setup.py and passed into the C++ code as a
 # define (VERSION_INFO) here.

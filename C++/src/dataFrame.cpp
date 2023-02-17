@@ -1,4 +1,4 @@
-#include "DataFrame.h"
+#include "dataFrame.h"
 
 DataFrame::DataFrame():
   _featureData(nullptr), _outcomeData(nullptr), _rowNumbers(nullptr),
@@ -8,9 +8,7 @@ DataFrame::DataFrame():
   _deepFeatureWeightsVariables(nullptr), _observationWeights(nullptr),
   _monotonicConstraints(nullptr), _groupMemberships(nullptr){}
 
-DataFrame::~DataFrame() {
-//  std::cout << "DataFrame() destructor is called." << std::endl;
-}
+DataFrame::~DataFrame(){};
 
 DataFrame::DataFrame(
   std::shared_ptr< std::vector< std::vector<double> > > featureData,
@@ -26,8 +24,7 @@ DataFrame::DataFrame(
   std::unique_ptr< std::vector<double> > observationWeights,
   std::shared_ptr< std::vector<int> > monotonicConstraints,
   std::unique_ptr< std::vector<size_t> > groupMemberships,
-  bool monotoneAvg,
-  std::unique_ptr< std::vector<size_t> > symmetricIndices
+  bool monotoneAvg
 ) {
   this->_featureData = std::move(featureData);
   this->_outcomeData = std::move(outcomeData);
@@ -43,7 +40,6 @@ DataFrame::DataFrame(
   this->_monotonicConstraints = std::move(monotonicConstraints);
   this->_groupMemberships = std::move(groupMemberships);
   this->_monotoneAvg = (bool) monotoneAvg;
-  this->_symmetricIndices = std::move(symmetricIndices); // Switch from R indices being 1 - indexed
 
   // define the row numbers to be the numbers from 1 to nrow:
   std::vector<size_t> rowNumberss;

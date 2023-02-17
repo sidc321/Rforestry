@@ -23,7 +23,6 @@ from pydantic.dataclasses import dataclass
 
 from . import extension, preprocessing  # type: ignore
 from .processed_dta import ProcessedDta
-from .validators.corrected_predict_validator import CorrectedPredictValidator
 from .validators.fit_validator import FitValidator
 from .validators.predict_validator import PredictValidator
 
@@ -124,18 +123,27 @@ class RandomForest:
      functions in the leaf nodes. This is recommended for data with linear outcomes.
      For implementation details, see: https://arxiv.org/abs/1906.06463.
     :type linear: *bool, optional, default=False*
-    :param min_trees_per_group: The number of trees which we make sure have been created leaving
-     out each group. This is 0 by default, so we will not give any special treatment to
-     the groups when sampling, however if this is set to a positive integer, we
+    :param min_trees_per_fold: The number of trees which we make sure have been created leaving
+     out each fold (each fold is a set of randomly selected groups).
+     This is 0 by default, so we will not give any special treatment to
+     the groups when sampling observations, however if this is set to a positive integer, we
      modify the bootstrap sampling scheme to ensure that exactly that many trees
-     have the group left out. We do this by, for each group, creating *min_trees_per_group*
+     have each group left out. We do this by, for each fold, creating min_trees_per_fold
      trees which are built on observations sampled from the set of training observations
-     which are not in the current group. This means we create at least ``len(groups)*min_trees_per_group``
-     trees for the forest. If ``ntree>len(groups)*min_trees_per_group`` , we create
-     ``max(len(groups)*min_trees_per_group,ntree)`` total trees, in which at least *min_trees_per_group*
-     are created leaving out each group. For debugging purposes, these group sampling
-     trees are stored at the end of the Python forest, in blocks based on the left out group.
-    :type min_trees_per_group: *int, optional, default=0*
+     which are not in a group in the current fold. The folds form a random partition of
+     all of the possible groups, each of size foldSize. This means we create at
+     least # folds * min_trees_per_fold trees for the forest.
+     If ntree > # folds * min_trees_per_fold, we create
+     max(# folds * min_trees_per_fold, ntree) total trees, in which at least min_trees_per_fold
+     are created leaving out each fold.
+    :type min_trees_per_fold: *int, optional, default=0*
+    :param fold_size The number of groups that are selected randomly for each fold to be
+     left out when using minTreesPerFold. When minTreesPerFold is set and foldSize is
+     set, all possible groups will be partitioned into folds, each containing foldSize unique groups
+     (if foldSize doesn't evenly divide the number of groups, a single fold will be smaller,
+     as it will contain the remaining groups). Then minTreesPerFold are grown with each
+     entire fold of groups left out.
+    :type fold_size: *int, optional, default=1*
     :param monotone_avg: This is a flag that indicates whether or not monotonic
      constraints should be enforced on the averaging set in addition to the splitting set.
      This flag is meaningless unless both honesty and monotonic constraints are in use.
@@ -146,6 +154,12 @@ class RandomForest:
     :param scale: A parameter which indicates whether or not we want to scale and center
      the covariates and outcome before doing the regression. This can help with
      stability, so the default is *True*.
+    :param na_direction: Sets a default direction for missing values in each split
+     node during training. It test placing all missing values to the left and
+     right, then selects the direction that minimizes loss. If no missing values
+     exist, then a default direction is randomly selected in proportion to the
+     distribution of observations on the left and right. (Default = FALSE)
+    :type na_direction: *bool, optional, default=False*
     :type scale: *bool, optional, default=True*
     :param double_tree: Indicator of whether the number of trees is doubled as averaging and splitting
      data can be exchanged to create decorrelated trees.
@@ -199,11 +213,6 @@ class RandomForest:
        determine how likely the observation is to be selected in each bootstrap sample.
        Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
 
-     * symmetric (*numpy.array  of shape[ncols]*) - Used for the experimental feature which imposes strict symmetric
-       marginal structure on the predictions of the forest through only selecting symmetric splits with symmetric
-       aggregation functions. It's a numpy array of size *ncols* consisting of 0-s and 1-s, with 1 denoting
-       the features to enforce symmetry on. Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
-
      * monotonic_constraints (*numpy.array of shape[ncols]*) - An array of size *ncol* specifying monotonic
        relationships between the continuous features and the outcome. Its entries are in -1, 0, 1, in which
        1 indicates an increasing monotonic relationship, -1 indicates a decreasing monotonic relationship, and
@@ -227,6 +236,8 @@ class RandomForest:
      * col_sd (*numpy.array of shape[ncols]*) - The standard deviation of each column.
 
      * has_nas (*bool*) - Specifies whether the feature matrix contains missing observations or not.
+
+     * na_direction (*bool*) - Sets a default direction for missing values in each split node during training
 
      * n_observations (*int*) - The number of observations in the training data.
 
@@ -299,11 +310,13 @@ class RandomForest:
     middle_split: StrictBool = False
     max_obs: Optional[conint(gt=0, strict=True)] = None  # Add a default value.
     linear: StrictBool = False
-    min_trees_per_group: conint(ge=0, strict=True) = 0
+    min_trees_per_fold: conint(ge=0, strict=True) = 0
+    fold_size: conint(gt=0, strict=True) = 1
     monotone_avg: StrictBool = False
     overfit_penalty: Union[StrictInt, StrictFloat] = 1
     scale: StrictBool = False
     double_tree: StrictBool = False
+    na_direction: StrictBool = False
 
     forest: Optional[pd.DataFrame] = dataclasses.field(default=None, init=False)
     dataframe: Optional[pd.DataFrame] = dataclasses.field(default=None, init=False)
@@ -407,15 +420,15 @@ class RandomForest:
 
             group_vector = pd.to_numeric(groups)
 
-            # Print warning if the group number and minTreesPerGroup results in a large forest
-            if self.min_trees_per_group > 0 and len(groups.cat.categories) * self.min_trees_per_group > 2000:
+            # Print warning if the group number and minTreesPerFold results in a large forest
+            if self.min_trees_per_fold > 0 and len(groups.cat.categories) * self.min_trees_per_fold > 2000:
                 warnings.warn(
                     "Using "
                     + str(len(groups.cat.categories))
                     + " groups with "
-                    + str(self.min_trees_per_group)
+                    + str(self.min_trees_per_fold)
                     + " trees per group will train "
-                    + str(len(groups.cat.categories) * self.min_trees_per_group)
+                    + str(len(groups.cat.categories) * self.min_trees_per_fold)
                     + " trees in the forest"
                 )
 
@@ -433,7 +446,6 @@ class RandomForest:
         feature_weights: Optional[np.ndarray] = None,
         deep_feature_weights: Optional[np.ndarray] = None,
         observation_weights: Optional[np.ndarray] = None,
-        symmetric: Optional[np.ndarray] = None,  # Add a default value.
         lin_feats: Optional[Union[np.ndarray, List]] = None,  # Add a default value.
         monotonic_constraints: Optional[np.ndarray] = None,  # Add a default value.
         groups: Optional[pd.Series] = None,
@@ -460,15 +472,6 @@ class RandomForest:
          The default is to use uniform probabilities. This option is not allowed when sampling is
          done without replacement.
         :type observationWeights: *array_like of shape [nrows,], optional*
-        :param symmetric: Used for the experimental feature which imposes strict symmetric
-         marginal structure on the predictions of the forest through only selecting
-         symmetric splits with symmetric aggregation functions. Should be a list of size *ncols* with a single
-         1 entry denoting the feature to enforce symmetry on. Defaults to all zeroes.
-         For version >= 0.9.0.83, we experimentally allow more than one feature to
-         enforce symmetry at a time. This should only be used for a small number of
-         features as it has a runtime that is exponential in the number of symmetric
-         features - ``O(N*2^|S|)`` - where S is the set of symmetric features).
-        :type symmetric: *array_like of shape [ncols,], optional*
         :param linFeats: A list containing the indices of which features to split
          linearly on when using linear penalized splits (defaults to use all numerical features).
         :type linFeats: *array_like, optional*
@@ -513,15 +516,6 @@ class RandomForest:
         self.sampsize = preprocessing.get_sampsize(self, x)
         self.mtry = preprocessing.get_mtry(self, x)
 
-        if any(i != 0 for i in symmetric) and self.scale:
-            warnings.warn(
-                "As symmetry is implementing pseudo outcomes, this causes problems when the Y values are scaled. "
-                "Setting scale = False"
-            )
-            # for now don't scale when we run symmetric splitting since we use pseudo outcomes
-            # and want to retain the scaling of Y
-            self.scale = False
-
         self._set_nodesize_strict()
 
         feature_weights_variables = self._get_weights_variables(feature_weights)
@@ -547,12 +541,6 @@ class RandomForest:
         if self.scale:
             processed_x, y, col_means, col_sd = preprocessing.scale(x, y, processed_x, categorical_feature_cols)
 
-        # Get the symmetric feature if one is set
-        symmetric_index = -1
-        idxs: np.ndarray = np.where(symmetric > 0)[0]
-        if idxs.size != 0:
-            symmetric_index = idxs[0]
-
         # cpp linking
         processed_x.reset_index(drop=True, inplace=True)
 
@@ -572,8 +560,6 @@ class RandomForest:
             monotonic_constraints,
             group_vector,
             self.monotone_avg,
-            symmetric,
-            symmetric.size,
             nrow,
             ncol + 1,
             self._get_seed(seed),
@@ -600,10 +586,11 @@ class RandomForest:
             self.verbose,
             self.middle_split,
             self.max_obs,
-            self.min_trees_per_group,
+            self.min_trees_per_fold,
+            self.fold_size,
             x.isnull().values.any(),
+            self.na_direction,
             self.linear,
-            symmetric_index != -1,
             self.overfit_penalty,
             self.double_tree,
         )
@@ -619,7 +606,6 @@ class RandomForest:
             deep_feature_weights=deep_feature_weights,
             deep_feature_weights_variables=deep_feature_weights_variables,
             observation_weights=observation_weights,
-            symmetric=symmetric,
             monotonic_constraints=monotonic_constraints,
             linear_feature_cols=lin_feats,
             groups_mapping=groups_mapping,
@@ -965,173 +951,6 @@ class RandomForest:
 
         return result
 
-    def get_ci(
-        self,
-        newdata: Union[pd.DataFrame, pd.Series, np.ndarray],
-        level: float = 0.95,
-        n_bootstrap_draws: int = 100,
-        method: str = "OOB-conformal",
-    ) -> dict:
-
-        """
-        For a new set of features, calculate the confidence intervals for each new observation.
-
-        :param newdata: A set of new observations for which we want to predict the
-         outcomes and use confidence intervals.
-        :type newdata: *pandas.DataFrame, pandas.Series, numpy.ndarray, 2d list of shape [nsamples, ncols]*
-        :param level: The confidence level at which we want to make our intervals.
-        :type level: *double, optional, default=.95*
-        :param B: Number of bootstrap draws to use when using ``method = "OOB-bootstrap"``
-        :type B: *int, optional, default=100*
-        :param method: A flag for the different ways to create the confidence intervals.
-         Right now we have two ways of doing this. One is the 'OOB-bootstrap' flag which
-         uses many bootstrap pulls from the set of OOB trees then with these different
-         pulls, we use the set of trees to predict for the new feature and give the
-         confidence set over the many bootstrap draws. The other method - 'OOB-conformal' -
-         creates intervals by taking the set of doubleOOB trees for each observation, and
-         using the predictions of these trees to give conformal intervals. So for an
-         observation obs_i, let S_i be the set of trees for which obs_i was in neither
-         the splitting set nor the averaging set (or the set of trees for which obs_i
-         was "doubleOOB"), we then predict for obs_i with only the trees in S_i::
-
-            doubleOOB_tree_preds = S_i.predict(obs_i)
-            CI(obs_i, level = .95) = quantile(doubleOOB_tree_preds - y_i, [0.025, 0.975])
-
-         The 'local-conformal' option takes the residuals of each training point (using)
-         OOB predictions, and then uses the weights of the random forest to determine
-         the quantiles of the residuals in the local neighborhood of the predicted point.
-        :type method: *str, optional, default='OOB-conformal'*
-        :param noWarning: A flag to not display warnings.
-        :type noWarning: *bool, optional, default=False*
-        :return: The confidence intervals for each observation in newdata.
-        :rtype: dict
-
-        """
-
-        if method not in ["OOB-conformal", "OOB-bootstrap", "local-conformal"]:
-            raise ValueError("Method must be one of OOB-conformal, OOB-bootstrap, or local-conformal")
-
-        if method == "OOB-conformal" and not (self.oob_honest and self.double_bootstrap):
-            raise ValueError("We cannot do OOB-conformal intervals unless both OOBhonest and doubleBootstrap are True")
-
-        if method == "OOB-bootstrap" and not self.oob_honest:
-            raise ValueError("We cannot do OOB-bootstrap intervals unless OOBhonest is True")
-
-        if method == "local-conformal" and not self.oob_honest:
-            raise ValueError("We cannot do local-conformal intervals unless OOBhonest is True")
-
-        if method == "OOB-bootstrap":
-            # Now we do B bootstrap pulls of the trees in order to do prediction
-            # intervals for newdata
-            prediction_array = pd.DataFrame(np.empty((len(newdata.index), n_bootstrap_draws)))
-
-            for i in range(n_bootstrap_draws):
-                bootstrap = np.random.choice(self.ntree, size=self.ntree, replace=True, p=None)
-
-                pred = self.predict(newdata=newdata, trees=bootstrap)
-                prediction_array.iloc[:, i] = pred
-
-            quantiles = np.quantile(prediction_array, [(1 - level) / 2, 1 - (1 - level) / 2], axis=1)
-
-            return {
-                "Predictions": self.predict(newdata=newdata),
-                "CI.upper": quantiles[1, :],
-                "CI.lower": quantiles[0, :],
-                "level": level,
-            }
-
-        if method == "OOB-conformal":
-            # Get double OOB predictions and the residuals
-            y_pred = self.predict(aggregation="doubleOOB")
-
-            if self.scale:
-                res = y_pred - (self.processed_dta.y * self.processed_dta.col_sd[-1] + self.processed_dta.col_means[-1])
-            else:
-                res = y_pred - self.processed_dta.y
-
-            # Get (1-level) / 2 and 1 - (1-level) / 2 quantiles of the residuals
-            quantiles = np.quantile(res, [(1 - level) / 2, 1 - (1 - level) / 2])
-
-            # Get predictions on newdata
-            predictions = self.predict(newdata)
-
-            return {
-                "Predictions": predictions,
-                "CI.upper": predictions + quantiles[1],
-                "CI.lower": predictions + quantiles[0],
-                "level": level,
-            }
-
-        # method == 'local-conformal'
-
-        # oob_preds = self.predict(aggregation="oob")
-        # if self.scale:
-        #    oob_res = (
-        #        self.processed_dta.y * self.processed_dta.col_sd[-1] + self.processed_dta.col_means[-1]
-        #    ) - oob_preds
-        # else:
-        #    oob_res = self.processed_dta.y - oob_preds
-        # TODO: weightmatrix not implemented yet!!!!
-
-    def predict_info(self, aggregation: str = "oob") -> None:
-        """
-        Get the observations which are used to predict for a set of new
-        observations using either all trees (for out of sample observations), or
-        tree for which the observation is out of averaging set or out of sample entirely.
-
-        :param newdata: Data on which we want to do predictions. Must be the same length
-         as the training set if we are doing 'oob' or 'doubleOOB' aggregation.
-        :type newdata: *pandas.DataFrame, pandas.Series, numpy.ndarray, 2d list of shape [nsamples, ncols]*
-        :param aggregation: Specifies which aggregation version is used to predict for the
-         observation, must be one of 'average', 'oob', and 'doubleOOB'.
-        :type aggregation: *str, optional, default='oob'*
-        :return: A dictionary with four entries. 'weightMatrix' is a matrix specifying the
-         weight given to training observation i when prediction on observation j.
-         'avgIndices' gives the indices which are in the averaging set for each new
-         observation. 'avgWeights' gives the weights corresponding to each averaging
-         observation returned in 'avgIndices'. 'obsInfo' gives the full observation vectors
-         which were used to predict for an observation, as well as the weight given
-         each observation.
-        :rtype: dict
-
-        """
-
-        if aggregation not in ["average", "oob", "doubleOOB"]:
-            raise ValueError("Aggregation must be one of average, oob, or doubleOOB")
-
-        # TODO: weightmatrix not implemented yet!!!!
-
-    def decision_path(self, X: Union[pd.DataFrame, pd.Series, np.ndarray], tree_idx: int = 0) -> np.ndarray:
-        """
-        Gets the decision path in the forest.
-
-        :param X: Testing samples. For each observation in X, we will get its decision path.
-        :type X: *pandas.DataFrame, pandas.Series, numpy.ndarray, 2d list of shape [nsamples, ncols]*
-        :param tree_idx: The index of the tree in the forest where the path will be found.
-        :type tree_idx: *int, optional, default=0*
-        :return: A node indicator matrix, where each entry denotes the id of the corresponding
-         node.
-        :rtype: numpy.ndarray
-
-        """
-
-        X = pd.DataFrame(X)
-
-        result = np.empty(len(X.index), dtype=object)
-        for i in range(len(X.index)):
-            obs = X.iloc[i, :].values
-            path_ptr = extension.get_path(self.forest, obs, tree_idx)
-
-            path_length = int(extension.vector_get_size_t(path_ptr, 0))
-            path_array = np.empty(path_length, dtype=np.intc)
-
-            for j in range(path_length):
-                path_array[j] = int(extension.vector_get_size_t(path_ptr, j + 1))
-
-            result[i] = path_array
-
-        return result
-
     def score(
         self, X: Union[pd.DataFrame, pd.Series, List], y: np.ndarray, sample_weight: Optional[np.ndarray] = None
     ) -> float:
@@ -1154,7 +973,7 @@ class RandomForest:
 
     def translate_tree(self, tree_ids: Optional[Union[int, np.ndarray]] = None) -> None:
         """
-        Given a trained forest, translates the selected trees by allowing access to its undelying structure.
+        Given a trained forest, translates the selected trees by allowing access to its underlying structure.
         After translating tree *i*, its structure will be stored as a dictionary in :ref:`Py_forest <translate-label>`
         and can be accessed by ``[RandomForest object].Py_forest[i]`` . Check out the :ref:`Py_forest <translate-label>`
         attribute for more details about its structure.
@@ -1221,288 +1040,6 @@ class RandomForest:
                 self.py_forest[cur_id]["averaging_sample_idx"][i] = int(averaging_info[i + 1])
 
             self.py_forest[cur_id]["seed"] = int(tree_info[num_nodes * 8])
-
-    @CorrectedPredictValidator
-    def corrected_predict(
-        self,
-        newdata: Optional[Any] = None,
-        *,
-        feats: Optional[np.ndarray] = CorrectedPredictValidator.DEFAULT_FEATS,
-        nrounds: int = CorrectedPredictValidator.DEFAULT_NROUNDS,
-        linear: bool = CorrectedPredictValidator.DEFAULT_LINEAR,
-        double: bool = False,
-        simple: bool = True,
-        verbose: bool = False,
-        use_residuals: bool = False,
-        adaptive: bool = False,
-        monotone: bool = False,
-        num_quants: int = 5,
-        forestry_parameters: dict = {},
-        keep_fits: bool = False,
-    ) -> Union[np.ndarray, Dict]:
-        """
-        Perform predictions given the forest using a bias correction based on
-        the out of bag predictions on the training set. By default, we use a final linear
-        correction based on the leave-one-out hat matrix after doing 'nrounds' nonlinear
-        corrections.
-
-        :param newdata: Dataframe on which to predict. If this is left *None*, we
-         predict on the in sample data.
-        :type newdata: *pandas.DataFrame, pandas.Series, numpy.ndarray, 2d list of shape [nsamples, ncols],
-         optional, default=None*
-        :param feats: A list of feature indices which should be included in the bias
-         correction. By default only the outcome and predicted outcomes are used.
-        :type feats: *array_like, optional, default=None*
-        :param nrounds: The number of nonlinear bias correction steps which should be
-         taken. By default, just a single linear correction is used.
-        :type nrounds: *int, optional, default=0*
-        :param linear: A flag indicating whether or not we want to do a final linear
-         bias correction after doing the nonlinear corrections.
-        :type linear: *bool, optional, default=True*
-        :param double: A flag indicating if one should use ``aggregation = "doubleOOB"`` for
-         the initial predictions rather than ``aggregation = "oob"`` .
-        :type double: *bool, optional, default=False*
-        :param simple: flag indicating whether we should do a simple linear adjustment
-         or do different adjustments by quantiles.
-        :type simple: *bool, optional, default=True*
-        :param verbose: A flag which displays the bias of each qunatile.
-        :type verbose: *bool, optional, default=False*
-        :param use_residuals: A flag indicating if we should use the residuals to fit the
-         bias correction steps. Defualt is *False*, which means that we will use *Y*
-         rather than *Y-Y_hat* as the regression outcome in the bias correction steps.
-        :type use_residuals: *bool, optional, default=False*
-        :param adaptive: A flag to indicate whether we use *adaptiveForestry* or not in the
-         regression step. *adaptiveForestry* is not implemented yet, so the default is *False*.
-        :type adaptive: *bool, optional, default=False*
-        :param monotone: A flag to indicate whether or not we should use monotonicity
-         in the regression of *Y* on *Y_hat* (when doing forest correction steps).
-         If *True*, will constrain the corrected prediction for *Y* to be monotone in the
-         original prediction of *Y*.
-        :type monotone: *bool, optional, default=False*
-        :param num_quants: Number of quantiles to use when doing quantile specific bias
-         correction. Will only be used if ``simple = False``.
-        :type num_quants: *int, optional, default=5*
-        :param params_forestry: A dictionary of parameters to pass to the subsequent *RandomForest*
-         calls. Note that these forests will be trained on features of dimension
-         ``len(feats) + 1`` as the correction forests are trained using the additional feature *Y_hat*,
-         so monotonic constraints etc given to this list should be of size ``len(feats) + 1``.
-         Defaults to the standard *RandomForest* parameters for any parameters that are
-         not included in the dictionary.
-        :type params_forestry: *dict, optional*
-        :param keep_fits: A flag that indicates if we should save the intermediate
-         forests used for the bias correction. If this is *True*, we return a list of
-         the *RandomForest* objects for each iteration in the bias correction.
-        :type keep_fits: *bool, optional, default=False*
-        :return: An array of the bias corrected predictions
-        :rtype: numpy.array
-        """
-
-        # To avoid false pd warnings
-        pd.options.mode.chained_assignment = None
-
-        # Check the parameters match parameters for RandomForest or adaptiveForestry
-        if not adaptive:
-            forestry_args = set(self.get_parameters().keys())
-
-        for parameter in forestry_parameters:
-            if parameter not in forestry_args:
-                raise ValueError(f"Invalid parameter in params.forestry: {parameter}")
-
-        if double:
-            aggregation = "doubleOOB"
-        else:
-            aggregation = "oob"
-
-        # First get out of bag preds
-        oob_preds = self.predict(aggregation=aggregation)
-
-        if feats is None:
-            adjust_data = pd.DataFrame({"Y": self.processed_dta["y"], "Y.hat": oob_preds})
-        else:
-            adjust_data = self.processed_dta["processed_x"].iloc[:, feats]
-            adjust_data.columns = ["V" + str(x) for x in range(len(feats))]
-            adjust_data["Y"] = self.processed_dta["y"]
-            adjust_data["Y.hat"] = oob_preds
-
-        # Store the RF fits
-        rf_fits = []
-
-        if nrounds > 0:
-            for _ in range(nrounds):
-                # Set right outcome to regress for regression step
-                if use_residuals:
-                    y_reg = adjust_data["Y"] - adjust_data["Y.hat"]
-                else:
-                    y_reg = adjust_data["Y"]
-
-                if monotone:
-                    # Set default params for monotonicity in the Y.hat feature
-                    parameters = forestry_parameters.copy()
-                    parameters["OOBhonest"] = True
-                    parameters["monotoneAvg"] = True
-                    monotone_constraits = np.zeros(len(adjust_data.columns) - 1)
-                    monotone_constraits[-1] = 1
-
-                    forest = RandomForest(**parameters)
-                    forest.fit(
-                        x=adjust_data.loc[:, adjust_data.columns != "Y"],
-                        y=y_reg,
-                        monotonic_constraints=monotone_constraits,
-                    )
-
-                else:
-                    # Set default RandomForest params
-                    parameters = forestry_parameters.copy()
-                    parameters["OOBhonest"] = True
-
-                    forest = RandomForest(**parameters)
-                    forest.fit(x=adjust_data.loc[:, adjust_data.columns != "Y"], y=y_reg)
-
-                pred = forest.predict(adjust_data.loc[:, adjust_data.columns != "Y"], aggregation=aggregation)
-
-                # Stror the ith fit
-                rf_fits.append(forest)
-
-                # If we predicted some residuals, we now have to add the old Y.hat to them
-                # to get the new Y.hat
-                if use_residuals:
-                    pred += adjust_data["Y.hat"]
-
-                # Adjust the predicted Y hats
-                adjust_data["Y.hat"] = pred
-
-            # if we have a new feature, we need to run the correction fits on that as well
-            if newdata is not None:
-                # Get initial predictions
-                if feats is None:
-                    pred_data = pd.DataFrame({"Y.hat": self.predict(newdata=newdata)})
-                else:
-                    pred_data = pd.DataFrame(newdata.iloc[:, feats])
-                    pred_data["Y.hat"] = self.predict(newdata=newdata)  # aggregation = agg ?????
-
-                # Set column names to follow a format matching the features used
-                if feats is not None:
-                    pred_data.columns = ["V" + str(x) for x in range(len(feats))] + ["Y.hat"]
-
-                for i in range(nrounds):
-                    adjusted_pred = rf_fits[i].predict(newdata=pred_data)  # aggregation = agg ?????
-                    pred_data["Y.hat"] = adjusted_pred  # doesnt make sense??????
-
-        if newdata is not None:
-            if nrounds > 0:
-                preds_initial = pred_data["Y.hat"]
-            else:
-                preds_initial = self.predict(newdata=newdata)
-
-        if linear:
-            # Now do linear adjustment
-            if simple:
-                # Now we either return the adjusted in sample predictions, or the
-                # out of sample predictions scaled according to the adjustment model
-                if newdata is None:
-                    preds_adjusted = preprocessing.loo_pred_helper(adjust_data)["insample_preds"]
-                else:
-                    model = preprocessing.loo_pred_helper(adjust_data)["adjustment_model"]
-
-                    if feats is None:
-                        data_pred = pd.DataFrame({"Y.hat": preds_initial})
-                    else:
-                        data_pred = pd.DataFrame(newdata.iloc[:, feats])
-                        data_pred.columns = ["V" + str(x) for x in range(len(feats))]
-                        data_pred["Y.hat"] = preds_initial
-
-                    preds_adjusted = np.array(model.predict(sm.add_constant(data_pred)))
-
-            # Not simple
-            else:
-                # split Yhat into quantiles
-                Y_hat = adjust_data["Y.hat"]
-                Y = np.array(adjust_data["Y"])
-
-                cuts, training_quantiles = pd.qcut(Y_hat, num_quants, retbins=True)
-                q_idx = np.array(cuts.cat.codes)
-
-                new_pred = np.empty(Y_hat.size)
-
-                for i in range(num_quants):
-                    # split data
-                    mask = q_idx == i
-                    if verbose:
-                        bias = np.mean(Y[mask] - Y_hat[mask])
-                        print(f"Quantile {i}: {cuts.cat.categories[i]}, Bias: {bias}")
-                    # Again we have to check if the data was in or out of sample, and do predictions
-                    # accordingly --????? why aren't we doing this?
-                    new_pred[mask] = preprocessing.loo_pred_helper(adjust_data.loc[mask, :].reset_index(drop=True))[
-                        "insample_preds"
-                    ]
-
-                if newdata is not None:
-                    # Now we have fit the Q_num different models, we take the models and use
-                    # split Yhat into quantiles
-                    np.put(training_quantiles, -1, np.inf)
-                    np.put(training_quantiles, 0, -np.inf)
-
-                    # Get the quantile each testing observation falls into
-                    testing_quantiles = np.empty(preds_initial.size, dtype=np.intc)
-                    for i in range(preds_initial.size):  # ?????? Why use two loops??
-                        testing_quantiles[i] = np.argmax(training_quantiles >= preds_initial[i]) - 1
-
-                    # Now predict for each index set using the right model
-                    preds_adjusted = np.empty(len(newdata.index))
-                    for i in range(training_quantiles.size - 1):
-                        mask = testing_quantiles == i
-
-                        if feats is None:  # ???? Check this later
-                            pred_df = pd.DataFrame({"Y.hat": preds_initial[mask].reset_index(drop=True)})
-                        else:
-                            pred_df = pd.DataFrame(newdata.iloc[mask, feats].reset_index(drop=True))
-                            pred_df.columns = ["V" + str(x) for x in range(len(feats))]
-                            pred_df["Y.hat"] = preds_initial[mask].reset_index(drop=True)
-
-                        fit_i = sm.OLS(
-                            Y[q_idx == i],
-                            sm.add_constant(
-                                adjust_data.loc[q_idx == i, adjust_data.columns != "Y"].reset_index(drop=True)
-                            ),
-                        ).fit()
-                        preds_adjusted[mask] = fit_i.predict(sm.add_constant(pred_df))
-
-                else:
-                    preds_adjusted = new_pred
-
-            if not keep_fits:
-                return preds_adjusted
-
-            return {"predictions": preds_adjusted, "fits": rf_fits}
-
-        # Not linear
-        else:
-            if not keep_fits:
-                return np.array(adjust_data.iloc[:, -1])
-            return {
-                "predictions": np.array(adjust_data.iloc[:, -1]),
-                "fits": rf_fits,
-            }
-
-    def get_split_proportions(self) -> np.ndarray:
-        """
-        Retrieves the proportion of splits for each feature in the given
-        *RandomForest* object. These proportions are calculated as the number of splits
-        on feature *i* in the entire forest over total the number of splits in the forest.
-
-        :return: An array of length equal to the number of columns
-        :rtype: numpy.array
-        """
-
-        split_nums = np.zeros(self.processed_dta.num_columns)
-
-        self.translate_tree()
-        for i in range(self.ntree):
-            for feature in self.py_forest[i]["feature"]:
-                if feature >= 0:
-                    split_nums[feature] += 1
-
-        return split_nums / np.sum(split_nums)
 
     def get_parameters(self) -> dict:
         """
@@ -1582,8 +1119,6 @@ class RandomForest:
             state["processed_dta"].monotonic_constraints,
             group_vector,
             state["monotone_avg"],
-            state["processed_dta"].symmetric,
-            state["processed_dta"].symmetric.size,
             state["processed_dta"].n_observations,
             state["processed_dta"].num_columns + 1,
             state["seed"],
@@ -1652,10 +1187,9 @@ class RandomForest:
             state["verbose"],
             state["middle_split"],
             state["max_obs"],
-            state["min_trees_per_group"],
+            state["min_trees_per_fold"],
             state["processed_dta"].has_nas,
             state["linear"],
-            not np.any(state["processed_dta"].symmetric),
             state["overfit_penalty"],
             state["double_tree"],
             tree_info,
@@ -1684,9 +1218,3 @@ class RandomForest:
     def __del__(self):
         # Free the pointers to foretsry and dataframe
         extension.delete_forestry(self.forest, self.dataframe)
-
-
-# make linFeats same as symmetric...
-
-# ????????????? min nodes strict or not in plotting - get_min_samples_leaf
-# https://github.com/parrt/dtreeviz/blob/master/dtreeviz/models/shadow_decision_tree.py
