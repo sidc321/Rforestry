@@ -1129,7 +1129,7 @@ class RandomForest:
         tree_counts = np.empty(state["ntree"] * 3, dtype=np.intc)
         total_nodes, total_split_idx, total_av_idx = 0, 0, 0
         for i in range(state["ntree"]):
-            tree_counts[3 * i] = state["py_forest"][i]["children_right"].size
+            tree_counts[3 * i] = state["py_forest"][i]["feature"].size
             total_nodes += tree_counts[3 * i]
 
             tree_counts[3 * i + 1] = state["py_forest"][i]["splitting_sample_idx"].size
