@@ -902,6 +902,8 @@ void forestryTree::recursivePartition(
       naDirection
     );
 
+    size_t node_id;
+    assignNodeId(node_id);
     (*rootNode).setSplitNode(
         bestSplitFeature,
         bestSplitValue,
@@ -909,6 +911,7 @@ void forestryTree::recursivePartition(
         std::move(rightChild),
         naLeftCount,
         naRightCount,
+        node_id,
         bestSplitNaDir
     );
   }
@@ -1667,6 +1670,8 @@ void forestryTree::recursive_reconstruction(
       weights
     );
 
+    size_t node_id;
+    assignNodeId(node_id);
     (*currentNode).setSplitNode(
         (size_t) var_id - 1,
         split_val,
@@ -1674,6 +1679,7 @@ void forestryTree::recursive_reconstruction(
         std::move(rightChild),
         naLeftCount,
         naRightCount,
+        node_id,
         naDefaultDirection
     );
 

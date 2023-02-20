@@ -45,6 +45,7 @@ void RFNode::setSplitNode(
   std::unique_ptr< RFNode > rightChild,
   size_t naLeftCount,
   size_t naRightCount,
+  size_t nodeId,
   int naDefaultDirection
 ) {
   // Split node constructor
@@ -57,7 +58,7 @@ void RFNode::setSplitNode(
   _naLeftCount = naLeftCount;
   _naRightCount = naRightCount;
   _naDefaultDirection = naDefaultDirection;
-  _nodeId = -1;
+  _nodeId = nodeId;
 }
 
 void RFNode::setRidgeCoefficients(
