@@ -683,6 +683,10 @@ void RFNode::write_node_info(
     treeInfo->naRightCount.push_back(-1);
     treeInfo->naDefaultDirection.push_back(0);
 
+    // Write dummy child IDs
+    treeInfo->left_child_id.push_back(-1);
+    treeInfo->right_child_id.push_back(-1);
+
     treeInfo->num_avg_samples.push_back(getAverageCount());
     treeInfo->num_spl_samples.push_back(getSplitCount());
     treeInfo->values.push_back(getPredictWeight());

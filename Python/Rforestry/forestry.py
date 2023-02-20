@@ -1006,7 +1006,7 @@ class RandomForest:
             split_info = np.empty(self.sampsize + 1, dtype=np.intc)
             averaging_info = split_info
 
-            tree_info = np.empty(num_nodes * 8 + 1, dtype=np.double)
+            tree_info = np.empty(num_nodes * 9 + 1, dtype=np.double)
 
             extension.fill_tree_info(self.forest, cur_id, tree_info, split_info, averaging_info)
 
@@ -1018,6 +1018,7 @@ class RandomForest:
             self.py_forest[cur_id]["values"] = np.empty(num_nodes, dtype=np.double)
             self.py_forest[cur_id]["na_left_count"] = np.empty(num_nodes, dtype=np.intc)
             self.py_forest[cur_id]["na_right_count"] = np.empty(num_nodes, dtype=np.intc)
+            self.py_forest[cur_id]["na_default_direction"] = np.empty(num_nodes, dtype=np.intc)
 
             for i in range(num_nodes):
                 self.py_forest[cur_id]["children_right"][i] = int(tree_info[i])
@@ -1028,6 +1029,7 @@ class RandomForest:
                 self.py_forest[cur_id]["values"][i] = tree_info[num_nodes * 5 + i]
                 self.py_forest[cur_id]["na_left_count"][i] = int(tree_info[num_nodes * 6 + i])
                 self.py_forest[cur_id]["na_right_count"][i] = int(tree_info[num_nodes * 7 + i])
+                self.py_forest[cur_id]["na_default_direction"][i] = int(tree_info[num_nodes * 8 + i])
 
             num_split_idx = int(split_info[0])
             self.py_forest[cur_id]["splitting_sample_idx"] = np.empty(num_split_idx, dtype=np.intc)
@@ -1124,22 +1126,23 @@ class RandomForest:
             state["seed"],
         )
 
-        tree_info = np.empty(state["ntree"] * 3, dtype=np.intc)
+        tree_counts = np.empty(state["ntree"] * 3, dtype=np.intc)
         total_nodes, total_split_idx, total_av_idx = 0, 0, 0
         for i in range(state["ntree"]):
-            tree_info[3 * i] = state["py_forest"][i]["children_right"].size
-            total_nodes += tree_info[3 * i]
+            tree_counts[3 * i] = state["py_forest"][i]["children_right"].size
+            total_nodes += tree_counts[3 * i]
 
-            tree_info[3 * i + 1] = state["py_forest"][i]["splitting_sample_idx"].size
-            total_split_idx += tree_info[3 * i + 1]
+            tree_counts[3 * i + 1] = state["py_forest"][i]["splitting_sample_idx"].size
+            total_split_idx += tree_counts[3 * i + 1]
 
-            tree_info[3 * i + 2] = state["py_forest"][i]["averaging_sample_idx"].size
-            total_av_idx += tree_info[3 * i + 2]
+            tree_counts[3 * i + 2] = state["py_forest"][i]["averaging_sample_idx"].size
+            total_av_idx += tree_counts[3 * i + 2]
 
         thresholds = np.empty(total_nodes, dtype=np.double)
         features = np.empty(total_nodes, dtype=np.intc)
         na_left_counts = np.empty(total_nodes, dtype=np.intc)
         na_right_counts = np.empty(total_nodes, dtype=np.intc)
+        na_default_direction = np.empty(total_nodes, dtype=np.intc)
         sample_split_idx = np.empty(total_split_idx, dtype=np.intc)
         sample_av_idx = np.empty(total_av_idx, dtype=np.intc)
         predict_weights = np.empty(total_nodes, dtype=np.double)
@@ -1147,20 +1150,22 @@ class RandomForest:
 
         ind, ind_s, ind_a = 0, 0, 0
         for i in range(state["ntree"]):
-            for j in range(tree_info[3 * i]):
+            for j in range(tree_counts[3 * i]):
                 thresholds[ind] = state["py_forest"][i]["threshold"][j]
                 features[ind] = state["py_forest"][i]["feature"][j]
                 na_left_counts[ind] = state["py_forest"][i]["na_left_count"][j]
                 na_right_counts[ind] = state["py_forest"][i]["na_right_count"][j]
+                na_default_direction[ind] = state["py_forest"][i]["na_default_direction"][j]
                 predict_weights[ind] = state["py_forest"][i]["values"][j]
+
 
                 ind += 1
 
-            for j in range(tree_info[3 * i + 1]):
+            for j in range(tree_counts[3 * i + 1]):
                 sample_split_idx[ind_s] = state["py_forest"][i]["splitting_sample_idx"][j]
                 ind_s += 1
 
-            for j in range(tree_info[3 * i + 2]):
+            for j in range(tree_counts[3 * i + 2]):
                 sample_av_idx[ind_a] = state["py_forest"][i]["averaging_sample_idx"][j]
                 ind_a += 1
 
@@ -1188,15 +1193,18 @@ class RandomForest:
             state["middle_split"],
             state["max_obs"],
             state["min_trees_per_fold"],
+            state["fold_size"],
             state["processed_dta"].has_nas,
+            state["na_direction"],
             state["linear"],
             state["overfit_penalty"],
             state["double_tree"],
-            tree_info,
+            tree_counts,
             thresholds,
             features,
             na_left_counts,
             na_right_counts,
+            na_default_direction,
             sample_split_idx,
             sample_av_idx,
             predict_weights,
