@@ -46,3 +46,30 @@ def test_translate_single_tree(forest):
 def test_all_trees(forest):
     X, _ = get_data()
 
+    forest.translate_tree(0)
+    assert forest.py_forest[0]
+    assert len(forest.py_forest) == forest.ntree
+
+    # Translating more trees
+    forest.translate_tree([0, 1, 2])
+    assert forest.py_forest[0]
+    assert forest.py_forest[1]
+    assert forest.py_forest[2]
+
+    forest.translate_tree()
+
+    for i in range(forest.ntree):
+        assert forest.py_forest[i]
+
+        num_nodes = forest.py_forest[i]["threshold"].size
+        num_leaf_nodes = forest.py_forest[i]["values"].size
+        # assert not any(forest.py_forest[i][key].size != numNodes for key in forest.py_forest[i].keys())
+        assert len(forest.py_forest[i]["feature"]) == num_nodes+num_leaf_nodes
+        assert len(forest.py_forest[i]["na_left_count"]) == num_nodes
+        assert len(forest.py_forest[i]["na_right_count"]) == num_nodes
+        assert len(forest.py_forest[i]["na_default_direction"]) == num_nodes
+
+        assert np.amax(forest.py_forest[i]["splitting_sample_idx"]) <= X.shape[2] - 1
+        assert np.amax(forest.py_forest[i]["averaging_sample_idx"]) <= X.shape[2] - 1
+
+        assert np.amax(forest.py_forest[i]["feature"]) <= X.shape[1] - 1

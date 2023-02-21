@@ -1147,7 +1147,7 @@ class RandomForest:
 
         sample_split_idx = np.empty(total_split_idx, dtype=np.intc)
         sample_av_idx = np.empty(total_av_idx, dtype=np.intc)
-        
+
         predict_weights = np.empty(total_leaf_nodes, dtype=np.double)
         tree_seeds = np.empty(state["ntree"], dtype=np.uintc)
 
