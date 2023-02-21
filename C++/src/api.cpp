@@ -440,32 +440,38 @@ void fill_tree_info(void* forest_ptr,
 
     info_holder = forest->getForest()->at(tree_idx)->getTreeInfo(forest->getTrainingData());
     int num_nodes = forest->getForest()->at(tree_idx)->getNodeCount();
+    int num_leaf_nodes = forest->getForest()->at(tree_idx)->getLeafNodeCount();
     
-    for (int i = 0; i < num_nodes; i++) {
-        treeInfo[i] = (double)info_holder->left_child_id.at(i);
-        treeInfo[num_nodes+i] = (double)info_holder->right_child_id.at(i);
-        treeInfo[num_nodes*2+i] = (double)info_holder->var_id.at(i);
-        treeInfo[num_nodes*3+i] = (double)info_holder->num_avg_samples.at(i);
-        treeInfo[num_nodes*4+i] = info_holder->split_val.at(i);
-        treeInfo[num_nodes*5+i] = info_holder->values.at(i);
-        treeInfo[num_nodes*6+i] = (double)info_holder->naLeftCount.at(i);
-        treeInfo[num_nodes*7+i] = (double)info_holder->naLeftCount.at(i);
+    for (int i = 0; i < num_nodes + num_leaf_nodes; i++) {
+        treeInfo[i] = (double)info_holder->var_id.at(i);
     }
 
+    for (int i = 0; i < num_leaf_nodes; i++) {
+        treeInfo[num_nodes + num_leaf_nodes + i] = info_holder->values.at(i);
+    }
+
+    for (int i = 0; i < num_nodes; i++) {
+        treeInfo[num_nodes + num_leaf_nodes*2 + i] = info_holder->split_val.at(i);
+        treeInfo[num_nodes *2 + num_leaf_nodes*2 + i] = (double)info_holder->naLeftCount.at(i);
+        treeInfo[num_nodes *3 + num_leaf_nodes*2 + i] = (double)info_holder->naRightCount.at(i);
+        treeInfo[num_nodes *4 + num_leaf_nodes*2 + i] = (double)info_holder->naDefaultDirection.at(i);
+    }
+
+    // Populate splitting samples for the tree
     size_t splitSize = info_holder->splittingSampleIndex.size();
     split_info[0] = splitSize;
-    
     for (size_t i = 0; i < splitSize; i++){
         split_info[i+1] = info_holder->splittingSampleIndex.at(i);
     }
 
+    // Populate averaging samples for the tree
     size_t avSize = info_holder->averagingSampleIndex.size();
     av_info[0] = avSize;
     for (size_t i = 0; i < avSize; i++){
         av_info[i+1] = info_holder->averagingSampleIndex.at(i);
     }
 
-    treeInfo[num_nodes*8] = info_holder->seed;
+    treeInfo[num_nodes *5 + num_leaf_nodes*2] = info_holder->seed;
 }
 
 
@@ -653,6 +659,16 @@ void* py_reconstructree(void* data_ptr,
 size_t get_node_count(void* forest_pt, int tree_idx) {
     forestry* forest = reinterpret_cast<forestry *>(forest_pt);
     return(forest->getForest()->at(tree_idx)->getNodeCount());
+}
+
+size_t get_split_node_count(void* forest_pt, int tree_idx) {
+    forestry* forest = reinterpret_cast<forestry *>(forest_pt);
+    return(forest->getForest()->at(tree_idx)->getSplitNodeCount());
+}
+
+size_t get_leaf_node_count(void* forest_pt, int tree_idx) {
+    forestry* forest = reinterpret_cast<forestry *>(forest_pt);
+    return(forest->getForest()->at(tree_idx)->getLeafNodeCount());
 }
 
 void delete_forestry(void* forest_pt, void* dataframe_pt){

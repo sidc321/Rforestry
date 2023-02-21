@@ -602,7 +602,8 @@ void forestryTree::recursivePartition(
       (depth == getMaxDepth())) {
 
     size_t node_id;
-    assignNodeId(node_id);
+    assignNodeId(node_id,
+                 false);
     (*rootNode).setLeafNode(
         averagingSampleIndex->size(),
         splittingSampleIndex->size(),
@@ -694,8 +695,8 @@ void forestryTree::recursivePartition(
   if (std::isnan(bestSplitValue)) {
 
     size_t node_id;
-    assignNodeId(node_id);
-
+    assignNodeId(node_id,
+                 false);
     (*rootNode).setLeafNode(
         averagingSampleIndex->size(),
         splittingSampleIndex->size(),
@@ -752,7 +753,8 @@ void forestryTree::recursivePartition(
     if ((lAvgSize*rAvgSize*lSplSize*rSplSize == 0)) {
 
       size_t node_id;
-      assignNodeId(node_id);
+      assignNodeId(node_id,
+                   false);
       (*rootNode).setLeafNode(
           averagingSampleIndex->size(),
           splittingSampleIndex->size(),
@@ -784,7 +786,8 @@ void forestryTree::recursivePartition(
       if (rSquaredDifference < getMinSplitGain()) {
 
         size_t node_id;
-        assignNodeId(node_id);
+        assignNodeId(node_id,
+                     false);
         (*rootNode).setLeafNode(
             averagingSampleIndex->size(),
             splittingSampleIndex->size(),
@@ -903,7 +906,8 @@ void forestryTree::recursivePartition(
     );
 
     size_t node_id;
-    assignNodeId(node_id);
+    assignNodeId(node_id,
+                 true);
     (*rootNode).setSplitNode(
         bestSplitFeature,
         bestSplitValue,
@@ -1525,6 +1529,10 @@ std::unique_ptr<tree_info> forestryTree::getTreeInfo(
   // set seed of the current tree
   treeInfo->seed = getSeed();
 
+  // Set the number of split nodes and leaf nodes
+  treeInfo->numSplitNodes = getSplitNodeCount();
+  treeInfo->numLeafNodes = getLeafNodeCount();
+
   return treeInfo;
 }
 
@@ -1631,8 +1639,8 @@ void forestryTree::recursive_reconstruction(
     weights->erase(weights->begin());
 
     size_t node_id;
-    std::vector<double> wts;
-    assignNodeId(node_id);
+    assignNodeId(node_id,
+                 false);
     (*currentNode).setLeafNode(
         nAve,
         nSpl,
@@ -1671,7 +1679,8 @@ void forestryTree::recursive_reconstruction(
     );
 
     size_t node_id;
-    assignNodeId(node_id);
+    assignNodeId(node_id,
+                 true);
     (*currentNode).setSplitNode(
         (size_t) var_id - 1,
         split_val,

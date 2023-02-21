@@ -683,10 +683,6 @@ void RFNode::write_node_info(
     treeInfo->naRightCount.push_back(-1);
     treeInfo->naDefaultDirection.push_back(0);
 
-    // Write dummy child IDs
-    treeInfo->left_child_id.push_back(-1);
-    treeInfo->right_child_id.push_back(-1);
-
     treeInfo->num_avg_samples.push_back(getAverageCount());
     treeInfo->num_spl_samples.push_back(getSplitCount());
     treeInfo->values.push_back(getPredictWeight());
@@ -698,10 +694,6 @@ void RFNode::write_node_info(
     treeInfo->naLeftCount.push_back(getNaLeftCount());
     treeInfo->naRightCount.push_back(getNaRightCount());
     treeInfo->naDefaultDirection.push_back(getNaDefaultDirection());
-
-    // Also write child id's
-    treeInfo->left_child_id.push_back( (int) getLeftChild()->getNodeId());
-    treeInfo->right_child_id.push_back( (int) getRightChild()->getNodeId());
 
     getLeftChild()->write_node_info(treeInfo, trainingData);
     getRightChild()->write_node_info(treeInfo, trainingData);
