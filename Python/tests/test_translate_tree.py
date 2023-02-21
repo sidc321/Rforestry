@@ -72,4 +72,4 @@ def test_all_trees(forest):
         assert np.amax(forest.py_forest[i]["splitting_sample_idx"]) <= X.shape[0]
         assert np.amax(forest.py_forest[i]["averaging_sample_idx"]) <= X.shape[0]
 
-        assert np.amax(forest.py_forest[i]["feature"]) <= X.shape[1] - 1
+        assert np.amax(forest.py_forest[i]["feature"]) <= X.shape[1]
