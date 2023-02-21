@@ -130,6 +130,8 @@ forestryTree::forestryTree(
   this->_root = std::move(root);
   /* Node ID's are 1 indexed from left to right */
   this->_nodeCount = 0;
+  this->_splitNodeCount = 0;
+  this->_leafNodeCount = 0;
   this->_seed = seed;
 
   /* If ridge splitting, initialize RSS components to pass to leaves*/
