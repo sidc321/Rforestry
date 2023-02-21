@@ -1136,15 +1136,18 @@ class RandomForest:
             total_av_idx += tree_counts[3 * i + 2]
 
             tree_counts[3 * i + 3] = state["py_forest"][i]["values"].size
-            total_av_idx += tree_counts[4 * i + 2]
+            total_leaf_nodes += tree_counts[3 * i + 3]
+
+        features = np.empty(total_nodes+total_leaf_nodes, dtype=np.intc)
 
         thresholds = np.empty(total_nodes, dtype=np.double)
-        features = np.empty(total_nodes+total_leaf_nodes, dtype=np.intc)
         na_left_counts = np.empty(total_nodes, dtype=np.intc)
         na_right_counts = np.empty(total_nodes, dtype=np.intc)
         na_default_direction = np.empty(total_nodes, dtype=np.intc)
+
         sample_split_idx = np.empty(total_split_idx, dtype=np.intc)
         sample_av_idx = np.empty(total_av_idx, dtype=np.intc)
+        
         predict_weights = np.empty(total_leaf_nodes, dtype=np.double)
         tree_seeds = np.empty(state["ntree"], dtype=np.uintc)
 
