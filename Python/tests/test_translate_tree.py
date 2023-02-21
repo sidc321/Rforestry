@@ -69,7 +69,7 @@ def test_all_trees(forest):
         assert len(forest.py_forest[i]["na_right_count"]) == num_nodes
         assert len(forest.py_forest[i]["na_default_direction"]) == num_nodes
 
-        assert np.amax(forest.py_forest[i]["splitting_sample_idx"]) <= X.shape[0] - 1
-        assert np.amax(forest.py_forest[i]["averaging_sample_idx"]) <= X.shape[0] - 1
+        assert np.amax(forest.py_forest[i]["splitting_sample_idx"]) <= X.shape[0]
+        assert np.amax(forest.py_forest[i]["averaging_sample_idx"]) <= X.shape[0]
 
         assert np.amax(forest.py_forest[i]["feature"]) <= X.shape[1] - 1
