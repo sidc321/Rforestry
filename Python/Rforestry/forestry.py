@@ -924,8 +924,6 @@ class RandomForest:
 
         return np.mean((y_true - preds) ** 2)
 
-    # TODO: CHANGE get_vi after weightmatrix!!!!!!!!!!!!!!!!!!!#######
-    # TODO: Check out Bottleneck for faster numpy!!!!!!!!!!!!!!!!!!!!!!!!!
     def get_vi(self, no_warning: bool = False) -> Optional[np.ndarray]:
         """
         Calculate the percentage increase in OOB error of the forest
