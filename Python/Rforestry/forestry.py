@@ -1002,7 +1002,6 @@ class RandomForest:
 
             num_nodes = extension.get_tree_node_count(self.forest, cur_id)
             num_leaf_nodes = extension.get_tree_leaf_count(self.forest, cur_id)
-            #num_split_nodes = extension.get_tree_split_count(self.forest, cur_id)
 
             # Initialize arrays to pass to C
             split_info = np.empty(self.sampsize + 1, dtype=np.intc)
@@ -1124,10 +1123,10 @@ class RandomForest:
             state["seed"],
         )
 
-        tree_counts = np.empty(state["ntree"] * 3, dtype=np.intc)
-        total_nodes, total_split_idx, total_av_idx = 0, 0, 0
+        tree_counts = np.empty(state["ntree"] * 4, dtype=np.intc)
+        total_nodes, total_leaf_nodes, total_split_idx, total_av_idx = 0, 0, 0, 0
         for i in range(state["ntree"]):
-            tree_counts[3 * i] = state["py_forest"][i]["feature"].size
+            tree_counts[3 * i] = state["py_forest"][i]["threshold"].size
             total_nodes += tree_counts[3 * i]
 
             tree_counts[3 * i + 1] = state["py_forest"][i]["splitting_sample_idx"].size
@@ -1136,17 +1135,20 @@ class RandomForest:
             tree_counts[3 * i + 2] = state["py_forest"][i]["averaging_sample_idx"].size
             total_av_idx += tree_counts[3 * i + 2]
 
+            tree_counts[3 * i + 3] = state["py_forest"][i]["values"].size
+            total_av_idx += tree_counts[4 * i + 2]
+
         thresholds = np.empty(total_nodes, dtype=np.double)
-        features = np.empty(total_nodes, dtype=np.intc)
+        features = np.empty(total_nodes+total_leaf_nodes, dtype=np.intc)
         na_left_counts = np.empty(total_nodes, dtype=np.intc)
         na_right_counts = np.empty(total_nodes, dtype=np.intc)
         na_default_direction = np.empty(total_nodes, dtype=np.intc)
         sample_split_idx = np.empty(total_split_idx, dtype=np.intc)
         sample_av_idx = np.empty(total_av_idx, dtype=np.intc)
-        predict_weights = np.empty(total_nodes, dtype=np.double)
+        predict_weights = np.empty(total_leaf_nodes, dtype=np.double)
         tree_seeds = np.empty(state["ntree"], dtype=np.uintc)
 
-        ind, ind_s, ind_a = 0, 0, 0
+        ind, ind_s, ind_a, ind_val = 0, 0, 0, 0
         for i in range(state["ntree"]):
             for j in range(tree_counts[3 * i]):
                 thresholds[ind] = state["py_forest"][i]["threshold"][j]
@@ -1154,7 +1156,7 @@ class RandomForest:
                 na_left_counts[ind] = state["py_forest"][i]["na_left_count"][j]
                 na_right_counts[ind] = state["py_forest"][i]["na_right_count"][j]
                 na_default_direction[ind] = state["py_forest"][i]["na_default_direction"][j]
-                predict_weights[ind] = state["py_forest"][i]["values"][j]
+
                 ind += 1
 
             for j in range(tree_counts[3 * i + 1]):
@@ -1164,6 +1166,11 @@ class RandomForest:
             for j in range(tree_counts[3 * i + 2]):
                 sample_av_idx[ind_a] = state["py_forest"][i]["averaging_sample_idx"][j]
                 ind_a += 1
+
+            for j in range(tree_counts[3 * i + 3]):
+                features[tree_counts[3 * i]+ind_val] = state["py_forest"][i]["feature"][j]
+                predict_weights[ind_val] = state["py_forest"][i]["values"][j]
+                ind_val += 1
 
             tree_seeds[i] = state["py_forest"][i]["seed"]
 
