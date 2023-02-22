@@ -297,6 +297,16 @@ size_t getTreeNodeCount(void *forest_ptr,
     return get_node_count(forest_ptr,tree_idx);
 }
 
+size_t getTreeSplitNodeCount(void *forest_ptr,
+                             int tree_idx){
+    return get_split_node_count(forest_ptr,tree_idx);
+}
+
+size_t getTreeLeafNodeCount(void *forest_ptr,
+                            int tree_idx){
+    return get_leaf_node_count(forest_ptr,tree_idx);
+}
+
 PYBIND11_MODULE(extension, m)
 {
     m.doc() = R"pbdoc(
@@ -326,12 +336,12 @@ PYBIND11_MODULE(extension, m)
 
         Some other explanation about the getTreeNodeCount function.
     )pbdoc");
-    m.def("get_tree_split_count", &get_split_node_count, R"pbdoc(
+    m.def("get_tree_split_count", &getTreeSplitNodeCount, R"pbdoc(
         Some help text here
 
         Some other explanation about the getTreeSplitNodeCount function.
     )pbdoc");
-    m.def("get_tree_leaf_count", &get_leaf_node_count, R"pbdoc(
+    m.def("get_tree_leaf_count", &getTreeLeafNodeCount, R"pbdoc(
         Some help text here
 
         Some other explanation about the getTreeLeafNodeCount function.
