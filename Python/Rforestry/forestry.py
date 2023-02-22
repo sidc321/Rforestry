@@ -251,8 +251,8 @@ class RandomForest:
 
      .. _translate-label:
 
-    :ivar forest: For any tree *i* in the forest, *forest[i]* is a dictionary which gives access to the underlying
-     structrure of that tree. *forest[i]* has the following entries:
+    :ivarsaved_forest: For any tree *i* in the forest, *saved_forest[i]* is a dictionary which gives access to the underlying
+     structrure of that tree. *saved_forest[i]* has the following entries:
 
      * children_right (*numpy.array of shape[number of nodes in the tree,]*) - For a node with a given *id*,
        *children_right[id]* gives the id of the right child of that node. If leaf node, *children_right[id]* is *-1*.
@@ -274,11 +274,11 @@ class RandomForest:
        a leaf node, *values[id]* gives the prediction made by that node. Otherwise, *values[id]* is *0.0*.
 
      .. note::
-        When a *RandomForest* is initialized, *forest* is set to a list of *ntree* empty dictionaries. In order to
+        When a *RandomForest* is initialized, *saved_forest* is set to a list of *ntree* empty dictionaries. In order to
         populate those dictionaries, one must use the :meth:`translate_tree() <Rforestry.RandomForest.translate_tree>`
         method.
 
-    :vartype forest: list[dict]
+    :vartypesaved_forest: list[dict]
     :ivar forest: A ctypes pointer to the *forestry* object in C++. It is initially set to *None* and updated only
      after :meth:`fit() <forestry.RandomForest.fit>` is called.
     :vartype forest: ctypes.c_void_p
@@ -321,7 +321,7 @@ class RandomForest:
     forest: Optional[pd.DataFrame] = dataclasses.field(default=None, init=False)
     dataframe: Optional[pd.DataFrame] = dataclasses.field(default=None, init=False)
     processed_dta: Optional[ProcessedDta] = dataclasses.field(default=None, init=False)
-    forest: List[Dict] = dataclasses.field(default_factory=list, init=False)
+   saved_forest: List[Dict] = dataclasses.field(default_factory=list, init=False)
 
     def __post_init__(self) -> None:
         if self.nthread > os.cpu_count():
@@ -972,8 +972,8 @@ class RandomForest:
     def translate_tree(self, tree_ids: Optional[Union[int, np.ndarray]] = None) -> None:
         """
         Given a trained forest, translates the selected trees by allowing access to its underlying structure.
-        After translating tree *i*, its structure will be stored as a dictionary in :ref:`forest <translate-label>`
-        and can be accessed by ``[RandomForest object].forest[i]`` . Check out the :ref:`forest <translate-label>`
+        After translating tree *i*, its structure will be stored as a dictionary in :ref:`saved_forest <translate-label>`
+        and can be accessed by ``[RandomForest object].saved_forest[i]`` . Check out the :ref:`saved_forest <translate-label>`
         attribute for more details about its structure.
 
         :param tree_ids: The indices of the trees to be translated. By default, all the trees in the forest
@@ -982,8 +982,8 @@ class RandomForest:
         :rtype: None
         """
 
-        if len(self.forest) == 0:
-            self.forest = [{} for _ in range(self.ntree)]
+        if len(self.saved_forest) == 0:
+            self.saved_forest = [{} for _ in range(self.ntree)]
 
         if tree_ids is None:
             idx = np.arange(self.ntree)
@@ -995,7 +995,7 @@ class RandomForest:
 
         for cur_id in idx:
 
-            if self.forest[cur_id]:
+            if self.saved_forest[cur_id]:
                 continue
 
             num_nodes = extension.get_tree_node_count(self.forest, cur_id)
@@ -1009,34 +1009,34 @@ class RandomForest:
 
             extension.fill_tree_info(self.forest, cur_id, tree_info, split_info, averaging_info)
 
-            self.forest[cur_id]["feature"] = np.empty(num_nodes+num_leaf_nodes, dtype=np.intc)
-            self.forest[cur_id]["threshold"] = np.empty(num_nodes, dtype=np.double)
-            self.forest[cur_id]["values"] = np.empty(num_leaf_nodes, dtype=np.double)
-            self.forest[cur_id]["na_left_count"] = np.empty(num_nodes, dtype=np.intc)
-            self.forest[cur_id]["na_right_count"] = np.empty(num_nodes, dtype=np.intc)
-            self.forest[cur_id]["na_default_direction"] = np.empty(num_nodes, dtype=np.intc)
+            self.saved_forest[cur_id]["feature"] = np.empty(num_nodes+num_leaf_nodes, dtype=np.intc)
+            self.saved_forest[cur_id]["threshold"] = np.empty(num_nodes, dtype=np.double)
+            self.saved_forest[cur_id]["values"] = np.empty(num_leaf_nodes, dtype=np.double)
+            self.saved_forest[cur_id]["na_left_count"] = np.empty(num_nodes, dtype=np.intc)
+            self.saved_forest[cur_id]["na_right_count"] = np.empty(num_nodes, dtype=np.intc)
+            self.saved_forest[cur_id]["na_default_direction"] = np.empty(num_nodes, dtype=np.intc)
 
             for i in range(num_nodes+num_leaf_nodes):
-                self.forest[cur_id]["feature"][i] = int(tree_info[i])
+                self.saved_forest[cur_id]["feature"][i] = int(tree_info[i])
             for i in range(num_leaf_nodes):
-                self.forest[cur_id]["values"][i] = tree_info[num_nodes+num_leaf_nodes + i]
+                self.saved_forest[cur_id]["values"][i] = tree_info[num_nodes+num_leaf_nodes + i]
             for i in range(num_nodes):
-                self.forest[cur_id]["threshold"][i] = tree_info[num_nodes + num_leaf_nodes * 2 + i]
-                self.forest[cur_id]["na_left_count"][i] = int(tree_info[num_nodes * 2 + num_leaf_nodes * 2 + i])
-                self.forest[cur_id]["na_right_count"][i] = int(tree_info[num_nodes * 3 + num_leaf_nodes * 2 + i])
-                self.forest[cur_id]["na_default_direction"][i] = int(tree_info[num_nodes * 4 + num_leaf_nodes * 2 + i])
+                self.saved_forest[cur_id]["threshold"][i] = tree_info[num_nodes + num_leaf_nodes * 2 + i]
+                self.saved_forest[cur_id]["na_left_count"][i] = int(tree_info[num_nodes * 2 + num_leaf_nodes * 2 + i])
+                self.saved_forest[cur_id]["na_right_count"][i] = int(tree_info[num_nodes * 3 + num_leaf_nodes * 2 + i])
+                self.saved_forest[cur_id]["na_default_direction"][i] = int(tree_info[num_nodes * 4 + num_leaf_nodes * 2 + i])
 
             num_split_idx = int(split_info[0])
-            self.forest[cur_id]["splitting_sample_idx"] = np.empty(num_split_idx, dtype=np.intc)
+            self.saved_forest[cur_id]["splitting_sample_idx"] = np.empty(num_split_idx, dtype=np.intc)
             for i in range(num_split_idx):
-                self.forest[cur_id]["splitting_sample_idx"][i] = int(split_info[i + 1])
+                self.saved_forest[cur_id]["splitting_sample_idx"][i] = int(split_info[i + 1])
 
             num_av_idx = int(averaging_info[0])
-            self.forest[cur_id]["averaging_sample_idx"] = np.empty(num_av_idx, dtype=np.intc)
+            self.saved_forest[cur_id]["averaging_sample_idx"] = np.empty(num_av_idx, dtype=np.intc)
             for i in range(num_av_idx):
-                self.forest[cur_id]["averaging_sample_idx"][i] = int(averaging_info[i + 1])
+                self.saved_forest[cur_id]["averaging_sample_idx"][i] = int(averaging_info[i + 1])
 
-            self.forest[cur_id]["seed"] = int(tree_info[num_nodes * 5 + num_leaf_nodes * 2])
+            self.saved_forest[cur_id]["seed"] = int(tree_info[num_nodes * 5 + num_leaf_nodes * 2])
 
     def get_parameters(self) -> dict:
         """
@@ -1049,7 +1049,7 @@ class RandomForest:
         return {
             parameter: value
             for parameter, value in self.__dict__.items()
-            if parameter not in ["forest", "dataframe", "processed_dta", "forest", "__pydantic_initialised__"]
+            if parameter not in ["forest", "dataframe", "processed_dta", "saved_forest", "__pydantic_initialised__"]
         }
 
     def set_parameters(self, **new_parameters: dict) -> Self:
@@ -1124,16 +1124,16 @@ class RandomForest:
         tree_counts = np.empty(state["ntree"] * 4, dtype=np.intc)
         total_nodes, total_leaf_nodes, total_split_idx, total_av_idx = 0, 0, 0, 0
         for i in range(state["ntree"]):
-            tree_counts[3 * i] = state["forest"][i]["threshold"].size
+            tree_counts[3 * i] = state["saved_forest"][i]["threshold"].size
             total_nodes += tree_counts[3 * i]
 
-            tree_counts[3 * i + 1] = state["forest"][i]["splitting_sample_idx"].size
+            tree_counts[3 * i + 1] = state["saved_forest"][i]["splitting_sample_idx"].size
             total_split_idx += tree_counts[3 * i + 1]
 
-            tree_counts[3 * i + 2] = state["forest"][i]["averaging_sample_idx"].size
+            tree_counts[3 * i + 2] = state["saved_forest"][i]["averaging_sample_idx"].size
             total_av_idx += tree_counts[3 * i + 2]
 
-            tree_counts[3 * i + 3] = state["forest"][i]["values"].size
+            tree_counts[3 * i + 3] = state["saved_forest"][i]["values"].size
             total_leaf_nodes += tree_counts[3 * i + 3]
 
         features = np.empty(total_nodes+total_leaf_nodes, dtype=np.intc)
@@ -1152,28 +1152,28 @@ class RandomForest:
         ind, ind_s, ind_a, ind_val = 0, 0, 0, 0
         for i in range(state["ntree"]):
             for j in range(tree_counts[3 * i]):
-                thresholds[ind] = state["forest"][i]["threshold"][j]
-                features[ind] = state["forest"][i]["feature"][j]
-                na_left_counts[ind] = state["forest"][i]["na_left_count"][j]
-                na_right_counts[ind] = state["forest"][i]["na_right_count"][j]
-                na_default_direction[ind] = state["forest"][i]["na_default_direction"][j]
+                thresholds[ind] = state["saved_forest"][i]["threshold"][j]
+                features[ind] = state["saved_forest"][i]["feature"][j]
+                na_left_counts[ind] = state["saved_forest"][i]["na_left_count"][j]
+                na_right_counts[ind] = state["saved_forest"][i]["na_right_count"][j]
+                na_default_direction[ind] = state["saved_forest"][i]["na_default_direction"][j]
 
                 ind += 1
 
             for j in range(tree_counts[3 * i + 1]):
-                sample_split_idx[ind_s] = state["forest"][i]["splitting_sample_idx"][j]
+                sample_split_idx[ind_s] = state["saved_forest"][i]["splitting_sample_idx"][j]
                 ind_s += 1
 
             for j in range(tree_counts[3 * i + 2]):
-                sample_av_idx[ind_a] = state["forest"][i]["averaging_sample_idx"][j]
+                sample_av_idx[ind_a] = state["saved_forest"][i]["averaging_sample_idx"][j]
                 ind_a += 1
 
             for j in range(tree_counts[3 * i + 3]):
-                features[tree_counts[3 * i]+ind_val] = state["forest"][i]["feature"][j]
-                predict_weights[ind_val] = state["forest"][i]["values"][j]
+                features[tree_counts[3 * i]+ind_val] = state["saved_forest"][i]["feature"][j]
+                predict_weights[ind_val] = state["saved_forest"][i]["values"][j]
                 ind_val += 1
 
-            tree_seeds[i] = state["forest"][i]["seed"]
+            tree_seeds[i] = state["saved_forest"][i]["seed"]
 
         state["forest"] = extension.reconstruct_tree(
             state["dataframe"],

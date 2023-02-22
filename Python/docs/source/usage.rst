@@ -274,7 +274,7 @@ Retrieve the Tree Structure
 
 This is an example of how to retrieve the underlying tree structure in the forest. To do that,
 we need to use the :meth:`translate_tree() <forestry.RandomForest.translate_tree>` function,
-which fills the :ref:`forest <translate-label>` attribute for the corresponding tree.
+which fills the :ref:`saved_forest <translate-label>` attribute for the corresponding tree.
 
 .. code-block:: Python
 
@@ -294,7 +294,7 @@ which fills the :ref:`forest <translate-label>` attribute for the corresponding 
 
     # Translate the first tree in the forest
     fr.translate_tree(0)
-    print(fr.forest[0])
+    print(fr.saved_forest[0])
 
     # Calculate the proportion of splits for each feature_names
     split_prop = fr.get_split_propotions()
