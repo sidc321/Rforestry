@@ -23,9 +23,9 @@ fr2.fit(X.iloc[:, 1:], X.iloc[:, 1], lin_feats=[0, 1])
 print("translate the first tree")
 
 fr.translate_tree(0)
-# print(fr.py_forest[0]["children_left"].size)
+# print(fr.forest[0]["children_left"].size)
 fr2.translate_tree(0)
-# print(fr2.py_forest[0])
+# print(fr2.forest[0])
 
 print("Making predictions")
 preds = fr2.predict(X.iloc[:, 1:], aggregation="doubleOOB", return_weight_matrix=True)

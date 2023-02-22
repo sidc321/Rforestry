@@ -91,7 +91,7 @@ void *get_data_wrapper(
         seed);
 }
 
-void *py_reconstructree_wrapper(void *data_ptr,
+void *reconstructree_wrapper(void *data_ptr,
                                 size_t ntree,
                                 bool replace,
                                 size_t sampSize,
@@ -129,7 +129,7 @@ void *py_reconstructree_wrapper(void *data_ptr,
                                 py::array_t<double> predict_weights,
                                 py::array_t<unsigned int> tree_seeds)
 {
-    return py_reconstructree(data_ptr,
+    return reconstructree(data_ptr,
                              ntree,
                              replace,
                              sampSize,
@@ -336,10 +336,10 @@ PYBIND11_MODULE(extension, m)
 
         Some other explanation about the getTreeLeafNodeCount function.
     )pbdoc");
-    m.def("reconstruct_tree", &py_reconstructree_wrapper, R"pbdoc(
+    m.def("reconstruct_tree", &reconstructree_wrapper, R"pbdoc(
         Some help text here
 
-        Some other explanation about the py_reconstructree function.
+        Some other explanation about the reconstructree function.
     )pbdoc");
     m.def("delete_forestry", &delete_forestry, R"pbdoc(
         Some help text here

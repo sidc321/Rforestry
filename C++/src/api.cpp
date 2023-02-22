@@ -475,7 +475,7 @@ void fill_tree_info(void* forest_ptr,
 }
 
 
-void* py_reconstructree(void* data_ptr,
+void* reconstructree(void* data_ptr,
         size_t ntree,
         bool replace,
         size_t sampSize,
