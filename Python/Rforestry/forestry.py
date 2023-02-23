@@ -251,7 +251,7 @@ class RandomForest:
 
      .. _translate-label:
 
-    :ivarsaved_forest: For any tree *i* in the forest, *saved_forest[i]* is a dictionary which gives access to the underlying
+    :ivar saved_forest: For any tree *i* in the forest, *saved_forest[i]* is a dictionary which gives access to the underlying
      structrure of that tree. *saved_forest[i]* has the following entries:
 
      * children_right (*numpy.array of shape[number of nodes in the tree,]*) - For a node with a given *id*,
@@ -278,7 +278,7 @@ class RandomForest:
         populate those dictionaries, one must use the :meth:`translate_tree() <Rforestry.RandomForest.translate_tree>`
         method.
 
-    :vartypesaved_forest: list[dict]
+    :vartype saved_forest: list[dict]
     :ivar forest: A ctypes pointer to the *forestry* object in C++. It is initially set to *None* and updated only
      after :meth:`fit() <forestry.RandomForest.fit>` is called.
     :vartype forest: ctypes.c_void_p
@@ -321,7 +321,7 @@ class RandomForest:
     forest: Optional[pd.DataFrame] = dataclasses.field(default=None, init=False)
     dataframe: Optional[pd.DataFrame] = dataclasses.field(default=None, init=False)
     processed_dta: Optional[ProcessedDta] = dataclasses.field(default=None, init=False)
-   saved_forest: List[Dict] = dataclasses.field(default_factory=list, init=False)
+    saved_forest: List[Dict] = dataclasses.field(default_factory=list, init=False)
 
     def __post_init__(self) -> None:
         if self.nthread > os.cpu_count():
