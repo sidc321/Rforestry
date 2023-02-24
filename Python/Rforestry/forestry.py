@@ -667,8 +667,10 @@ class RandomForest:
             exact,
             return_weight_matrix,
             self.verbose,
+            training_idx is not None,
             n_preds,
             n_weight_matrix,
+            training_idx
         )
 
     def _aggregation_double_oob(
@@ -707,8 +709,10 @@ class RandomForest:
             exact,
             return_weight_matrix,
             self.verbose,
+            training_idx is not None,
             n_preds,
             n_weight_matrix,
+            training_idx
         )
 
     def _aggregation_coefs(
