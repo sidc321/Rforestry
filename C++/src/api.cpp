@@ -365,7 +365,8 @@ void predictOOB_forest(
         bool returnWeightMatrix,
         bool verbose,
         std::vector<double>& predictions,
-        std::vector<double>& weight_matrix
+        std::vector<double>& weight_matrix,
+        std::vector<size_t> training_idx
 ){
     if (verbose)
         std::cout << forest_pt << std::endl;
@@ -375,7 +376,7 @@ void predictOOB_forest(
     forest->setDataframe(dta_frame);
 
     // For now put trainingIdx empty
-    std::vector<size_t> training_idx_use;
+    std::vector<size_t> training_idx_use = training_idx;
 
     //Create Data
     size_t ncol = dta_frame->getNumColumns();

@@ -177,13 +177,22 @@ py::tuple predictOOB_forest_wrapper(
     bool returnWeightMatrix,
     bool verbose,
     unsigned int n_preds,
-    unsigned int n_weight_matrix)
+    unsigned int n_weight_matrix,
+    py::array_t<size_t> training_idx)
 {
     py::array_t<double> predictions = create_numpy_array(n_preds);
     std::vector<double> predictions_vector(n_preds);
 
     py::array_t<double> weight_matrix = create_numpy_array(n_weight_matrix);
     std::vector<double> weight_matrix_vector(n_weight_matrix);
+
+    size_t training_idx_size = training_idx.request().count;
+    if (training_idx_size > 0) {
+       auto training_idx_vector = create_vector_from_numpy_array(training_idx);
+    } else {
+       std::vector<size_t> training_idx_vector;
+    }
+
 
     predictOOB_forest(
         forest_pt,
@@ -194,7 +203,9 @@ py::tuple predictOOB_forest_wrapper(
         returnWeightMatrix,
         verbose,
         predictions_vector,
-        weight_matrix_vector);
+        weight_matrix_vector,
+        training_idx_vector
+        );
 
     copy_vector_to_numpy_array(predictions_vector, predictions);
     copy_vector_to_numpy_array(weight_matrix_vector, weight_matrix);
