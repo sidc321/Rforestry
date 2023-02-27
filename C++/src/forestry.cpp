@@ -934,7 +934,6 @@ void forestry::fillinTreeInfo(
 
     } catch (std::runtime_error &err) {
       std::cerr << err.what() << std::endl;
-
     }
 
     if (isVerbose()) {

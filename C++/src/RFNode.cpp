@@ -45,6 +45,7 @@ void RFNode::setSplitNode(
   std::unique_ptr< RFNode > rightChild,
   size_t naLeftCount,
   size_t naRightCount,
+  size_t nodeId,
   int naDefaultDirection
 ) {
   // Split node constructor
@@ -57,7 +58,7 @@ void RFNode::setSplitNode(
   _naLeftCount = naLeftCount;
   _naRightCount = naRightCount;
   _naDefaultDirection = naDefaultDirection;
-  _nodeId = -1;
+  _nodeId = nodeId;
 }
 
 void RFNode::setRidgeCoefficients(
@@ -693,10 +694,6 @@ void RFNode::write_node_info(
     treeInfo->naLeftCount.push_back(getNaLeftCount());
     treeInfo->naRightCount.push_back(getNaRightCount());
     treeInfo->naDefaultDirection.push_back(getNaDefaultDirection());
-
-    // Also write child id's
-    treeInfo->left_child_id.push_back( (int) getLeftChild()->getNodeId());
-    treeInfo->right_child_id.push_back( (int) getRightChild()->getNodeId());
 
     getLeftChild()->write_node_info(treeInfo, trainingData);
     getRightChild()->write_node_info(treeInfo, trainingData);

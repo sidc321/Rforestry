@@ -91,7 +91,7 @@ void *get_data_wrapper(
         seed);
 }
 
-void *py_reconstructree_wrapper(void *data_ptr,
+void *reconstructree_wrapper(void *data_ptr,
                                 size_t ntree,
                                 bool replace,
                                 size_t sampSize,
@@ -129,7 +129,7 @@ void *py_reconstructree_wrapper(void *data_ptr,
                                 py::array_t<double> predict_weights,
                                 py::array_t<unsigned int> tree_seeds)
 {
-    return py_reconstructree(data_ptr,
+    return reconstructree(data_ptr,
                              ntree,
                              replace,
                              sampSize,
@@ -176,14 +176,22 @@ py::tuple predictOOB_forest_wrapper(
     bool exact,
     bool returnWeightMatrix,
     bool verbose,
+    bool use_training_idx,
     unsigned int n_preds,
-    unsigned int n_weight_matrix)
+    unsigned int n_weight_matrix,
+    py::array_t<size_t> training_idx)
 {
     py::array_t<double> predictions = create_numpy_array(n_preds);
     std::vector<double> predictions_vector(n_preds);
 
     py::array_t<double> weight_matrix = create_numpy_array(n_weight_matrix);
     std::vector<double> weight_matrix_vector(n_weight_matrix);
+
+    std::vector<size_t> training_idx_vector;
+    if (use_training_idx) {
+       training_idx_vector = create_vector_from_numpy_array(training_idx);
+    }
+
 
     predictOOB_forest(
         forest_pt,
@@ -194,7 +202,9 @@ py::tuple predictOOB_forest_wrapper(
         returnWeightMatrix,
         verbose,
         predictions_vector,
-        weight_matrix_vector);
+        weight_matrix_vector,
+        training_idx_vector
+        );
 
     copy_vector_to_numpy_array(predictions_vector, predictions);
     copy_vector_to_numpy_array(weight_matrix_vector, weight_matrix);
@@ -297,6 +307,16 @@ size_t getTreeNodeCount(void *forest_ptr,
     return get_node_count(forest_ptr,tree_idx);
 }
 
+size_t getTreeSplitNodeCount(void *forest_ptr,
+                             int tree_idx){
+    return get_split_node_count(forest_ptr,tree_idx);
+}
+
+size_t getTreeLeafNodeCount(void *forest_ptr,
+                            int tree_idx){
+    return get_leaf_node_count(forest_ptr,tree_idx);
+}
+
 PYBIND11_MODULE(extension, m)
 {
     m.doc() = R"pbdoc(
@@ -326,10 +346,20 @@ PYBIND11_MODULE(extension, m)
 
         Some other explanation about the getTreeNodeCount function.
     )pbdoc");
-    m.def("reconstruct_tree", &py_reconstructree_wrapper, R"pbdoc(
+    m.def("get_tree_split_count", &getTreeSplitNodeCount, R"pbdoc(
         Some help text here
 
-        Some other explanation about the py_reconstructree function.
+        Some other explanation about the getTreeSplitNodeCount function.
+    )pbdoc");
+    m.def("get_tree_leaf_count", &getTreeLeafNodeCount, R"pbdoc(
+        Some help text here
+
+        Some other explanation about the getTreeLeafNodeCount function.
+    )pbdoc");
+    m.def("reconstruct_tree", &reconstructree_wrapper, R"pbdoc(
+        Some help text here
+
+        Some other explanation about the reconstructree function.
     )pbdoc");
     m.def("delete_forestry", &delete_forestry, R"pbdoc(
         Some help text here

@@ -254,12 +254,26 @@ public:
     return _naDirection;
   }
 
-  void assignNodeId(size_t& node_i) {
+  void assignNodeId(size_t& node_i,
+                    bool split) {
     node_i = ++_nodeCount;
+    if (split) {
+        _splitNodeCount++;
+    } else {
+        _leafNodeCount++;
+    }
   }
 
   size_t getNodeCount() {
     return _nodeCount;
+  }
+
+  size_t getSplitNodeCount() {
+      return _splitNodeCount;
+  }
+
+  size_t getLeafNodeCount() {
+      return _leafNodeCount;
   }
 
 private:
@@ -280,6 +294,8 @@ private:
   double _overfitPenalty;
   unsigned int _seed;
   size_t _nodeCount;
+  size_t _splitNodeCount;
+  size_t _leafNodeCount;
 };
 
 
