@@ -1,12 +1,11 @@
 Package: Rforestry
 Type: Package
 Title: Random Forests, Linear Trees, and Gradient Boosting for Inference and Interpretability
-Version: 0.9.1.1
+Version: 0.9.0.163
 Authors@R: c(
     person("Sören", "Künzel", role = "aut"),
     person("Theo", "Saarinen", role = c("aut","cre"), email = "theo_s@berkeley.edu"),
     person("Simon", "Walter", role = "aut"),
-    person("Sam", "Antonyan", role = "aut"),
     person("Edward", "Liu", role = "aut"),
     person("Allen", "Tang", role = "aut"),
     person("Jasjeet", "Sekhon", role = "aut")
@@ -29,12 +28,11 @@ Imports:
     visNetwork, 
     glmnet (>= 4.1), 
     grDevices,
-    onehot,
-    dplyr
+    onehot
 LinkingTo: Rcpp,
   RcppArmadillo,
   RcppThread
-RoxygenNote: 7.2.1
+RoxygenNote: 7.2.3
 SystemRequirements: C++11
 Suggests:
     testthat,
@@ -45,7 +43,6 @@ Collate:
     'R_preprocessing.R'
     'RcppExports.R'
     'forestry.R'
-    'adaptive_forestry.R'
     'backwards_compatible.R'
     'compute_rf_lp.R'
     'neighborhood_imputation.R'
