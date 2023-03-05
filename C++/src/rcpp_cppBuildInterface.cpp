@@ -4,7 +4,7 @@
 #include "RFNode.h"
 #include "forestry.h"
 #include "utils.h"
-#include <RcppArmadillo.h>
+#include <armadillo>
 
 void freeforestry(
   SEXP ptr
