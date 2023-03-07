@@ -1,0 +1,6 @@
+include README.md LICENSE extension/pybind11/LICENSE extension/pybind11/CMakeLists.txt
+graft extension/pybind11/include
+graft extension/pybind11/tools
+graft extension/include
+graft extension/src
+include extension/CMakeLists.txt
