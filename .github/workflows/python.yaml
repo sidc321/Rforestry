@@ -1,0 +1,140 @@
+name: Python package
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "Python/**"
+      - "C%2B%2B/**"
+      - ".github/workflows/python.yaml"
+  pull_request:
+    paths:
+      - "Python/**"
+      - "C%2B%2B/**"
+      - ".github/workflows/python.yaml"
+
+jobs:
+  build_sdist:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+          cache: "pip"
+          cache-dependency-path: "Python/requirements-dev.txt"
+
+      - name: Build
+        working-directory: Python/
+        run: |
+          python -m pip install build
+
+          python -m build --sdist
+
+          # Ensure exactly one artifact was produced.
+          [[ $(shopt -s nullglob; ls dist/*.tar.gz | wc -w) == 1 ]] || {
+            echo "Unexpected content in dist dir: '$(ls dist/*.tar.gz)'."
+            exit 1
+          }
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: sdist
+          path: Python/dist/*.tar.gz
+
+  build_linux_wheels:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.11.2
+        env:
+          CIBW_ARCHS: x86_64
+          CIBW_MANYLINUX_X86_64_IMAGE: ghcr.io/theo-s/rforestry/python_build_env:latest
+          CIBW_BUILD: cp38-manylinux* cp39-manylinux* cp310-manylinux* cp311-manylinux*
+          CIBW_TEST_COMMAND: "pytest /project/Python/tests -v --color=yes"
+        with:
+          package-dir: Python/
+          output-dir: Python/dist
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux_wheels
+          path: Python/dist/*.whl
+
+  build_macos_wheels:
+    name: macos build for ${{ matrix.config.arch }}
+    runs-on: macos-10.15
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - { arch: "x86_64" }
+          - { arch: "arm64" }
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.11.2
+        env:
+          CIBW_ARCHS: ${{ matrix.config.arch }}
+          CIBW_BUILD: cp38-* cp39-* cp310-* cp311-*
+          CIBW_TEST_COMMAND: "pytest work/Rforestry/Rforestry/Python/tests -v --color=yes"
+          CIBW_BEFORE_ALL: >
+            brew install armadillo
+        with:
+          package-dir: Python/
+          output-dir: Python/dist
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: macos_${{ matrix.config.arch }}_wheels
+          path: Python/dist/*.whl
+
+  upload:
+    needs: [build_sdist, build_linux_wheels, build_macos_wheels]
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: sdist
+          path: packages
+      - uses: actions/download-artifact@v3
+        with:
+          name: linux_wheels
+          path: packages
+      - uses: actions/download-artifact@v3
+        with:
+          name: macos_x86_64_wheels
+          path: packages
+      - uses: actions/download-artifact@v3
+        with:
+          name: macos_arm64_wheels
+          path: packages
+      - name: List
+        run: |
+          ls -alh packages
+      - name: Publish package to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          #repository_url: https://test.pypi.org/legacy/
+          packages_dir: packages/
