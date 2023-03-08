@@ -1447,7 +1447,7 @@ predict.forestry <- function(object,
                                        nrow = nobs,
                                        ncol = terminalNodes[nobs+1,i])
       for (j in 1:nobs) {
-        sparse_rep_single_tree[j,terminalNodes[j,i]] <- 1
+        sparse_rep_single_tree[j,terminalNodes[j,i]+1] <- 1
       }
       sparse_rep <- cbind(sparse_rep, sparse_rep_single_tree)
     }
