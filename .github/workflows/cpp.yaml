@@ -2,13 +2,9 @@ name: C++ Lint
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - "C%2B%2B/**"
-      - ".github/workflows/cpp.yaml"
   pull_request:
     paths:
-      - "C%2B%2B/**"
+      - "src/**"
       - ".github/workflows/cpp.yaml"
 
 jobs:
@@ -26,6 +22,6 @@ jobs:
           sudo tar -xf v2.1.2.tar.gz -C /
 
       - name: Lint
-        working-directory: C++/src/
+        working-directory: src/
         run: |
-          clang-tidy *.cpp -header-filter="^.*/C++/src/.*" --use-color -- -I/usr/lib/R/site-library/RcppArmadillo/include -I/usr/lib/R/site-library/Rcpp/include -I/usr/share/R/include -I/RcppThread-2.1.2/inst/include
+          clang-tidy *.cpp -header-filter="^.*/src/.*" --use-color -- -I/usr/lib/R/site-library/RcppArmadillo/include -I/usr/lib/R/site-library/Rcpp/include -I/usr/share/R/include -I/RcppThread-2.1.2/inst/include

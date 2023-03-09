@@ -5,16 +5,19 @@ on:
   push:
     paths:
       - "Python/**"
-      - "C%2B%2B/**"
+      - "src/**"
       - ".github/workflows/python.yaml"
+    branches:
+      - master
   pull_request:
     paths:
       - "Python/**"
-      - "C%2B%2B/**"
+      - "src/**"
       - ".github/workflows/python.yaml"
 
 jobs:
   build_sdist:
+    name: sdist build
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -49,6 +52,7 @@ jobs:
           path: Python/dist/*.tar.gz
 
   build_linux_wheels:
+    name: linux wheels build
     runs-on: ubuntu-latest
 
     steps:
@@ -75,7 +79,7 @@ jobs:
           path: Python/dist/*.whl
 
   build_macos_wheels:
-    name: macos build for ${{ matrix.config.arch }}
+    name: macos wheels build for ${{ matrix.config.arch }}
     runs-on: macos-10.15
     strategy:
       fail-fast: false

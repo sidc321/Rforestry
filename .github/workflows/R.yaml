@@ -1,23 +1,10 @@
 name: R package
 
 on:
-  push:
-    paths:
-      - ".github/workflows/R.yaml"
-      - "C%2B%2B/**"
-      - "R/**"
-  #    branches:
-  #      - main
-  #      - master
-  #      - experimental
   pull_request:
-    branches:
-      - main
-      - master
-      - experimental
     paths:
       - ".github/workflows/R.yaml"
-      - "C%2B%2B/**"
+      - "src/**"
       - "R/**"
 
 jobs:
