@@ -22,6 +22,7 @@ forestryTree::forestryTree():
   _interactionDepth(0),
   _averagingSampleIndex(nullptr),
   _splittingSampleIndex(nullptr),
+  _excludedSampleIndex(nullptr),
   _root(nullptr) {};
 
 forestryTree::~forestryTree() {};
@@ -38,6 +39,7 @@ forestryTree::forestryTree(
   size_t interactionDepth,
   std::unique_ptr< std::vector<size_t> > splittingSampleIndex,
   std::unique_ptr< std::vector<size_t> > averagingSampleIndex,
+  std::unique_ptr< std::vector<size_t> > excludedSampleIndex,
   std::mt19937_64& random_number_generator,
   bool splitMiddle,
   size_t maxObs,
@@ -59,6 +61,7 @@ forestryTree::forestryTree(
   * @param maxDepth    Max depth of a tree
   * @param splittingSampleIndex    A vector with index of splitting samples
   * @param averagingSampleIndex    A vector with index of averaging samples
+  * @param excludedSampleIndex    A vector with indices excluded from averaging
   * @param random_number_generator    A mt19937 random generator
   * @param splitMiddle    Boolean to indicate if new feature value is
   *    determined at a random position between two feature values
@@ -126,6 +129,7 @@ forestryTree::forestryTree(
   this->_interactionDepth = interactionDepth;
   this->_averagingSampleIndex = std::move(averagingSampleIndex);
   this->_splittingSampleIndex = std::move(splittingSampleIndex);
+  this->_excludedSampleIndex = std::move(excludedSampleIndex);
   this->_overfitPenalty = overfitPenalty;
   std::unique_ptr< RFNode > root ( new RFNode() );
   this->_root = std::move(root);
@@ -207,6 +211,7 @@ void forestryTree::setDummyTree(
     size_t interactionDepth,
     std::unique_ptr< std::vector<size_t> > splittingSampleIndex,
     std::unique_ptr< std::vector<size_t> > averagingSampleIndex,
+    std::unique_ptr< std::vector<size_t> > excludedSampleIndex,
     double overfitPenalty
 ){
   this->_mtry = mtry;
@@ -219,6 +224,7 @@ void forestryTree::setDummyTree(
   this->_interactionDepth = interactionDepth;
   this->_averagingSampleIndex = std::move(averagingSampleIndex);
   this->_splittingSampleIndex = std::move(splittingSampleIndex);
+  this->_averagingSampleIndex = std::move(excludedSampleIndex);
   this->_overfitPenalty = overfitPenalty;
 }
 
@@ -1327,10 +1333,15 @@ void forestryTree::getOOGIndex(
 
   // For a given tree, we cycle through all averaging indices and get their
   // group memberships. Then we take the set of observations which are in groups
-  // which haven't been seen by the current tree, and output this to outputOOBIndex
+  // which haven't been seen by the current tree, and output this to outputOOBIndex.
+  // If an observation was explicitly excluded from the averaging set, consider it also
+  // seen by the current tree.
+  std::vector<size_t> inBagIndex = *getAveragingIndex();
+  inBagIndex.insert(inBagIndex.end(), getExcludedIndex()->begin(), getExcludedIndex()->end());
+
   std::sort(
-    getAveragingIndex()->begin(),
-    getAveragingIndex()->end()
+    inBagIndex.begin(),
+    inBagIndex.end()
   );
 
   std::sort(
@@ -1340,8 +1351,8 @@ void forestryTree::getOOGIndex(
 
   // Add all in sample groups to a set
   std::set<size_t> in_sample_groups;
-  for (std::vector<size_t>::iterator iter = getAveragingIndex()->begin();
-       iter != getAveragingIndex()->end();
+  for (std::vector<size_t>::iterator iter = inBagIndex.begin();
+       iter != inBagIndex.end();
        iter++) {
     in_sample_groups.insert(groupMemberships[*iter]);
   }
@@ -1519,6 +1530,9 @@ std::unique_ptr<tree_info> forestryTree::getTreeInfo(
   for (size_t i = 0; i<_splittingSampleIndex->size(); i++) {
     treeInfo->splittingSampleIndex.push_back((*_splittingSampleIndex)[i] + 1);
   }
+  for (size_t i = 0; i<_excludedSampleIndex->size(); i++) {
+    treeInfo->excludedSampleIndex.push_back((*_excludedSampleIndex)[i] + 1);
+  }
 
   // set seed of the current tree
   treeInfo->seed = getSeed();
@@ -1548,6 +1562,7 @@ void forestryTree::reconstruct_tree(
     std::vector<int> naDefaultDirections,
     std::vector<size_t> averagingSampleIndex,
     std::vector<size_t> splittingSampleIndex,
+    std::vector<size_t> excludedSampleIndex,
     std::vector<double> predictWeights
     ){
   // Setting all the parameters:
@@ -1577,6 +1592,12 @@ void forestryTree::reconstruct_tree(
   );
   for(size_t i=0; i<splittingSampleIndex.size(); i++){
     (*_splittingSampleIndex).push_back(splittingSampleIndex[i] - 1);
+  }
+  _excludedSampleIndex = std::unique_ptr< std::vector<size_t> > (
+    new std::vector<size_t>
+  );
+  for(size_t i=0; i<excludedSampleIndex.size(); i++){
+    (*_excludedSampleIndex).push_back(excludedSampleIndex[i] - 1);
   }
 
   std::unique_ptr< RFNode > root ( new RFNode() );

@@ -29,6 +29,7 @@ public:
     size_t interactionDepth,
     std::unique_ptr< std::vector<size_t> > splittingSampleIndex,
     std::unique_ptr< std::vector<size_t> > averagingSampleIndex,
+    std::unique_ptr< std::vector<size_t> > excludedSampleIndex,
     std::mt19937_64& random_number_generator,
     bool splitMiddle,
     size_t maxObs,
@@ -51,6 +52,7 @@ public:
     size_t interactionDepth,
     std::unique_ptr< std::vector<size_t> > splittingSampleIndex,
     std::unique_ptr< std::vector<size_t> > averagingSampleIndex,
+    std::unique_ptr< std::vector<size_t> > excludedSampleIndex,
     double overfitPenalty
   );
 
@@ -94,6 +96,7 @@ public:
       std::vector<int> naDefaultDirections,
       std::vector<size_t> averagingSampleIndex,
       std::vector<size_t> splittingSampleIndex,
+      std::vector<size_t> excludedSampleIndex,
       std::vector<double> predictWeights);
 
   void recursive_reconstruction(
@@ -234,6 +237,10 @@ public:
     return _averagingSampleIndex.get();
   }
 
+  std::vector<size_t>* getExcludedIndex() {
+    return _excludedSampleIndex.get();
+  }
+
   RFNode* getRoot() {
     return _root.get();
   }
@@ -273,6 +280,7 @@ private:
   size_t _interactionDepth;
   std::unique_ptr< std::vector<size_t> > _averagingSampleIndex;
   std::unique_ptr< std::vector<size_t> > _splittingSampleIndex;
+  std::unique_ptr< std::vector<size_t> > _excludedSampleIndex;
   std::unique_ptr< RFNode > _root;
   bool _hasNas;
   bool _naDirection;

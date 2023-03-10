@@ -6,6 +6,7 @@ DataFrame::DataFrame():
   _linearFeatureCols(nullptr), _numRows(0), _numColumns(0),
   _featureWeights(nullptr), _featureWeightsVariables(nullptr),  _deepFeatureWeights(nullptr),
   _deepFeatureWeightsVariables(nullptr), _observationWeights(nullptr),
+  _customSplittingSet(nullptr), _customAveragingSet(nullptr), _customExcludedSet(nullptr),
   _monotonicConstraints(nullptr), _groupMemberships(nullptr){}
 
 DataFrame::~DataFrame(){};
@@ -22,6 +23,9 @@ DataFrame::DataFrame(
   std::unique_ptr<std::vector<double>> deepFeatureWeights,
   std::unique_ptr<std::vector<size_t>> deepFeatureWeightsVariables,
   std::unique_ptr< std::vector<double> > observationWeights,
+  std::unique_ptr< std::vector< std::vector<size_t> > > customSplittingSet,
+  std::unique_ptr< std::vector< std::vector<size_t> > > customAveragingSet,
+  std::unique_ptr< std::vector< std::vector<size_t> > > customExcludedSet,
   std::shared_ptr< std::vector<int> > monotonicConstraints,
   std::unique_ptr< std::vector<size_t> > groupMemberships,
   bool monotoneAvg
@@ -37,6 +41,9 @@ DataFrame::DataFrame(
   this->_deepFeatureWeights = std::move(deepFeatureWeights);
   this->_deepFeatureWeightsVariables = std::move(deepFeatureWeightsVariables);
   this->_observationWeights = std::move(observationWeights);
+  this->_customSplittingSet = std::move(customSplittingSet);
+  this->_customAveragingSet = std::move(customAveragingSet);
+  this->_customExcludedSet = std::move(customExcludedSet);
   this->_monotonicConstraints = std::move(monotonicConstraints);
   this->_groupMemberships = std::move(groupMemberships);
   this->_monotoneAvg = (bool) monotoneAvg;

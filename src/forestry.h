@@ -11,7 +11,6 @@
 #include <string>
 
 
-
 class forestry {
 
 public:
@@ -83,6 +82,7 @@ public:
       std::unique_ptr< std::vector< std::vector<int> >  > & naDefaultDirections,
       std::unique_ptr< std::vector< std::vector<size_t> >  > & averagingSampleIndex,
       std::unique_ptr< std::vector< std::vector<size_t> >  > & splittingSampleIndex,
+      std::unique_ptr< std::vector< std::vector<size_t> >  > & excludedSampleIndex,
       std::unique_ptr< std::vector< std::vector<double> >  > & weights);
 
   size_t getTotalNodeCount();

@@ -38,6 +38,9 @@ training_data_checker <- function(x,
                                   featureWeights,
                                   deepFeatureWeights,
                                   observationWeights,
+                                  customSplittingSet,
+                                  customAveragingSet,
+                                  customExcludedSet,
                                   linear,
                                   scale,
                                   hasNas,
@@ -143,6 +146,10 @@ training_data_checker <- function(x,
   }
 
   observationWeights <- observationWeights/sum(observationWeights)
+
+  # if (length(customSplittingSet) != ntree) {
+  #   stop('TODO: - other checks such as length and - overlapping sets, - turn off other sampling features, not compatible with doubleTree')
+  # }
 
   # if the splitratio is 1, then we use adaptive rf and avgSampleSize is the
   # equal to the total sampsize
@@ -275,6 +282,9 @@ training_data_checker <- function(x,
               "scale" = scale,
               "deepFeatureWeights" = deepFeatureWeights,
               "observationWeights" = observationWeights,
+              "customSplittingSet" = customSplittingSet,
+              "customAveragingSet" = customAveragingSet,
+              "customExcludedSet" = customExcludedSet,
               "hasNas" = hasNas,
               "naDirection" = naDirection
         ))
@@ -378,6 +388,9 @@ setClass(
     deepFeatureWeights = "numeric",
     deepFeatureWeightsVariables = "numeric",
     observationWeights = "numeric",
+    customSplittingSet = "list",
+    customAveragingSet = "list",
+    customExcludedSet = "list",
     overfitPenalty = "numeric",
     doubleTree = "logical",
     groupsMapping = "list",
@@ -430,6 +443,9 @@ setClass(
 #' @param observationWeights Denotes the weights for each training observation
 #'   that determine how likely the observation is to be selected in each bootstrap sample.
 #'   This option is not allowed when sampling is done without replacement.
+#' @param customSplittingSet ...
+#' @param customAveragingSet ...
+#' @param customExcludedSet ...
 #' @param splitratio Proportion of the training data used as the splitting dataset.
 #'   It is a ratio between 0 and 1. If the ratio is 1 (the default), then the splitting
 #'   set uses the entire data, as does the averaging set---i.e., the standard Breiman RF setup.
@@ -595,6 +611,9 @@ forestry <- function(x,
                      featureWeights = NULL,
                      deepFeatureWeights = NULL,
                      observationWeights = NULL,
+                     customSplittingSet = NULL,
+                     customAveragingSet = NULL,
+                     customExcludedSet = NULL,
                      splitratio = 1,
                      OOBhonest = FALSE,
                      doubleBootstrap = if (OOBhonest)
@@ -674,6 +693,15 @@ forestry <- function(x,
   if(is.null(observationWeights)) {
     observationWeights <- rep(1, nrow(x))
   }
+  if(is.null(customSplittingSet)) {
+    customSplittingSet <- list()
+  }
+  if(is.null(customAveragingSet)) {
+    customAveragingSet <- list()
+  }
+  if(is.null(customExcludedSet)) {
+    customExcludedSet <- list()
+  }
   updated_variables <-
     training_data_checker(
       x = x,
@@ -700,6 +728,9 @@ forestry <- function(x,
       featureWeights = featureWeights,
       deepFeatureWeights = deepFeatureWeights,
       observationWeights = observationWeights,
+      customSplittingSet = customSplittingSet,
+      customAveragingSet = customAveragingSet,
+      customExcludedSet = customExcludedSet,
       linear = linear,
       scale = scale,
       hasNas = hasNas,
@@ -802,6 +833,9 @@ forestry <- function(x,
         deepFeatureWeights =  deepFeatureWeights,
         deepFeatureWeightsVariables = deepFeatureWeightsVariables,
         observationWeights = observationWeights,
+        customSplittingSet = customSplittingSet,
+        customAveragingSet = customAveragingSet,
+        customExcludedSet = customExcludedSet,
         monotonicConstraints = monotonicConstraints,
         groupMemberships = groupVector,
         monotoneAvg = monotoneAvg
@@ -838,6 +872,9 @@ forestry <- function(x,
         deepFeatureWeights,
         deepFeatureWeightsVariables,
         observationWeights,
+        customSplittingSet,
+        customAveragingSet,
+        customExcludedSet,
         monotonicConstraints,
         groupVector,
         minTreesPerFold,
@@ -905,6 +942,9 @@ forestry <- function(x,
           deepFeatureWeights =  deepFeatureWeights,
           deepFeatureWeightsVariables = deepFeatureWeightsVariables,
           observationWeights = observationWeights,
+          customSplittingSet = customSplittingSet,
+          customAveragingSet = customAveragingSet,
+          customExcludedSet = customExcludedSet,
           hasNas = hasNas,
           naDirection = naDirection,
           linear = linear,
@@ -1000,6 +1040,9 @@ forestry <- function(x,
         deepFeatureWeights =  deepFeatureWeights,
         deepFeatureWeightsVariables = deepFeatureWeightsVariables,
         observationWeights,
+        customSplittingSet,
+        customAveragingSet,
+        customExcludedSet,
         monotonicConstraints,
         groupVector,
         minTreesPerFold,
@@ -1044,6 +1087,9 @@ forestry <- function(x,
           featureWeights = featureWeights,
           deepFeatureWeights = deepFeatureWeights,
           observationWeights = observationWeights,
+          customSplittingSet = customSplittingSet,
+          customAveragingSet = customAveragingSet,
+          customExcludedSet = customExcludedSet,
           hasNas = hasNas,
           naDirection = naDirection,
           linear = linear,
@@ -1880,6 +1926,9 @@ relinkCPP_prt <- function(object) {
       deepFeatureWeights = object@deepFeatureWeights,
       deepFeatureWeightsVariables = object@deepFeatureWeightsVariables,
       observationWeights = object@observationWeights,
+      customSplittingSet = object@customSplittingSet,
+      customAveragingSet = object@customAveragingSet,
+      customExcludedSet = object@customExcludedSet,
       monotonicConstraints = object@monotonicConstraints,
       groupMemberships = as.integer(object@groups),
       monotoneAvg = object@monotoneAvg,

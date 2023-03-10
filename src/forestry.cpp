@@ -223,31 +223,41 @@ void forestry::addTrees(size_t ntree) {
           // Split sampled indices into averaging and splitting sets
           std::unique_ptr<std::vector<size_t> > splitSampleIndex;
           std::unique_ptr<std::vector<size_t> > averageSampleIndex;
+          std::unique_ptr<std::vector<size_t> > excludedSampleIndex;
 
           std::unique_ptr<std::vector<size_t> > splitSampleIndex2;
           std::unique_ptr<std::vector<size_t> > averageSampleIndex2;
 
           std::vector<size_t> splitIndicesFill;
           std::vector<size_t> avgIndicesFill;
+          std::vector<size_t> excludedIndicesFill;
 
-          // Generate the splitting and averaging indices for the ith tree
-          generate_sample_indices(
-                  splitIndicesFill,
-                  avgIndicesFill,
-                  groupToGrow,
-                  getminTreesPerFold(),
-                  i,
-                  getSampleSize(),
-                  (ntree != 0) && (getTrainingData()->getGroups()->at(0) != 0) ? numGroups : 0,
-                  isReplacement(),
-                  getOOBhonest(),
-                  getDoubleBootstrap(),
-                  getSplitRatio(),
-                  _doubleTree,
-                  random_number_generator,
-                  foldMemberships,
-                  getTrainingData()
-                  );
+          std::vector< std::vector<size_t> >* customSplittingSet = getTrainingData()->getCustomSplittingSet();
+
+          if (customSplittingSet->size() == 0) {
+            // Generate the splitting and averaging indices for the ith tree
+            generate_sample_indices(
+              splitIndicesFill,
+              avgIndicesFill,
+              groupToGrow,
+              getminTreesPerFold(),
+              i,
+              getSampleSize(),
+              (ntree != 0) && (getTrainingData()->getGroups()->at(0) != 0) ? numGroups : 0,
+              isReplacement(),
+              getOOBhonest(),
+              getDoubleBootstrap(),
+              getSplitRatio(),
+              _doubleTree,
+              random_number_generator,
+              foldMemberships,
+              getTrainingData()
+            );
+          } else {
+            splitIndicesFill = customSplittingSet->at(i);
+            avgIndicesFill = getTrainingData()->getCustomSplittingSet()->at(i);
+            excludedIndicesFill = getTrainingData()->getCustomExcludedSet()->at(i);
+          }
 
           // Set the smart pointers to use the returned indices
           splitSampleIndex.reset(
@@ -255,6 +265,9 @@ void forestry::addTrees(size_t ntree) {
           );
           averageSampleIndex.reset(
                     new std::vector<size_t>(avgIndicesFill)
+          );
+          excludedSampleIndex.reset(
+            new std::vector<size_t>(excludedIndicesFill)
           );
 
           // If we are doing doubleTree, swap the indices and make two trees
@@ -282,6 +295,7 @@ void forestry::addTrees(size_t ntree) {
                 getInteractionDepth(),
                 std::move(splitSampleIndex),
                 std::move(averageSampleIndex),
+                std::move(excludedSampleIndex),
                 random_number_generator,
                 getSplitMiddle(),
                 getMaxObs(),
@@ -308,6 +322,7 @@ void forestry::addTrees(size_t ntree) {
                     getInteractionDepth(),
                     std::move(averageSampleIndex2),
                     std::move(splitSampleIndex2),
+                    std::move(excludedSampleIndex),
                     random_number_generator,
                     getSplitMiddle(),
                     getMaxObs(),
@@ -966,6 +981,7 @@ void forestry::reconstructTrees(
     std::unique_ptr< std::vector< std::vector<int> >  > & naDefaultDirections,
     std::unique_ptr< std::vector< std::vector<size_t> >  > & averagingSampleIndex,
     std::unique_ptr< std::vector< std::vector<size_t> >  > & splittingSampleIndex,
+    std::unique_ptr< std::vector< std::vector<size_t> >  > & excludedSampleIndex,
     std::unique_ptr< std::vector< std::vector<double> >  > & weights){
 
     #if DOPARELLEL
@@ -1023,6 +1039,7 @@ void forestry::reconstructTrees(
                 (*naDefaultDirections)[i],
                 (*averagingSampleIndex)[i],
                 (*splittingSampleIndex)[i],
+                (*excludedSampleIndex)[i],
                 (*weights)[i]);
 
 #if DOPARELLEL
