@@ -31,9 +31,7 @@ include_directories("include" ${Armadillo_LIBRARY_DIR})
 add_subdirectory(pybind11)
 #pybind11_add_module(extension src/main.cpp include/forestry.cpp include/forestryTree.cpp include/dataFrame.cpp include/sampling.cpp)
 
-###
 add_library(extension MODULE src/main.cpp include/forestry.cpp include/forestryTree.cpp include/dataFrame.cpp include/treeSplitting.cpp include/RFNode.cpp include/sampling.cpp)
-#add_library(extension MODULE src/main.cpp)
 
 target_link_libraries(extension PRIVATE pybind11::module pybind11::lto pybind11::windows_extras PUBLIC ${ARMADILLO_LIBRARY})
 
@@ -51,4 +49,4 @@ target_include_directories(extension PUBLIC ${ARMADILLO_INCLUDE_DIR})
 
 # EXAMPLE_VERSION_INFO is defined by setup.py and passed into the C++ code as a
 # define (VERSION_INFO) here.
-target_compile_definitions(extension PRIVATE VERSION_INFO=${EXAMPLE_VERSION_INFO})
+target_compile_definitions(extension PRIVATE VERSION_INFO=${VERSION_INFO})
