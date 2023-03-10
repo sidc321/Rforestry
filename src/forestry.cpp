@@ -232,9 +232,9 @@ void forestry::addTrees(size_t ntree) {
           std::vector<size_t> avgIndicesFill;
           std::vector<size_t> excludedIndicesFill;
 
-          std::vector< std::vector<size_t> >* customSplittingSet = getTrainingData()->getCustomSplittingSet();
+          std::vector< std::vector<size_t> >* customSplittingSample = getTrainingData()->getCustomSplittingSample();
 
-          if (customSplittingSet->size() == 0) {
+          if (customSplittingSample->size() == 0) {
             // Generate the splitting and averaging indices for the ith tree
             generate_sample_indices(
               splitIndicesFill,
@@ -254,9 +254,9 @@ void forestry::addTrees(size_t ntree) {
               getTrainingData()
             );
           } else {
-            splitIndicesFill = customSplittingSet->at(i);
-            avgIndicesFill = getTrainingData()->getCustomSplittingSet()->at(i);
-            excludedIndicesFill = getTrainingData()->getCustomExcludedSet()->at(i);
+            splitIndicesFill = customSplittingSample->at(i);
+            avgIndicesFill = getTrainingData()->getCustomAveragingSample()->at(i);
+            excludedIndicesFill = getTrainingData()->getCustomExcludedSample()->at(i);
           }
 
           // Set the smart pointers to use the returned indices

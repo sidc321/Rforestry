@@ -25,9 +25,9 @@ public:
     std::unique_ptr< std::vector<double> > deepFeatureWeights,
     std::unique_ptr< std::vector<size_t> > deepFeatureWeightsVariables,
     std::unique_ptr< std::vector<double> > observationWeights,
-    std::unique_ptr< std::vector< std::vector<size_t> > > customSplittingSet,
-    std::unique_ptr< std::vector< std::vector<size_t> > > customAveragingSet,
-    std::unique_ptr< std::vector< std::vector<size_t> > > customExcludedSet,
+    std::unique_ptr< std::vector< std::vector<size_t> > > customSplittingSample,
+    std::unique_ptr< std::vector< std::vector<size_t> > > customAveragingSample,
+    std::unique_ptr< std::vector< std::vector<size_t> > > customExcludedSample,
     std::shared_ptr< std::vector<int> > monotonicConstraints,
     std::unique_ptr< std::vector<size_t> > groupMemberships,
     bool monotoneAvg
@@ -96,16 +96,16 @@ public:
     return _observationWeights.get();
   }
 
-  std::vector< std::vector<size_t> >* getCustomSplittingSet() {
-    return _customSplittingSet.get();
+  std::vector< std::vector<size_t> >* getCustomSplittingSample() {
+    return _customSplittingSample.get();
   }
 
-  std::vector< std::vector<size_t> >* getCustomAveragingSet() {
-    return _customAveragingSet.get();
+  std::vector< std::vector<size_t> >* getCustomAveragingSample() {
+    return _customAveragingSample.get();
   }
 
-  std::vector< std::vector<size_t> >* getCustomExcludedSet() {
-    return _customExcludedSet.get();
+  std::vector< std::vector<size_t> >* getCustomExcludedSample() {
+    return _customExcludedSample.get();
   }
 
   std::vector<int>* getMonotonicConstraints() {
@@ -144,9 +144,9 @@ private:
   std::unique_ptr< std::vector<double> > _deepFeatureWeights;
   std::unique_ptr< std::vector<size_t> > _deepFeatureWeightsVariables;
   std::unique_ptr< std::vector<double> > _observationWeights;
-  std::unique_ptr< std::vector< std::vector<size_t> > > _customSplittingSet;
-  std::unique_ptr< std::vector< std::vector<size_t> > > _customAveragingSet;
-  std::unique_ptr< std::vector< std::vector<size_t> > > _customExcludedSet;
+  std::unique_ptr< std::vector< std::vector<size_t> > > _customSplittingSample;
+  std::unique_ptr< std::vector< std::vector<size_t> > > _customAveragingSample;
+  std::unique_ptr< std::vector< std::vector<size_t> > > _customExcludedSample;
   std::shared_ptr< std::vector<int> > _monotonicConstraints;
   std::unique_ptr< std::vector<size_t> > _groupMemberships;
   bool _monotoneAvg;
