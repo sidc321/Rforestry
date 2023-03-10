@@ -2,10 +2,7 @@
 #include "pybind11/stl.h"
 #include "pybind11/numpy.h"
 
-#include "utils.cpp"
-#include "api.cpp"
-
-// fail
+#include "api.h"
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
