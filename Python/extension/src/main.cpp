@@ -10,8 +10,7 @@
 namespace py = pybind11;
 
 template <typename T>
-void copy_vector_to_numpy_array(std::vector<T> &vector, py::array_t<T> &np)
-{
+void copy_vector_to_numpy_array(std::vector<T> &vector, py::array_t<T> &np) {
     py::buffer_info np_info = np.request();
     T *np_ptr = static_cast<T *>(np_info.ptr);
 
@@ -22,8 +21,7 @@ void copy_vector_to_numpy_array(std::vector<T> &vector, py::array_t<T> &np)
 }
 
 template <typename T>
-std::vector<T> create_vector_from_numpy_array(py::array_t<T> np)
-{
+std::vector<T> create_vector_from_numpy_array(py::array_t<T> np) {
     py::buffer_info np_info = np.request();
     T *np_ptr = static_cast<T *>(np_info.ptr);
 
@@ -35,8 +33,7 @@ std::vector<T> create_vector_from_numpy_array(py::array_t<T> np)
     return vector;
 }
 
-py::array_t<double> create_numpy_array(unsigned int size)
-{
+py::array_t<double> create_numpy_array(unsigned int size) {
     return py::array(py::buffer_info(
         nullptr,                              /* Pointer to data (nullptr -> ask NumPy to allocate!) */
         sizeof(double),                       /* Size of one item */
@@ -65,8 +62,8 @@ void *get_data_wrapper(
     bool monotoneAvg,
     size_t numRows,
     size_t numColumns,
-    unsigned int seed)
-{
+    unsigned int seed
+) {
     return get_data(
         static_cast<double *>(arr.request().ptr),
         static_cast<size_t *>(categorical_vars.request().ptr),
@@ -85,84 +82,87 @@ void *get_data_wrapper(
         monotoneAvg,
         numRows,
         numColumns,
-        seed);
+        seed
+    );
 }
 
-void *reconstructree_wrapper(void *data_ptr,
-                                size_t ntree,
-                                bool replace,
-                                size_t sampSize,
-                                double splitRatio,
-                                bool OOBhonest,
-                                bool doubleBootstrap,
-                                size_t mtry,
-                                size_t minNodeSizeSpt,
-                                size_t minNodeSizeAvg,
-                                size_t minNodeSizeToSplitSpt,
-                                size_t minNodeSizeToSplitAvg,
-                                double minSplitGain,
-                                size_t maxDepth,
-                                size_t interactionDepth,
-                                unsigned int seed,
-                                size_t nthread,
-                                bool verbose,
-                                bool splitMiddle,
-                                size_t maxObs,
-                                size_t minTreesPerFold,
-                                size_t foldSize,
-                                bool hasNas,
-                                bool naDirection,
-                                bool linear,
-                                double overfitPenalty,
-                                bool doubleTree,
-                                py::array_t<size_t> tree_counts,
-                                py::array_t<double> thresholds,
-                                py::array_t<int> features,
-                                py::array_t<int> na_left_count,
-                                py::array_t<int> na_right_count,
-                                py::array_t<int> na_default_directions,
-                                py::array_t<size_t> split_idx,
-                                py::array_t<size_t> average_idx,
-                                py::array_t<double> predict_weights,
-                                py::array_t<unsigned int> tree_seeds)
-{
+void *reconstructree_wrapper(
+    void *data_ptr,
+    size_t ntree,
+    bool replace,
+    size_t sampSize,
+    double splitRatio,
+    bool OOBhonest,
+    bool doubleBootstrap,
+    size_t mtry,
+    size_t minNodeSizeSpt,
+    size_t minNodeSizeAvg,
+    size_t minNodeSizeToSplitSpt,
+    size_t minNodeSizeToSplitAvg,
+    double minSplitGain,
+    size_t maxDepth,
+    size_t interactionDepth,
+    unsigned int seed,
+    size_t nthread,
+    bool verbose,
+    bool splitMiddle,
+    size_t maxObs,
+    size_t minTreesPerFold,
+    size_t foldSize,
+    bool hasNas,
+    bool naDirection,
+    bool linear,
+    double overfitPenalty,
+    bool doubleTree,
+    py::array_t<size_t> tree_counts,
+    py::array_t<double> thresholds,
+    py::array_t<int> features,
+    py::array_t<int> na_left_count,
+    py::array_t<int> na_right_count,
+    py::array_t<int> na_default_directions,
+    py::array_t<size_t> split_idx,
+    py::array_t<size_t> average_idx,
+    py::array_t<double> predict_weights,
+    py::array_t<unsigned int> tree_seeds
+) {
     return reconstructree(data_ptr,
-                             ntree,
-                             replace,
-                             sampSize,
-                             splitRatio,
-                             OOBhonest,
-                             doubleBootstrap,
-                             mtry,
-                             minNodeSizeSpt,
-                             minNodeSizeAvg,
-                             minNodeSizeToSplitSpt,
-                             minNodeSizeToSplitAvg,
-                             minSplitGain,
-                             maxDepth,
-                             interactionDepth,
-                             seed,
-                             nthread,
-                             verbose,
-                             splitMiddle,
-                             maxObs,
-                             minTreesPerFold,
-                             foldSize,
-                             hasNas,
-                             naDirection,
-                             linear,
-                             overfitPenalty,
-                             doubleTree,
-                             static_cast<size_t *>(tree_counts.request().ptr),
-                             static_cast<double *>(thresholds.request().ptr),
-                             static_cast<int *>(features.request().ptr),
-                             static_cast<int *>(na_left_count.request().ptr),
-                             static_cast<int *>(na_right_count.request().ptr),
-                             static_cast<int *>(na_default_directions.request().ptr),
-                             static_cast<size_t *>(split_idx.request().ptr),
-                             static_cast<size_t *>(average_idx.request().ptr),
-                             static_cast<double *>(predict_weights.request().ptr),
-                             static_cast<unsigned int *>(tree_seeds.request().ptr));
+        ntree,
+        replace,
+        sampSize,
+        splitRatio,
+        OOBhonest,
+        doubleBootstrap,
+        mtry,
+        minNodeSizeSpt,
+        minNodeSizeAvg,
+        minNodeSizeToSplitSpt,
+        minNodeSizeToSplitAvg,
+        minSplitGain,
+        maxDepth,
+        interactionDepth,
+        seed,
+        nthread,
+        verbose,
+        splitMiddle,
+        maxObs,
+        minTreesPerFold,
+        foldSize,
+        hasNas,
+        naDirection,
+        linear,
+        overfitPenalty,
+        doubleTree,
+        static_cast<size_t *>(tree_counts.request().ptr),
+        static_cast<double *>(thresholds.request().ptr),
+        static_cast<int *>(features.request().ptr),
+        static_cast<int *>(na_left_count.request().ptr),
+        static_cast<int *>(na_right_count.request().ptr),
+        static_cast<int *>(na_default_directions.request().ptr),
+        static_cast<size_t *>(split_idx.request().ptr),
+        static_cast<size_t *>(average_idx.request().ptr),
+        static_cast<double *>(predict_weights.request().ptr),
+        static_cast<unsigned int *>(tree_seeds.request().ptr)
+    );
 }
 
 py::tuple predictOOB_forest_wrapper(
@@ -176,8 +176,8 @@ py::tuple predictOOB_forest_wrapper(
     bool use_training_idx,
     unsigned int n_preds,
     unsigned int n_weight_matrix,
-    py::array_t<size_t> training_idx)
-{
+    py::array_t<size_t> training_idx
+) {
     py::array_t<double> predictions = create_numpy_array(n_preds);
     std::vector<double> predictions_vector(n_preds);
 
@@ -188,7 +188,6 @@ py::tuple predictOOB_forest_wrapper(
     if (use_training_idx) {
        training_idx_vector = create_vector_from_numpy_array(training_idx);
     }
-
 
     predictOOB_forest(
         forest_pt,
@@ -209,8 +208,7 @@ py::tuple predictOOB_forest_wrapper(
     return py::make_tuple(predictions, weight_matrix);
 }
 
-void show_array(double *ptr, size_t size)
-{
+void show_array(double *ptr, size_t size) {
     for (int i = 0; i < size; i++)
     {
         std::cout << *ptr << " ";
@@ -220,8 +218,7 @@ void show_array(double *ptr, size_t size)
               << '\n';
 }
 
-void show_array(std::vector<double> array)
-{
+void show_array(std::vector<double> array) {
     for (auto i : array)
     {
         std::cout << i << ' ';
@@ -244,8 +241,8 @@ py::tuple predict_forest_wrapper(
     size_t num_test_rows,
     unsigned int n_preds,
     unsigned int n_weight_matrix,
-    unsigned int n_coefficients)
-{
+    unsigned int n_coefficients
+) {
     py::array_t<double> predictions = create_numpy_array(n_preds);
     std::vector<double> predictions_vector(n_preds);
 
@@ -269,7 +266,8 @@ py::tuple predict_forest_wrapper(
         num_test_rows,
         predictions_vector,
         weight_matrix_vector,
-        coefficients_vector);
+        coefficients_vector
+    );
 
     copy_vector_to_numpy_array(predictions_vector, predictions);
     copy_vector_to_numpy_array(weight_matrix_vector, weight_matrix);
@@ -278,39 +276,39 @@ py::tuple predict_forest_wrapper(
     return py::make_tuple(predictions, weight_matrix, coefficients);
 }
 
-void fill_tree_info_wrapper(void *forest_ptr,
-                            int tree_idx,
-                            py::array_t<double> treeInfo,
-                            py::array_t<int> split_info,
-                            py::array_t<int> av_info)
-{
+void fill_tree_info_wrapper(
+    void *forest_ptr,
+    int tree_idx,
+    py::array_t<double> treeInfo,
+    py::array_t<int> split_info,
+    py::array_t<int> av_info
+) {
     auto treeInfo_vector = create_vector_from_numpy_array(treeInfo);
     auto split_info_vector = create_vector_from_numpy_array(split_info);
     auto av_info_vector = create_vector_from_numpy_array(av_info);
 
-    fill_tree_info(forest_ptr,
-                   tree_idx,
-                   treeInfo_vector,
-                   split_info_vector,
-                   av_info_vector);
+    fill_tree_info(
+        forest_ptr,
+        tree_idx,
+        treeInfo_vector,
+        split_info_vector,
+        av_info_vector
+    );
 
     copy_vector_to_numpy_array(treeInfo_vector, treeInfo);
     copy_vector_to_numpy_array(split_info_vector, split_info);
     copy_vector_to_numpy_array(av_info_vector, av_info);
 }
 
-size_t getTreeNodeCount(void *forest_ptr,
-                        int tree_idx){
+size_t getTreeNodeCount(void *forest_ptr, int tree_idx) {
     return get_node_count(forest_ptr,tree_idx);
 }
 
-size_t getTreeSplitNodeCount(void *forest_ptr,
-                             int tree_idx){
+size_t getTreeSplitNodeCount(void *forest_ptr, int tree_idx) {
     return get_split_node_count(forest_ptr,tree_idx);
 }
 
-size_t getTreeLeafNodeCount(void *forest_ptr,
-                            int tree_idx){
+size_t getTreeLeafNodeCount(void *forest_ptr, int tree_idx) {
     return get_leaf_node_count(forest_ptr,tree_idx);
 }
 
