@@ -147,9 +147,24 @@ training_data_checker <- function(x,
 
   observationWeights <- observationWeights/sum(observationWeights)
 
-  # if (length(customSplittingSample) != ntree) {
-  #   stop('TODO: - other checks such as length and - overlapping sets, - turn off other sampling features, not compatible with doubleTree')
-  # }
+  if (length(customSplittingSample) != 0 || length(customAveragingSample) != 0) {
+    if (length(customSplittingSample) != ntree || length(customAveragingSample) != ntree) {
+      stop("Custom splitting and averaging samples must be provided for every tree")
+    }
+    for (i in 1:ntree) {
+      if (any(customAveragingSample[i] %in% customSplittingSample[i])) {
+        stop("Splitting and averaging samples must be disjoint")
+      }
+    }
+    if (length(customExcludedSample) != 0) {
+      for (i in 1:ntree) {
+        if (any(customExcludedSample[i]
+                %in% union(customAveragingSample[i], customSplittingSample[i]))) {
+          stop("Excluded samples must be disjoint from splitting and averaging samples")
+        }
+      }
+    }
+  }
 
   # if the splitratio is 1, then we use adaptive rf and avgSampleSize is the
   # equal to the total sampsize
@@ -443,9 +458,16 @@ setClass(
 #' @param observationWeights Denotes the weights for each training observation
 #'   that determine how likely the observation is to be selected in each bootstrap sample.
 #'   This option is not allowed when sampling is done without replacement.
-#' @param customSplittingSample ...
-#' @param customAveragingSample ...
-#' @param customExcludedSample ...
+#' @param customSplittingSample List of vectors for user-defined splitting observations per tree. The vector at
+#'   index i contains all the sampled splitting observations, with replacement allowed, for tree i.
+#'   This feature overrides other sampling parameters and must be set in conjunction with customAveragingSample.
+#' @param customAveragingSample List of vectors for user-defined averaging observations per tree. The vector at
+#'   index i contains all the sampled splitting observations, with replacement allowed, for tree i.
+#'   This feature overrides other sampling parameters and must be set in conjunction with customSplittingSample.
+#' @param customExcludedSample List of vectors for user-defined excluded observations per tree. The vector at
+#'   index i contains all the excluded observations for tree i. An observation is considered excluded if it does
+#'   not appear in the splitting or averaging set and has been explicitly withheld from being sampled for a tree.
+#'   Excluded observations are not considered out-of-bag.
 #' @param splitratio Proportion of the training data used as the splitting dataset.
 #'   It is a ratio between 0 and 1. If the ratio is 1 (the default), then the splitting
 #'   set uses the entire data, as does the averaging set---i.e., the standard Breiman RF setup.
