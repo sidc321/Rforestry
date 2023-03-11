@@ -1,7 +1,7 @@
 #ifndef FORESTRYCPP_UTILS_H
 #define FORESTRYCPP_UTILS_H
 
-#include "DataFrame.h"
+#include "dataFrame.h"
 #include <vector>
 #include <string>
 #include <iostream>
@@ -57,6 +57,11 @@ struct tree_info {
   std::vector< int > naDefaultDirection;
   // Contains the default direction for all NA values per split node if
   // naDirection == TRUE, -1 indicates left and 1 indicates right
+  size_t numLeafNodes;
+  size_t numSplitNodes;
+  // To help the Python API allocate space for the tree info,
+  // store the number of split nodes and number of leaf nodes
+  // (this allows us to calculate the size of each of the above vectors)
   unsigned int seed;
   // The seed that the tree was given (this uniquely identifies each tree
   // so that we can tell them apart. Very important for prediction when

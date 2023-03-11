@@ -2,7 +2,6 @@
 #include "utils.h"
 #include "treeSplitting.h"
 #include <armadillo>
-#include <RcppThread.h>
 #include <cmath>
 #include <set>
 #include <map>
@@ -135,6 +134,8 @@ forestryTree::forestryTree(
   this->_root = std::move(root);
   /* Node ID's are 1 indexed from left to right */
   this->_nodeCount = 0;
+  this->_splitNodeCount = 0;
+  this->_leafNodeCount = 0;
   this->_seed = seed;
 
   /* If ridge splitting, initialize RSS components to pass to leaves*/
@@ -265,7 +266,7 @@ void forestryTree::predict(
                        seed,
                        nodesizeStrictAvg,
                        OOBIndex);
-  //Rcpp::Rcout << "Seed is" << seed << ".\n";
+  //std::cout << "Seed is" << seed << ".\n";
 }
 
 
@@ -609,7 +610,8 @@ void forestryTree::recursivePartition(
       (depth == getMaxDepth())) {
 
     size_t node_id;
-    assignNodeId(node_id);
+    assignNodeId(node_id,
+                 false);
     (*rootNode).setLeafNode(
         averagingSampleIndex->size(),
         splittingSampleIndex->size(),
@@ -701,8 +703,8 @@ void forestryTree::recursivePartition(
   if (std::isnan(bestSplitValue)) {
 
     size_t node_id;
-    assignNodeId(node_id);
-
+    assignNodeId(node_id,
+                 false);
     (*rootNode).setLeafNode(
         averagingSampleIndex->size(),
         splittingSampleIndex->size(),
@@ -759,7 +761,8 @@ void forestryTree::recursivePartition(
     if ((lAvgSize*rAvgSize*lSplSize*rSplSize == 0)) {
 
       size_t node_id;
-      assignNodeId(node_id);
+      assignNodeId(node_id,
+                   false);
       (*rootNode).setLeafNode(
           averagingSampleIndex->size(),
           splittingSampleIndex->size(),
@@ -791,7 +794,8 @@ void forestryTree::recursivePartition(
       if (rSquaredDifference < getMinSplitGain()) {
 
         size_t node_id;
-        assignNodeId(node_id);
+        assignNodeId(node_id,
+                     false);
         (*rootNode).setLeafNode(
             averagingSampleIndex->size(),
             splittingSampleIndex->size(),
@@ -909,6 +913,9 @@ void forestryTree::recursivePartition(
       naDirection
     );
 
+    size_t node_id;
+    assignNodeId(node_id,
+                 true);
     (*rootNode).setSplitNode(
         bestSplitFeature,
         bestSplitValue,
@@ -916,6 +923,7 @@ void forestryTree::recursivePartition(
         std::move(rightChild),
         naLeftCount,
         naRightCount,
+        node_id,
         bestSplitNaDir
     );
   }
@@ -1537,6 +1545,10 @@ std::unique_ptr<tree_info> forestryTree::getTreeInfo(
   // set seed of the current tree
   treeInfo->seed = getSeed();
 
+  // Set the number of split nodes and leaf nodes
+  treeInfo->numSplitNodes = getSplitNodeCount();
+  treeInfo->numLeafNodes = getLeafNodeCount();
+
   return treeInfo;
 }
 
@@ -1650,8 +1662,8 @@ void forestryTree::recursive_reconstruction(
     weights->erase(weights->begin());
 
     size_t node_id;
-    std::vector<double> wts;
-    assignNodeId(node_id);
+    assignNodeId(node_id,
+                 false);
     (*currentNode).setLeafNode(
         nAve,
         nSpl,
@@ -1689,6 +1701,9 @@ void forestryTree::recursive_reconstruction(
       weights
     );
 
+    size_t node_id;
+    assignNodeId(node_id,
+                 true);
     (*currentNode).setSplitNode(
         (size_t) var_id - 1,
         split_val,
@@ -1696,6 +1711,7 @@ void forestryTree::recursive_reconstruction(
         std::move(rightChild),
         naLeftCount,
         naRightCount,
+        node_id,
         naDefaultDirection
     );
 

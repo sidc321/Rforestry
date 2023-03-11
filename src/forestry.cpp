@@ -1,9 +1,7 @@
-// [[Rcpp::depends(RcppThread)]]
 // [[Rcpp::plugins(cpp11)]]
 #include "forestry.h"
 #include "utils.h"
 #include "sampling.h"
-#include <RcppThread.h>
 #include <random>
 #include <algorithm>
 #include <thread>
@@ -178,7 +176,7 @@ void forestry::addTrees(size_t ntree) {
   //    std::cout << "Fold " << i << std::endl;
   //    print_vector(foldMemberships[i]);
   //}
-  //RcppThread::Rcout << newEndingTreeNumber;
+  //std::cout << newEndingTreeNumber;
 
   unsigned int nthreadToUse = (unsigned int) getNthread();
   if (nthreadToUse == 0) {
@@ -189,11 +187,8 @@ void forestry::addTrees(size_t ntree) {
 
   #if DOPARELLEL
   if (isVerbose()) {
-    RcppThread::Rcout << "Training parallel using " << nthreadToUse << " threads"
+    std::cout << "Training parallel using " << nthreadToUse << " threads"
               << std::endl;
-    R_FlushConsole();
-    R_ProcessEvents();
-    R_CheckUserInterrupt();
   }
 
   std::vector<std::thread> allThreads(nthreadToUse);
@@ -435,7 +430,7 @@ std::unique_ptr< std::vector<double> > forestry::predict(
     std::cout << "Prediction parallel using " << nthreadToUse << " threads"
               << std::endl;
     if (use_weights) {
-      RcppThread::Rcout << "Weights given by" << std::endl;
+      std::cout << "Weights given by" << std::endl;
       print_vector(*tree_weights);
     }
   }
@@ -737,7 +732,7 @@ std::vector<double> forestry::predictOOB(
                   }
 
                 } catch (std::runtime_error &err) {
-                  // Rcpp::Rcerr << err.what() << std::endl;
+                  // std::cerr << err.what() << std::endl;
                 }
               }
     #if DOPARELLEL
@@ -894,7 +889,7 @@ void forestry::calculateOOBError(
             }
 
           } catch (std::runtime_error &err) {
-            // Rcpp::Rcerr << err.what() << std::endl;
+            // std::cerr << err.what() << std::endl;
           }
         }
   #if DOPARELLEL
@@ -940,7 +935,7 @@ void forestry::fillinTreeInfo(
 ){
 
   if (isVerbose()) {
-    RcppThread::Rcout << "Starting to translate Forest to R.\n";
+    std::cout << "Starting to translate Forest to R.\n";
   }
 
   for(int i=0; i<((int) getNtree()); i++ ) {
@@ -954,17 +949,16 @@ void forestry::fillinTreeInfo(
 
     } catch (std::runtime_error &err) {
       std::cerr << err.what() << std::endl;
-
     }
 
     if (isVerbose()) {
-      RcppThread::Rcout << "Done with tree " << i + 1 << " of " << getNtree() << ".\n";
+      std::cout << "Done with tree " << i + 1 << " of " << getNtree() << ".\n";
     }
 
   }
 
   if (isVerbose()) {
-    RcppThread::Rcout << "Translation done.\n";
+    std::cout << "Translation done.\n";
   }
 
   return ;
@@ -993,7 +987,7 @@ void forestry::reconstructTrees(
     }
 
     if (isVerbose()) {
-      RcppThread::Rcout << "Reconstructing in parallel using " << nthreadToUse << " threads"
+      std::cout << "Reconstructing in parallel using " << nthreadToUse << " threads"
                         << std::endl;
     }
 

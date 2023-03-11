@@ -38,7 +38,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="index.html">Rforestry</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.9.0.159</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.9.1.1</span>
       </span>
     </div>
 
@@ -72,7 +72,7 @@
 <div class="section level2">
 <h2 id="rforestry-random-forests-linear-trees-and-gradient-boosting-for-inference-and-interpretability">Rforestry: Random Forests, Linear Trees, and Gradient Boosting for Inference and Interpretability<a class="anchor" aria-label="anchor" href="#rforestry-random-forests-linear-trees-and-gradient-boosting-for-inference-and-interpretability"></a>
 </h2>
-<p>Sören Künzel, Theo Saarinen, Simon Walter, Edward Liu, Allen Tang, Jasjeet Sekhon</p>
+<p>Sören Künzel, Theo Saarinen, Simon Walter, Sam Antonyan, Edward Liu, Allen Tang, Jasjeet Sekhon</p>
 </div>
 <div class="section level2">
 <h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
@@ -90,10 +90,13 @@
 </ol>
 </div>
 <div class="section level2">
-<h2 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a>
+<h2 id="python-package-usage">Python Package Usage<a class="anchor" aria-label="anchor" href="#python-package-usage"></a>
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/forestry-labs/Rforestry" class="external-link">Rforestry</a></span><span class="op">)</span></span>
+<span></span>
+<span></span>
+<span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">292315</span><span class="op">)</span></span>
 <span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">iris</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
@@ -106,108 +109,23 @@
 <span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">rf</span>, <span class="va">x_test</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="ridge-random-forest">Ridge Random Forest<a class="anchor" aria-label="anchor" href="#ridge-random-forest"></a>
+<h2 id="r-package-usage">R Package Usage<a class="anchor" aria-label="anchor" href="#r-package-usage"></a>
 </h2>
-<p>A fast implementation of random forests using ridge penalized splitting and ridge regression for predictions. In order to use this version of random forests, set the <code>linear</code> option to <code>TRUE</code>.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/forestry-labs/Rforestry" class="external-link">Rforestry</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">49</span><span class="op">)</span></span>
-<span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100</span><span class="op">)</span></span>
-<span><span class="va">a</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span></span>
-<span><span class="va">b</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span></span>
-<span><span class="va">c</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span></span>
-<span><span class="va">y</span> <span class="op">&lt;-</span> <span class="fl">4</span><span class="op">*</span><span class="va">a</span> <span class="op">+</span> <span class="fl">5.5</span><span class="op">*</span><span class="va">b</span> <span class="op">-</span> <span class="fl">.78</span><span class="op">*</span><span class="va">c</span></span>
-<span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span><span class="va">a</span>,<span class="va">b</span>,<span class="va">c</span><span class="op">)</span></span>
-<span><span class="va">forest</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/forestry.html">forestry</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span>, linear <span class="op">=</span> <span class="cn">TRUE</span>, nthread <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">forest</span>, <span class="va">x</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="monotonic-constraints">Monotonic Constraints<a class="anchor" aria-label="anchor" href="#monotonic-constraints"></a>
-</h2>
-<p>The parameter <code>monotonicConstraints</code> strictly enforces monotonicity of partition averages when evaluating potential splits on the indicated features. This parameter can be used to specify both monotone increasing and monotone decreasing constraints.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/forestry-labs/Rforestry" class="external-link">Rforestry</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">49</span><span class="op">)</span></span>
-<span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">150</span><span class="op">)</span><span class="op">+</span><span class="fl">5</span></span>
-<span><span class="va">y</span> <span class="op">&lt;-</span> <span class="fl">.15</span><span class="op">*</span><span class="va">x</span> <span class="op">+</span> <span class="fl">.5</span><span class="op">*</span><span class="fu"><a href="https://rdrr.io/r/base/Trig.html" class="external-link">sin</a></span><span class="op">(</span><span class="fl">3</span><span class="op">*</span><span class="va">x</span><span class="op">)</span></span>
-<span><span class="va">data_train</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>x1 <span class="op">=</span> <span class="va">x</span>, x2 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">150</span><span class="op">)</span><span class="op">+</span><span class="fl">5</span>, y <span class="op">=</span> <span class="va">y</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">150</span>, sd <span class="op">=</span> <span class="fl">.4</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">monotone_rf</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/forestry.html">forestry</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">data_train</span><span class="op">[</span>,<span class="op">-</span><span class="fl">3</span><span class="op">]</span>,</span>
-<span>                        y <span class="op">=</span> <span class="va">data_train</span><span class="op">$</span><span class="va">y</span>,</span>
-<span>                        monotonicConstraints <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>,<span class="fl">1</span><span class="op">)</span>,</span>
-<span>                        nodesizeStrictSpl <span class="op">=</span> <span class="fl">5</span>,</span>
-<span>                        nthread <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>                        ntree <span class="op">=</span> <span class="fl">25</span><span class="op">)</span></span>
-<span>                        </span>
-<span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">monotone_rf</span>, newdata <span class="op">=</span> <span class="va">data_train</span><span class="op">[</span>,<span class="op">-</span><span class="fl">3</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="oob-predictions">OOB Predictions<a class="anchor" aria-label="anchor" href="#oob-predictions"></a>
-</h2>
-<p>We can return the predictions for the training data set using only the trees in which each observation was out-of-bag (OOB). Note that when there are few trees, or a high proportion of the observations sampled, there may be some observations which are not out-of-bag for any trees. The predictions for these are returned as <code>NaN</code>.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/forestry-labs/Rforestry" class="external-link">Rforestry</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Train a forest</span></span>
-<span><span class="va">rf</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/forestry.html">forestry</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">iris</span><span class="op">[</span>,<span class="op">-</span><span class="fl">1</span><span class="op">]</span>,</span>
-<span>               y <span class="op">=</span> <span class="va">iris</span><span class="op">[</span>,<span class="fl">1</span><span class="op">]</span>,</span>
-<span>               nthread <span class="op">=</span> <span class="fl">2</span>,</span>
-<span>               ntree <span class="op">=</span> <span class="fl">500</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">292315</span><span class="op">)</span></span>
+<span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">iris</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="va">x_train</span> <span class="op">&lt;-</span> <span class="va">iris</span><span class="op">[</span><span class="op">-</span><span class="va">test_idx</span>, <span class="op">-</span><span class="fl">1</span><span class="op">]</span></span>
+<span><span class="va">y_train</span> <span class="op">&lt;-</span> <span class="va">iris</span><span class="op">[</span><span class="op">-</span><span class="va">test_idx</span>, <span class="fl">1</span><span class="op">]</span></span>
+<span><span class="va">x_test</span> <span class="op">&lt;-</span> <span class="va">iris</span><span class="op">[</span><span class="va">test_idx</span>, <span class="op">-</span><span class="fl">1</span><span class="op">]</span></span>
 <span></span>
-<span><span class="co"># Get the OOB predictions for the training set</span></span>
-<span><span class="va">oob_preds</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">rf</span>, aggregation <span class="op">=</span> <span class="st">"oob"</span><span class="op">)</span></span>
+<span><span class="va">rf</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/forestry.html">forestry</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">x_train</span>, y <span class="op">=</span> <span class="va">y_train</span>, nthread <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># This should be equal to the OOB error</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="op">(</span><span class="va">oob_preds</span> <span class="op">-</span>  <span class="va">iris</span><span class="op">[</span>,<span class="fl">1</span><span class="op">]</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/getOOB-forestry.html">getOOB</a></span><span class="op">(</span><span class="va">rf</span><span class="op">)</span></span></code></pre></div>
-<p>If OOB predictions are going to be used, it is advised that one use OOB honesty during training (OOBhonest=true). In this version of honesty, the OOB observations for each tree are used as the honest (averaging) set. OOB honesty also changes how predictions are constructed. When predicting for observations that are out-of-sample (using Predict(…, aggregation = “average”)), all the trees in the forest are used to construct predictions. When predicting for an observation that was in-sample (using predict(…, aggregation = “oob”)), only the trees for which that observation was not in the averaging set are used to construct the prediction for that observation. aggregation=“oob” (out-of-bag) ensures that the outcome value for an observation is never used to construct predictions for a given observation even when it is in sample. This property does not hold in standard honesty, which relies on an asymptotic subsampling argument. OOB honesty, when used in combination with aggregation=“oob” at the prediction stage, cannot overfit IID data, at either the training or prediction stage. The outputs of such models are also more stable and more easily interpretable. One can observe this if one queries the model using interpretation tools such as ALEs, PDPs, LIME, etc.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/forestry-labs/Rforestry" class="external-link">Rforestry</a></span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Train a forest</span></span>
-<span><span class="va">rf</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/forestry.html">forestry</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">iris</span><span class="op">[</span>,<span class="op">-</span><span class="fl">1</span><span class="op">]</span>,</span>
-<span>               y <span class="op">=</span> <span class="va">iris</span><span class="op">[</span>,<span class="fl">1</span><span class="op">]</span>,</span>
-<span>               nthread <span class="op">=</span> <span class="fl">2</span>,</span>
-<span>               ntree <span class="op">=</span> <span class="fl">500</span>,</span>
-<span>               OOBhonest<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Get the OOB predictions for the training set</span></span>
-<span><span class="va">oob_preds</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">rf</span>, aggregation <span class="op">=</span> <span class="st">"oob"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># This should be equal to the OOB error</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="op">(</span><span class="va">oob_preds</span> <span class="op">-</span>  <span class="va">iris</span><span class="op">[</span>,<span class="fl">1</span><span class="op">]</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/getOOB-forestry.html">getOOB</a></span><span class="op">(</span><span class="va">rf</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="saving--loading-a-model">Saving + Loading a model<a class="anchor" aria-label="anchor" href="#saving--loading-a-model"></a>
-</h2>
-<p>In order to save a trained model, we include two functions in order to save and load a model we have built. The following code shows how to use saveForestry and loadForestry to save and load a forestry model.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/forestry-labs/Rforestry" class="external-link">Rforestry</a></span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Train a forest</span></span>
-<span><span class="va">forest</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/forestry.html">forestry</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">iris</span><span class="op">[</span>,<span class="op">-</span><span class="fl">1</span><span class="op">]</span>,</span>
-<span>                   y <span class="op">=</span> <span class="va">iris</span><span class="op">[</span>,<span class="fl">1</span><span class="op">]</span>,</span>
-<span>                   nthread <span class="op">=</span> <span class="fl">2</span>,</span>
-<span>                   ntree <span class="op">=</span> <span class="fl">500</span>,</span>
-<span>                   OOBhonest<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span></span>
-<span>               </span>
-<span><span class="co"># Get predictions before save the forest</span></span>
-<span><span class="va">y_pred_before</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">forest</span>, <span class="va">iris</span><span class="op">[</span>,<span class="op">-</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Save the forest</span></span>
-<span><span class="fu"><a href="reference/saveForestry-forestry.html">saveForestry</a></span><span class="op">(</span><span class="va">forest</span>, filename <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="st">"forest.Rda"</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Delete the forest</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/rm.html" class="external-link">rm</a></span><span class="op">(</span><span class="va">forest</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Load the forest</span></span>
-<span><span class="va">forest_after</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/loadForestry-forestry.html">loadForestry</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="st">"forest.Rda"</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Predict after loading the forest</span></span>
-<span><span class="va">y_pred_after</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">forest_after</span>, <span class="va">iris</span><span class="op">[</span>,<span class="op">-</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">rf</span>, <span class="va">x_test</span><span class="op">)</span></span></code></pre></div>
 </div>
 
   </div>
@@ -243,6 +161,7 @@
 <li>Sören Künzel <br><small class="roles"> Author </small>  </li>
 <li>Theo Saarinen <br><small class="roles"> Author, maintainer </small>  </li>
 <li>Simon Walter <br><small class="roles"> Author </small>  </li>
+<li>Sam Antonyan <br><small class="roles"> Author </small>  </li>
 <li>Edward Liu <br><small class="roles"> Author </small>  </li>
 <li>Allen Tang <br><small class="roles"> Author </small>  </li>
 <li>Jasjeet Sekhon <br><small class="roles"> Author </small>  </li>
@@ -262,7 +181,7 @@
 
       <footer><div class="copyright">
   <p></p>
-<p>Developed by Sören Künzel, Theo Saarinen, Simon Walter, Edward Liu, Allen Tang, Jasjeet Sekhon.</p>
+<p>Developed by Sören Künzel, Theo Saarinen, Simon Walter, Sam Antonyan, Edward Liu, Allen Tang, Jasjeet Sekhon.</p>
 </div>
 
 <div class="pkgdown">

@@ -1,10 +1,9 @@
 #include "treeSplitting.h"
 #include "forestryTree.h"
-#include "DataFrame.h"
+#include "dataFrame.h"
 #include "RFNode.h"
 #include "utils.h"
 #include <armadillo>
-#include <RcppThread.h>
 #include <cmath>
 #include <set>
 #include <map>
@@ -961,7 +960,7 @@ void findBestSplitRidge(
         currentSplitValue = epsilon_lower;
       }
     }
-    //Rcpp::Rcout << currentRSS << " " << currentSplitValue << "\n";
+    //std::cout << currentRSS << " " << currentSplitValue << "\n";
     updateBestSplit(
       bestSplitLossAll,
       bestSplitValueAll,

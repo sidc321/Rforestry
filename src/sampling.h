@@ -1,7 +1,7 @@
 #ifndef SRC_SAMPLING_H
 #define SRC_SAMPLING_H
 
-#include "DataFrame.h"
+#include "dataFrame.h"
 #include <vector>
 #include <string>
 #include <iostream>

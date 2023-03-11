@@ -2,7 +2,7 @@
 #define HTECPP_RF_H
 
 #include "forestryTree.h"
-#include "DataFrame.h"
+#include "dataFrame.h"
 #include "forestryTree.h"
 #include "utils.h"
 #include <armadillo>
@@ -221,6 +221,10 @@ public:
       std::vector< std::vector<double> >* xNew,
       arma::Mat<double>* weightMatrix
   );
+
+  void setDataframe(DataFrame * newDf) {
+      _trainingData = std::move(newDf);
+  }
 
 private:
   DataFrame* _trainingData;

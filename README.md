@@ -16,6 +16,10 @@ and Linear Random Forests, with an emphasis on inference and interpretability.
 4. The latest development version can then be installed using
 `devtools::install_github("forestry-labs/Rforestry")`. For Windows users, you'll need to skip 64-bit compilation `devtools::install_github("forestry-labs/Rforestry", INSTALL_opts = c('--no-multiarch'))` due to an outstanding gcc issue.
 
+## Documentation
+
+For full documentation, see the documentation site [here](https://forestry-labs.github.io/Rforestry/).
+
 
 ## Usage
 
@@ -32,27 +36,6 @@ rf <- forestry(x = x_train, y = y_train, nthread = 2)
 
 predict(rf, x_test)
 ```
-
-## Ridge Random Forest
-
-A fast implementation of random forests using ridge penalized splitting and 
-ridge regression for predictions. 
-In order to use this version of random forests, set the `linear` option to `TRUE`.
-
-```R
-library(Rforestry)
-
-set.seed(49)
-n <- c(100)
-a <- rnorm(n)
-b <- rnorm(n)
-c <- rnorm(n)
-y <- 4*a + 5.5*b - .78*c
-x <- data.frame(a,b,c)
-forest <- forestry(x, y, linear = TRUE, nthread = 2)
-predict(forest, x)
-```
-
 ## Monotonic Constraints
 
 The parameter `monotonicConstraints` strictly enforces monotonicity of partition 
@@ -170,6 +153,27 @@ forest_after <- loadForestry(file.path("forest.Rda"))
 # Predict after loading the forest
 y_pred_after <- predict(forest_after, iris[,-1])
 
+```
+
+
+## Ridge Random Forest
+
+A fast implementation of random forests using ridge penalized splitting and 
+ridge regression for predictions. 
+In order to use this version of random forests, set the `linear` option to `TRUE`.
+
+```R
+library(Rforestry)
+
+set.seed(49)
+n <- c(100)
+a <- rnorm(n)
+b <- rnorm(n)
+c <- rnorm(n)
+y <- 4*a + 5.5*b - .78*c
+x <- data.frame(a,b,c)
+forest <- forestry(x, y, linear = TRUE, nthread = 2)
+predict(forest, x)
 ```
 
 

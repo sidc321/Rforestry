@@ -7,7 +7,7 @@
 #include <string>
 #include <memory>
 #include <algorithm>
-#include "DataFrame.h"
+#include "dataFrame.h"
 #include "utils.h"
 
 class RFNode {
@@ -30,6 +30,7 @@ public:
       std::unique_ptr< RFNode > rightChild,
       size_t naLeftCount,
       size_t naRightCount,
+      size_t nodeId,
       int naDefaultDirection
   );
 
