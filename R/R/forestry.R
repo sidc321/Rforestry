@@ -163,11 +163,11 @@ training_data_checker <- function(x,
       # Check that provided samples are integers in the correct range
       if (any(customSplittingSample[[i]] <= 0) || any(customSplittingSample[[i]] %% 1 != 0) ||
           any(customSplittingSample[[i]] > nrow(x))) {
-        stop("customSplittingSample must contain positive integers in the range [1,nrow(x)].")
+        stop("customSplittingSample must contain positive integers up to the number of observations in x")
       }
       if (any(customAveragingSample[[i]] <= 0) || any(customAveragingSample[[i]] %% 1 != 0) ||
           any(customAveragingSample[[i]] > nrow(x))) {
-        stop("customAveragingSample must contain positive integers in the range [1,nrow(x)].")
+        stop("customAveragingSample must contain positive integers up to the number of observations in x")
       }
     }
     # Check excluded sample is disjoint from both splitting and averaging set
@@ -180,7 +180,7 @@ training_data_checker <- function(x,
         # Check that included samples are integers in the correct range
         if (any(customExcludedSample[[i]] <= 0) || any(customExcludedSample[[i]] %% 1 != 0) ||
             any(customExcludedSample[[i]] > nrow(x))) {
-          stop("customExcludedSample must contain positive integers in the range [1,nrow(x)].")
+          stop("customExcludedSample must contain positive integers up to the number of observations in x")
         }
       }
     }
