@@ -29,6 +29,9 @@ training_data_checker(
   featureWeights,
   deepFeatureWeights,
   observationWeights,
+  customSplittingSample,
+  customAveragingSample,
+  customExcludedSample,
   linear,
   scale,
   hasNas,
@@ -136,6 +139,19 @@ resampling schemes, and provide predictions consistent with the Out-of-Group set
 \item{observationWeights}{Denotes the weights for each training observation
 that determine how likely the observation is to be selected in each bootstrap sample.
 This option is not allowed when sampling is done without replacement.}
+
+\item{customSplittingSample}{List of vectors for user-defined splitting observations per tree. The vector at
+index i contains all the sampled splitting observations, with replacement allowed, for tree i.
+This feature overrides other sampling parameters and must be set in conjunction with customAveragingSample.}
+
+\item{customAveragingSample}{List of vectors for user-defined averaging observations per tree. The vector at
+index i contains all the sampled splitting observations, with replacement allowed, for tree i.
+This feature overrides other sampling parameters and must be set in conjunction with customSplittingSample.}
+
+\item{customExcludedSample}{List of vectors for user-defined excluded observations per tree. The vector at
+index i contains all the excluded observations for tree i. An observation is considered excluded if it does
+not appear in the splitting or averaging set and has been explicitly withheld from being sampled for a tree.
+Excluded observations are not considered out-of-bag.}
 
 \item{linear}{Indicator that enables Ridge penalized splits and linear aggregation
 functions in the leaf nodes. This is recommended for data with linear outcomes.
