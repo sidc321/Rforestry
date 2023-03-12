@@ -148,34 +148,52 @@ training_data_checker <- function(x,
   observationWeights <- observationWeights/sum(observationWeights)
 
   if (length(customSplittingSample) != 0 || length(customAveragingSample) != 0) {
+
     # Check that we provide splitting samples as well as averaging samples
     if (length(customSplittingSample) != ntree || length(customAveragingSample) != ntree) {
       stop("Custom splitting and averaging samples must be provided for every tree")
     }
 
-    # Check that provided samples are integers in the correct range
-    if (any(customSplittingSample) <= 0 || any(customSplittingSample) %% 1 != 0 ||
-        any(customSplittingSample) > nrow(x)) {
-      stop("customSplittingSample must contain positive integers in the range [1,nrow(x)].")
-    }
-    if (any(customAveragingSample) <= 0 || any(customAveragingSample) %% 1 != 0 ||
-        any(customAveragingSample) > nrow(x)) {
-      stop("customAveragingSample must contain positive integers in the range [1,nrow(x)].")
-    }
-
     # Check that averaging sample and splitting samples are disjoint
     for (i in 1:ntree) {
-      if (any(customAveragingSample[i] %in% customSplittingSample[i])) {
+      if (any(customAveragingSample[[i]] %in% customSplittingSample[[i]])) {
         stop("Splitting and averaging samples must be disjoint")
+      }
+
+      # Check that provided samples are integers in the correct range
+      if (any(customSplittingSample[[i]] <= 0) || any(customSplittingSample[[i]] %% 1 != 0) ||
+          any(customSplittingSample[[i]] > nrow(x))) {
+        stop("customSplittingSample must contain positive integers in the range [1,nrow(x)].")
+      }
+      if (any(customAveragingSample[[i]] <= 0) || any(customAveragingSample[[i]] %% 1 != 0) ||
+          any(customAveragingSample[[i]] > nrow(x))) {
+        stop("customAveragingSample must contain positive integers in the range [1,nrow(x)].")
       }
     }
     # Check excluded sample is disjoint from both splitting and averaging set
     if (length(customExcludedSample) != 0) {
       for (i in 1:ntree) {
-        if (any(customExcludedSample[i]
-                %in% union(customAveragingSample[i], customSplittingSample[i]))) {
+        if (any(customExcludedSample[[i]]
+                %in% union(customAveragingSample[[i]], customSplittingSample[[i]]))) {
           stop("Excluded samples must be disjoint from splitting and averaging samples")
         }
+        # Check that included samples are integers in the correct range
+        if (any(customExcludedSample[[i]] <= 0) || any(customExcludedSample[[i]] %% 1 != 0) ||
+            any(customExcludedSample[[i]] > nrow(x))) {
+          stop("customExcludedSample must contain positive integers in the range [1,nrow(x)].")
+        }
+      }
+    }
+
+    # Now since we will pass to C++ the indices need to be 0-indexed, so convert
+    # from R 1-indexed indices to 0 indexed indices
+    for (i in 1:ntree) {
+      customAveragingSample[[i]] = customAveragingSample[[i]]-1
+      customSplittingSample[[i]] = customSplittingSample[[i]]-1
+    }
+    if (length(customExcludedSample) != 0) {
+      for (i in 1:ntree) {
+        customExcludedSample[[i]] = customExcludedSample[[i]]-1
       }
     }
   }
@@ -481,7 +499,9 @@ setClass(
 #' @param customExcludedSample List of vectors for user-defined excluded observations per tree. The vector at
 #'   index i contains the indices of the excluded observations for tree i. An observation is considered excluded if it does
 #'   not appear in the splitting or averaging set and has been explicitly withheld from being sampled for a tree.
-#'   Excluded observations are not considered out-of-bag.
+#'   Excluded observations are not considered out-of-bag, so when we call predict with aggregation = "oob",
+#'   when we predict for an observation, we will only use the predictions of trees in which the
+#'   observation was in the customSplittingSample (and neither in the customAveragingSample nor the customExcludedSample).
 #' @param splitratio Proportion of the training data used as the splitting dataset.
 #'   It is a ratio between 0 and 1. If the ratio is 1 (the default), then the splitting
 #'   set uses the entire data, as does the averaging set---i.e., the standard Breiman RF setup.

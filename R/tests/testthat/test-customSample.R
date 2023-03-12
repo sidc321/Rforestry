@@ -3,7 +3,7 @@ test_that("Tests custom sampling parameters", {
 
   x <- iris[, -1]
   y <- iris[, 1]
-  splittingSample = list(1:5, 6:10, 11:15)
+  splittingSample = list(1:5, 6:10, 146:149)
   averagingSample = list(16:20, 21:25, 26:30)
   excludedSample = list(31:35, 36:40, 41:45)
 
@@ -15,13 +15,17 @@ test_that("Tests custom sampling parameters", {
                  ntree = 3)
   rf <- make_savable(rf)
 
-  # for (i in rf@ntree) {
-  #   expect_equal(rf@R_forest[[i]]$splittingSampleIndex,
-  #                splittingSample[[i]])
-  #   expect_equal(rf@R_forest[[i]]$averagingSampleIndex,
-  #                averagingSample[[i]])
-  #   expect_equal(rf@R_forest[[i]]$excludedSampleIndex,
-  #                excludedSample[[i]])
-  # }
+  # Trees in the forest are currently stored sorted by seed in descending order
+  # So when checking indices tree i gets (ntree - i + 1) samples
+  # This is kind of messy so we probably want to change it
+
+  for (i in rf@ntree) {
+    expect_equal(rf@R_forest[[i]]$splittingSampleIndex,
+                 splittingSample[[4-i]])
+    expect_equal(rf@R_forest[[i]]$averagingSampleIndex,
+                 averagingSample[[4-i]])
+    expect_equal(rf@R_forest[[i]]$excludedSampleIndex,
+                 excludedSample[[4-i]])
+  }
 
 })

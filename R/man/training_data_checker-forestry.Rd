@@ -151,7 +151,9 @@ This feature overrides other sampling parameters and must be set in conjunction 
 \item{customExcludedSample}{List of vectors for user-defined excluded observations per tree. The vector at
 index i contains the indices of the excluded observations for tree i. An observation is considered excluded if it does
 not appear in the splitting or averaging set and has been explicitly withheld from being sampled for a tree.
-Excluded observations are not considered out-of-bag.}
+Excluded observations are not considered out-of-bag, so when we call predict with aggregation = "oob",
+when we predict for an observation, we will only use the predictions of trees in which the
+observation was in the customSplittingSample (and neither in the customAveragingSample nor the customExcludedSample).}
 
 \item{linear}{Indicator that enables Ridge penalized splits and linear aggregation
 functions in the leaf nodes. This is recommended for data with linear outcomes.
