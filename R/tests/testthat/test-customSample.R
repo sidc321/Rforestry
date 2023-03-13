@@ -152,10 +152,16 @@ test_that("Tests custom sampling parameters", {
                  ntree = 1)
 
   p <- predict(rf, newdata = x, aggregation = "oob", weightMatrix = TRUE)
-  # TODO: It seems like when we do predic with aggregation = "oob", it is not using honest predictions
-  p$treeCounts[1:10]
-  p$treeCounts[11:20]
-  p$treeCounts[21:30]
+  expect_equal(all.equal(p$treeCounts[1:10], rep(1,10)), TRUE)
+  expect_equal(all.equal(p$treeCounts[11:20], rep(0,10)), TRUE)
+  expect_equal(all.equal(p$treeCounts[21:30], rep(0,10)), TRUE)
+
+
+
+  p <- predict(rf, newdata = x, aggregation = "doubleOOB", weightMatrix = TRUE)
+  expect_equal(all.equal(p$treeCounts[1:10], rep(0,10)), TRUE)
+  expect_equal(all.equal(p$treeCounts[11:20], rep(0,10)), TRUE)
+  expect_equal(all.equal(p$treeCounts[21:30], rep(0,10)), TRUE)
 
 
 

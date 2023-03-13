@@ -1332,6 +1332,143 @@ void forestryTree::getOOBhonestIndex(
   }
 }
 
+void forestryTree::getOOBIndexExcluded(
+        std::vector<size_t> &outputOOBIndex,
+        std::vector<size_t> &allIndex
+){
+
+    size_t nRows = allIndex.size();
+
+    // equivalent to setDiff(1:nrow(x), union(excludedIndices, averagingIndices))
+    // Generate union of excluded and averaging dataset
+    std::sort(
+            getExcludedIndex()->begin(),
+            getExcludedIndex()->end()
+    );
+    std::sort(
+            getAveragingIndex()->begin(),
+            getAveragingIndex()->end()
+    );
+
+    std::sort(
+            allIndex.begin(),
+            allIndex.end()
+    );
+
+    std::vector<size_t> allSampledIndex(
+            getExcludedIndex()->size() + getAveragingIndex()->size()
+    );
+
+    std::vector<size_t>::iterator it= std::set_union(
+            getExcludedIndex()->begin(),
+            getExcludedIndex()->end(),
+            getAveragingIndex()->begin(),
+            getAveragingIndex()->end(),
+            allSampledIndex.begin()
+    );
+
+    allSampledIndex.resize((unsigned long) (it - allSampledIndex.begin()));
+
+    // OOB index is the set difference between sampled index and all index
+    std::vector<size_t> OOBIndex(nRows);
+
+    it = std::set_difference (
+            allIndex.begin(),
+            allIndex.end(),
+            allSampledIndex.begin(),
+            allSampledIndex.end(),
+            OOBIndex.begin()
+    );
+    OOBIndex.resize((unsigned long) (it - OOBIndex.begin()));
+
+    for (
+            std::vector<size_t>::iterator it_ = OOBIndex.begin();
+            it_ != OOBIndex.end();
+            ++it_
+            ) {
+        outputOOBIndex.push_back(*it_);
+    }
+}
+
+void forestryTree::getDoubleOOBIndexExcluded(
+        std::vector<size_t> &outputOOBIndex,
+        std::vector<size_t> &allIndex
+){
+
+    size_t nRows = allIndex.size();
+
+
+    // equivalent to setDiff(1:nrow(x), union(splittingIndices, averagingIndices, excludedIndices))
+    // Generate union of splitting and averaging and excluded dataset
+    std::sort(
+            getSplittingIndex()->begin(),
+            getSplittingIndex()->end()
+    );
+    std::sort(
+            getAveragingIndex()->begin(),
+            getAveragingIndex()->end()
+    );
+
+    std::sort(
+            getExcludedIndex()->begin(),
+            getExcludedIndex()->end()
+    );
+
+    std::sort(
+            allIndex.begin(),
+            allIndex.end()
+    );
+
+    std::vector<size_t> splitAvgUnion(
+            getSplittingIndex()->size() + getAveragingIndex()->size()
+    );
+
+    std::vector<size_t>::iterator it = std::set_union(
+            getSplittingIndex()->begin(),
+            getSplittingIndex()->end(),
+            getAveragingIndex()->begin(),
+            getAveragingIndex()->end(),
+            splitAvgUnion.begin()
+    );
+
+    splitAvgUnion.resize((unsigned long) (it - splitAvgUnion.begin()));
+
+    std::vector<size_t> allSampledIndex(
+            getSplittingIndex()->size() + getAveragingIndex()->size() + getExcludedIndex()->size()
+    );
+    std::vector<size_t>::iterator itAll = std::set_union(
+            splitAvgUnion.begin(),
+            splitAvgUnion.end(),
+            getExcludedIndex()->begin(),
+            getExcludedIndex()->end(),
+            allSampledIndex.begin()
+    );
+
+    allSampledIndex.resize((unsigned long) (itAll - allSampledIndex.begin()));
+
+    // OOB index is the set difference between sampled index and all index
+    std::vector<size_t> OOBIndex(nRows);
+
+    it = std::set_difference (
+            allIndex.begin(),
+            allIndex.end(),
+            allSampledIndex.begin(),
+            allSampledIndex.end(),
+            OOBIndex.begin()
+    );
+    OOBIndex.resize((unsigned long) (it - OOBIndex.begin()));
+
+    for (
+            std::vector<size_t>::iterator it_ = OOBIndex.begin();
+            it_ != OOBIndex.end();
+            ++it_
+            ) {
+        outputOOBIndex.push_back(*it_);
+    }
+}
+
+
+
 void forestryTree::getOOGIndex(
     std::vector<size_t> &outputOOBIndex,
     std::vector<size_t> groupMemberships,
@@ -1428,7 +1565,16 @@ void forestryTree::getOOBPrediction(
     }
 
   } else {
-    if (OOBhonest) {
+
+    if (getExcludedIndex()->size() > 0) {
+        if (doubleOOB) {
+            // Get setDiff(1:nrow(x), union(splittingIndices, averagingIndices, excludedIndices))
+            getDoubleOOBIndexExcluded(OOBIndex, allIndex);
+        } else {
+            // Get setDiff(1:nrow(x), averagingIndices, excludedIndices)
+            getOOBIndexExcluded(OOBIndex, allIndex);
+        }
+    } else if (OOBhonest) {
       if (doubleOOB) {
         // Get setDiff(1:nrow(x), union(splittingIndices, averagingIndices))
         getDoubleOOBIndex(OOBIndex, allIndex);

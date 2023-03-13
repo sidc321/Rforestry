@@ -178,6 +178,16 @@ public:
       std::vector<size_t> &allIndex
   );
 
+  void getDoubleOOBIndexExcluded(
+          std::vector<size_t> &outputOOBIndex,
+          std::vector<size_t> &allIndex
+  );
+
+  void getOOBIndexExcluded(
+          std::vector<size_t> &outputOOBIndex,
+          std::vector<size_t> &allIndex
+  );
+
   void getOOGIndex(
       std::vector<size_t> &outputOOBIndex,
       std::vector<size_t> groupMemberships,
