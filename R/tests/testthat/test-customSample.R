@@ -32,7 +32,7 @@ test_that("Tests custom sampling parameters", {
                    customAveragingSample = averagingSample,
                    customExcludedSample = excludedSample,
                    ntree = 3),
-    "customExcludedSample must be smaller than or equal in length to ntree"
+    "customExcludedSample must be equal in length to ntree"
   )
 
 
@@ -190,12 +190,12 @@ test_that("Tests custom sampling parameters", {
 
 
 
-  context("Test when we give only some trees excluded samples")
+  context("Test when we provide an empty excluded sample for a tree")
   rf <- forestry(x = x,
                  y = y,
                  customSplittingSample = list(1:10,11:20),
                  customAveragingSample = list(11:20,21:30),
-                 customExcludedSample = list(21:30),
+                 customExcludedSample = list(21:30, c()),
                  ntree = 2)
 
   p <- predict(rf, newdata = x, aggregation = "oob", weightMatrix = TRUE)

@@ -177,11 +177,11 @@ training_data_checker <- function(x,
     }
     # Check excluded sample is disjoint from both splitting and averaging set
     if (length(customExcludedSample) != 0) {
-      if (length(customExcludedSample) > ntree) {
-        stop("customExcludedSample must be smaller than or equal in length to ntree")
+      if (length(customExcludedSample) != ntree) {
+        stop("customExcludedSample must be equal in length to ntree")
       }
 
-      for (i in 1:length(customExcludedSample)) {
+      for (i in 1:ntree) {
         if (any(customExcludedSample[[i]]
                 %in% union(customAveragingSample[[i]], customSplittingSample[[i]]))) {
           stop("Excluded samples must be disjoint from splitting and averaging samples")
