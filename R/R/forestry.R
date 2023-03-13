@@ -150,6 +150,10 @@ training_data_checker <- function(x,
 
   if (length(customSplittingSample) != 0 || length(customAveragingSample) != 0) {
 
+    if (splitratio !=1 || OOBhonest) {
+      warning("When customSplittingSample is set, other honesty implementations are ignored")
+    }
+
     # Check that we provide splitting samples as well as averaging samples
     if (length(customSplittingSample) != ntree || length(customAveragingSample) != ntree) {
       stop("Custom splitting and averaging samples must be provided for every tree")

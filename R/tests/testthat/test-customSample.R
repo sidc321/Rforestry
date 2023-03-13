@@ -79,6 +79,31 @@ test_that("Tests custom sampling parameters", {
     "Splitting and averaging samples must be disjoint"
   )
 
+  context("Check warning when combined with other honesty parameters")
+
+  expect_warning(
+    rf <- forestry(x = x,
+                   y = y,
+                   customSplittingSample = list(1:10),
+                   customAveragingSample = list(11:20),
+                   customExcludedSample = list(21:30),
+                   OOBhonest = TRUE,
+                   ntree = 1),
+    "When customSplittingSample is set, other honesty implementations are ignored"
+  )
+
+  expect_warning(
+    rf <- forestry(x = x,
+                   y = y,
+                   customSplittingSample = list(1:10),
+                   customAveragingSample = list(11:20),
+                   customExcludedSample = list(21:30),
+                   splitratio = .5,
+                   ntree = 1),
+    "When customSplittingSample is set, other honesty implementations are ignored"
+  )
+
+
 
 
   context('Tests that splitting, averaging, and excluded samples are set correctly')
@@ -164,5 +189,24 @@ test_that("Tests custom sampling parameters", {
   expect_equal(all.equal(p$treeCounts[21:30], rep(0,10)), TRUE)
 
 
+
+  context("Test when we give no excluded samples")
+  rf <- forestry(x = x,
+                 y = y,
+                 customSplittingSample = list(1:10),
+                 customAveragingSample = list(11:20),
+                 ntree = 1)
+
+  p <- predict(rf, newdata = x, aggregation = "oob", weightMatrix = TRUE)
+  expect_equal(all.equal(p$treeCounts[1:10], rep(1,10)), TRUE)
+  expect_equal(all.equal(p$treeCounts[11:20], rep(0,10)), TRUE)
+  expect_equal(all.equal(p$treeCounts[21:30], rep(0,10)), TRUE)
+
+
+
+  p <- predict(rf, newdata = x, aggregation = "doubleOOB", weightMatrix = TRUE)
+  expect_equal(all.equal(p$treeCounts[1:10], rep(0,10)), TRUE)
+  expect_equal(all.equal(p$treeCounts[11:20], rep(0,10)), TRUE)
+  expect_equal(all.equal(p$treeCounts[21:30], rep(0,10)), TRUE)
 
 })
