@@ -123,6 +123,17 @@ extern "C" {
             obs_weights->at(i) = observation_weights[i];
         }
     
+        std::unique_ptr< std::vector< std::vector<size_t> > > customSplittingSample(
+                new std::vector< std::vector<size_t> >
+        );
+
+        std::unique_ptr< std::vector< std::vector<size_t> > > customAveragingSample(
+                new std::vector< std::vector<size_t> >
+        );
+
+        std::unique_ptr< std::vector< std::vector<size_t> > > customExcludedSample(
+                new std::vector< std::vector<size_t> >
+        );
     
         // monotone constraints for each column
         std::unique_ptr< std::vector<int> > monotone_constraints (
@@ -156,6 +167,9 @@ extern "C" {
             std::move(deep_feature_weights),
             std::move(deep_feature_weight_vars),
             std::move(obs_weights),
+            std::move(customSplittingSample),
+            std::move(customAveragingSample),
+            std::move(customExcludedSample),
             std::move(monotone_constraints),
             std::move(groups),
             monotoneAvg
@@ -581,6 +595,9 @@ extern "C" {
         std::unique_ptr< std::vector< std::vector<size_t> > > splittingSampleIndex(
             new std::vector< std::vector<size_t> >
         );
+        std::unique_ptr< std::vector< std::vector<size_t> > > excludedSampleIndex(
+            new std::vector< std::vector<size_t> >
+        );
         std::unique_ptr< std::vector<unsigned int> > treeSeeds(
             new std::vector<unsigned int>
         );
@@ -654,6 +671,7 @@ extern "C" {
             naDefaultDirections,
             averagingSampleIndex,
             splittingSampleIndex,
+            excludedSampleIndex,
             predictWeights
         );
     
