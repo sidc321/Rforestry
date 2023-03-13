@@ -20,6 +20,7 @@ training_data_checker(
   interactionDepth,
   splitratio,
   OOBhonest,
+  doubleBootstrap,
   nthread,
   middleSplit,
   doubleTree,
@@ -104,6 +105,12 @@ observations. In order to get the predictions of only the trees in which each
 observation fell into this doubleOOB set, one can run predict(... , aggregation = "doubleOOB").
 In order to not do this second bootstrap sample, the doubleBootstrap flag can
 be set to FALSE.}
+
+\item{doubleBootstrap}{The doubleBootstrap flag provides the option to resample
+with replacement from the out-of-bag observations set for each tree to construct
+the averaging set when using OOBhonest. If this is FALSE, the out-of-bag observations
+are used as the averaging set. By default this option is TRUE when running OOBhonest = TRUE.
+This option increases diversity across trees.}
 
 \item{nthread}{Number of threads to train and predict the forest. The default
 number is 0 which represents using all cores.}

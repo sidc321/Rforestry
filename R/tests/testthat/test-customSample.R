@@ -107,4 +107,56 @@ test_that("Tests custom sampling parameters", {
                  excludedSample[[4-i]])
   }
 
+
+  context("Try sampling outside of the forest construction")
+  set.seed(13123)
+  splittingSample = list()
+  averagingSample = list()
+  excludedSample= list()
+
+
+  for (count in 1:10) {
+    sampled_splitting <- sample(1:65, replace = TRUE, size = 65)
+    sampled_avging <- sample(66:125, replace = TRUE, size = 60)
+    sampled_exclude <- sample(126:150, replace = TRUE, size = 25)
+    splittingSample[[count]] = sampled_splitting
+    averagingSample[[count]] = sampled_avging
+    excludedSample[[count]] = sampled_exclude
+  }
+
+  rf <- forestry(x = x,
+                 y = y,
+                 customSplittingSample = splittingSample,
+                 customAveragingSample = averagingSample,
+                 customExcludedSample = excludedSample,
+                 ntree = 10)
+  rf <- make_savable(rf)
+
+  for (i in rf@ntree) {
+    expect_equal(rf@R_forest[[i]]$splittingSampleIndex,
+                 splittingSample[[11-i]])
+    expect_equal(rf@R_forest[[i]]$averagingSampleIndex,
+                 averagingSample[[11-i]])
+    expect_equal(rf@R_forest[[i]]$excludedSampleIndex,
+                 excludedSample[[11-i]])
+  }
+
+
+  context("Test the excluded set is working as expected with predict")
+
+  rf <- forestry(x = x,
+                 y = y,
+                 customSplittingSample = list(1:10),
+                 customAveragingSample = list(11:20),
+                 customExcludedSample = list(21:30),
+                 ntree = 1)
+
+  p <- predict(rf, newdata = x, aggregation = "oob", weightMatrix = TRUE)
+  # TODO: It seems like when we do predic with aggregation = "oob", it is not using honest predictions
+  p$treeCounts[1:10]
+  p$treeCounts[11:20]
+  p$treeCounts[21:30]
+
+
+
 })

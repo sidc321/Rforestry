@@ -29,6 +29,7 @@ training_data_checker <- function(x,
                                   interactionDepth,
                                   splitratio,
                                   OOBhonest,
+                                  doubleBootstrap,
                                   nthread,
                                   middleSplit,
                                   doubleTree,
@@ -185,6 +186,11 @@ training_data_checker <- function(x,
       }
     }
 
+    # Set OOB honest flag to be TRUE so we have proper prediction handling
+    if (!OOBhonest) {
+      OOBhonest=TRUE
+    }
+
     # Now since we will pass to C++ the indices need to be 0-indexed, so convert
     # from R 1-indexed indices to 0 indexed indices
     for (i in 1:ntree) {
@@ -195,6 +201,7 @@ training_data_checker <- function(x,
       for (i in 1:ntree) {
         customExcludedSample[[i]] = customExcludedSample[[i]]-1
       }
+      doubleBootstrap = TRUE
     }
   }
 
@@ -319,6 +326,7 @@ training_data_checker <- function(x,
               "interactionDepth" = interactionDepth,
               "splitratio" = splitratio,
               "OOBhonest" = OOBhonest,
+              "doubleBootstrap" = doubleBootstrap,
               "nthread" = nthread,
               "groups" = groups,
               "middleSplit" = middleSplit,
@@ -775,6 +783,7 @@ forestry <- function(x,
       interactionDepth = interactionDepth,
       splitratio = splitratio,
       OOBhonest = OOBhonest,
+      doubleBootstrap = doubleBootstrap,
       nthread = nthread,
       middleSplit = middleSplit,
       doubleTree = doubleTree,
