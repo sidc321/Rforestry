@@ -251,7 +251,10 @@ void forestry::addTrees(size_t ntree) {
           } else {
             splitIndicesFill = customSplittingSample->at(i);
             avgIndicesFill = getTrainingData()->getCustomAveragingSample()->at(i);
-            excludedIndicesFill = getTrainingData()->getCustomExcludedSample()->at(i);
+            // Only get the excluded indices if this tree has those set
+            if (i < getTrainingData()->getCustomExcludedSample()->size()) {
+                excludedIndicesFill = getTrainingData()->getCustomExcludedSample()->at(i);
+            }
           }
 
           // Set the smart pointers to use the returned indices

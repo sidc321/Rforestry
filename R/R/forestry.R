@@ -177,7 +177,11 @@ training_data_checker <- function(x,
     }
     # Check excluded sample is disjoint from both splitting and averaging set
     if (length(customExcludedSample) != 0) {
-      for (i in 1:ntree) {
+      if (length(customExcludedSample) > ntree) {
+        stop("customExcludedSample must be smaller than or equal in length to ntree")
+      }
+
+      for (i in 1:length(customExcludedSample)) {
         if (any(customExcludedSample[[i]]
                 %in% union(customAveragingSample[[i]], customSplittingSample[[i]]))) {
           stop("Excluded samples must be disjoint from splitting and averaging samples")
@@ -191,9 +195,8 @@ training_data_checker <- function(x,
     }
 
     # Set OOB honest flag to be TRUE so we have proper prediction handling
-    if (!OOBhonest) {
-      OOBhonest=TRUE
-    }
+    OOBhonest=TRUE
+    doubleBootstrap = TRUE
 
     # Now since we will pass to C++ the indices need to be 0-indexed, so convert
     # from R 1-indexed indices to 0 indexed indices
@@ -202,10 +205,9 @@ training_data_checker <- function(x,
       customSplittingSample[[i]] = customSplittingSample[[i]]-1
     }
     if (length(customExcludedSample) != 0) {
-      for (i in 1:ntree) {
+      for (i in 1:length(customExcludedSample)) {
         customExcludedSample[[i]] = customExcludedSample[[i]]-1
       }
-      doubleBootstrap = TRUE
     }
   }
 
@@ -508,12 +510,16 @@ setClass(
 #' @param customAveragingSample List of vectors for user-defined averaging observations per tree. The vector at
 #'   index i contains the indices of the sampled splitting observations, with replacement allowed, for tree i.
 #'   This feature overrides other sampling parameters and must be set in conjunction with customSplittingSample.
-#' @param customExcludedSample List of vectors for user-defined excluded observations per tree. The vector at
+#' @param customExcludedSample An optional list of vectors for user-defined excluded observations per tree. The vector at
 #'   index i contains the indices of the excluded observations for tree i. An observation is considered excluded if it does
 #'   not appear in the splitting or averaging set and has been explicitly withheld from being sampled for a tree.
 #'   Excluded observations are not considered out-of-bag, so when we call predict with aggregation = "oob",
 #'   when we predict for an observation, we will only use the predictions of trees in which the
 #'   observation was in the customSplittingSample (and neither in the customAveragingSample nor the customExcludedSample).
+#'   This parameter is optional even when customSplittingSample and customAveragingSample are set.
+#'   It is also optional at the tree level, so can have fewer than ntree entries. When given fewer than
+#'   ntree entries, for example K, the entries will be applied to the first K trees in the forest and
+#'   the remaining trees will have no excludedSamples.
 #' @param splitratio Proportion of the training data used as the splitting dataset.
 #'   It is a ratio between 0 and 1. If the ratio is 1 (the default), then the splitting
 #'   set uses the entire data, as does the averaging set---i.e., the standard Breiman RF setup.

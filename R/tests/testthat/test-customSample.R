@@ -32,7 +32,7 @@ test_that("Tests custom sampling parameters", {
                    customAveragingSample = averagingSample,
                    customExcludedSample = excludedSample,
                    ntree = 3),
-    "customExcludedSample must contain positive integers up to the number of observations in x"
+    "customExcludedSample must be smaller than or equal in length to ntree"
   )
 
 
@@ -190,23 +190,51 @@ test_that("Tests custom sampling parameters", {
 
 
 
-  context("Test when we give no excluded samples")
+  context("Test when we give only some trees excluded samples")
   rf <- forestry(x = x,
                  y = y,
-                 customSplittingSample = list(1:10),
-                 customAveragingSample = list(11:20),
-                 ntree = 1)
+                 customSplittingSample = list(1:10,11:20),
+                 customAveragingSample = list(11:20,21:30),
+                 customExcludedSample = list(21:30),
+                 ntree = 2)
 
   p <- predict(rf, newdata = x, aggregation = "oob", weightMatrix = TRUE)
-  expect_equal(all.equal(p$treeCounts[1:10], rep(1,10)), TRUE)
-  expect_equal(all.equal(p$treeCounts[11:20], rep(0,10)), TRUE)
+  expect_equal(all.equal(p$treeCounts[1:10], rep(2,10)), TRUE)
+  expect_equal(all.equal(p$treeCounts[11:20], rep(1,10)), TRUE)
   expect_equal(all.equal(p$treeCounts[21:30], rep(0,10)), TRUE)
 
 
 
   p <- predict(rf, newdata = x, aggregation = "doubleOOB", weightMatrix = TRUE)
-  expect_equal(all.equal(p$treeCounts[1:10], rep(0,10)), TRUE)
+  expect_equal(all.equal(p$treeCounts[1:10], rep(1,10)), TRUE)
   expect_equal(all.equal(p$treeCounts[11:20], rep(0,10)), TRUE)
   expect_equal(all.equal(p$treeCounts[21:30], rep(0,10)), TRUE)
+
+  rf <- make_savable(rf)
+  expect_equal(length(rf@R_forest[[1]]$excludedSampleIndex), 0)
+  expect_equal(length(rf@R_forest[[2]]$excludedSampleIndex), 10)
+  expect_equal(all.equal(rf@R_forest[[2]]$excludedSampleIndex, c(21:30)), TRUE)
+
+  context("Test when we no trees excluded samples")
+  rf <- forestry(x = x,
+                 y = y,
+                 customSplittingSample = list(1:10,11:20),
+                 customAveragingSample = list(11:20,21:30),
+                 ntree = 2)
+
+  p <- predict(rf, newdata = x, aggregation = "oob", weightMatrix = TRUE)
+  expect_equal(all.equal(p$treeCounts[1:10], rep(2,10)), TRUE)
+  expect_equal(all.equal(p$treeCounts[11:20], rep(1,10)), TRUE)
+  expect_equal(all.equal(p$treeCounts[21:30], rep(1,10)), TRUE)
+
+
+
+  p <- predict(rf, newdata = x, aggregation = "doubleOOB", weightMatrix = TRUE)
+  expect_equal(all.equal(p$treeCounts[1:10], rep(1,10)), TRUE)
+  expect_equal(all.equal(p$treeCounts[11:20], rep(0,10)), TRUE)
+  expect_equal(all.equal(p$treeCounts[21:30], rep(1,10)), TRUE)
+
+
+  rf <- make_savable(rf)
 
 })
