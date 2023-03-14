@@ -281,6 +281,25 @@ training_data_checker <- function(x,
     if (length(groups) != nrow(x)) {
       stop("Length of groups must equal the number of observations")
     }
+
+    # Check that the custom samples come from disjoint groups
+    if (length(customSplittingSample) != 0) {
+      # Check splitting and averaging have disjoint groups
+      for (i in 1:ntree) {
+        if (any(groups[customAveragingSample[[i]]+1] %in% groups[customSplittingSample[[i]]+1])) {
+          stop("Splitting and averaging samples must contain disjoint groups")
+        }
+      }
+      # Check customExcludedSample has disjoint groups
+      if (length(customExcludedSample) != 0) {
+        for (i in 1:ntree) {
+          if (any(groups[customExcludedSample[[i]]+1]
+                  %in% union(groups[customAveragingSample[[i]]+1], groups[customSplittingSample[[i]]+1]))) {
+            stop("Excluded samples must contain groups disjoint from those in the splitting and averaging samples")
+          }
+        }
+      }
+    }
   }
 
   if (OOBhonest && (splitratio != 1)) {
