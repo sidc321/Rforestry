@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from Rforestry import RandomForest
+from random_forestry import RandomForest
 
 
 def test_properties():

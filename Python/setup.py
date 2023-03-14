@@ -96,6 +96,6 @@ class CMakeBuild(build_ext):
 
 
 setup(
-    ext_modules=[CMakeExtension("Rforestry.extension", sourcedir="extension")],
+    ext_modules=[CMakeExtension("random_forestry.extension", sourcedir="extension")],
     cmdclass={"build_ext": CMakeBuild},
 )

@@ -3,7 +3,7 @@ requires = ["setuptools>=65.0.0", "wheel", "cmake>=3.12"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "Rforestry"
+name = "random-forestry"
 version = "1.0.0"
 description = "Random forest estimator"
 readme = "README.md"
@@ -27,7 +27,7 @@ dependencies = [
 requires-python = ">=3.8"
 
 [tool.setuptools]
-packages = ["Rforestry", "Rforestry.validators"]
+packages = ["random_forestry", "random_forestry.validators"]
 zip-safe = false
 
 [project.optional-dependencies]

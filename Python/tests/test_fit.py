@@ -3,8 +3,7 @@ import re
 import numpy as np
 import pytest
 from helpers import get_data
-
-from Rforestry import RandomForest
+from random_forestry import RandomForest
 
 
 def test_fit():

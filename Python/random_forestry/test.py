@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.datasets import load_iris
 
-from Rforestry import RandomForest
+from random_forestry import RandomForest
 
 # Getting the dataset
 data = load_iris()
