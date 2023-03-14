@@ -1,8 +1,3 @@
-"""
-LIBRARIES NEEDED
-----------------------
-"""
-
 import math
 import sys
 import warnings

@@ -1,6 +1,6 @@
 from helpers import get_data
 
-from Rforestry import RandomForest
+from random_forestry import RandomForest
 
 X, y = get_data()
 
