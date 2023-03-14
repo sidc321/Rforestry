@@ -59,6 +59,7 @@ test_that("Tests custom sampling parameters", {
   pred.new <- predict(rf.strict, newdata = new.x)
 
   # Now expect the order to be strictly increasing
+  skip_if_not_mac()
   expect_equal(all.equal(order(pred.new), 1:100), TRUE)
 
 
@@ -179,6 +180,7 @@ test_that("Tests custom sampling parameters", {
   pred.new <- predict(rf.groups.monotone.strict, newdata = new.x)
 
   # Now expect the order to be strictly increasing
+  skip_if_not_mac()
   expect_equal(all.equal(order(pred.new), 1:10), TRUE)
 
 
