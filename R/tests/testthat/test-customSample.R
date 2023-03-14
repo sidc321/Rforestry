@@ -48,21 +48,7 @@ test_that("Tests custom sampling parameters", {
                    customAveragingSample = averagingSample,
                    customExcludedSample = excludedSample,
                    ntree = 3),
-    "Excluded samples must be disjoint from splitting and averaging samples"
-  )
-
-  splittingSample = list(1:5, 6:10, 146:150)
-  averagingSample = list(16:20, 21:25, 26:30)
-  excludedSample = list(31:35, 36:40, 141:146)
-
-  expect_error(
-    rf <- forestry(x = x,
-                   y = y,
-                   customSplittingSample = splittingSample,
-                   customAveragingSample = averagingSample,
-                   customExcludedSample = excludedSample,
-                   ntree = 3),
-    "Excluded samples must be disjoint from splitting and averaging samples"
+    "Excluded samples must be disjoint from averaging samples"
   )
 
   splittingSample = list(1:5, 6:10, 26:30)

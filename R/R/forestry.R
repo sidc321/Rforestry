@@ -191,9 +191,8 @@ training_data_checker <- function(x,
       }
 
       for (i in 1:ntree) {
-        if (any(customExcludedSample[[i]]
-                %in% union(customAveragingSample[[i]], customSplittingSample[[i]]))) {
-          stop("Excluded samples must be disjoint from splitting and averaging samples")
+        if (any(customExcludedSample[[i]] %in% customAveragingSample[[i]])) {
+          stop("Excluded samples must be disjoint from averaging samples")
         }
         # Check that included samples are integers in the correct range
         if (any(customExcludedSample[[i]] <= 0) || any(customExcludedSample[[i]] %% 1 != 0) ||
