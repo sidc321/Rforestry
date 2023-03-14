@@ -29,7 +29,8 @@ Imports:
     visNetwork, 
     glmnet (>= 4.1), 
     grDevices,
-    onehot
+    onehot,
+    pROC
 LinkingTo: Rcpp,
   RcppArmadillo,
   RcppThread

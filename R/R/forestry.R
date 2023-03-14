@@ -1,6 +1,7 @@
 #' @useDynLib Rforestry, .registration = TRUE
 #' @importFrom Rcpp sourceCpp
 #' @importFrom stats predict
+#' @importFrom pROC roc
 NULL
 
 #' @include R_preprocessing.R
@@ -1620,15 +1621,21 @@ getOOBpreds <- function(object,
 #'  when each feature is shuffled.
 #' @param object A `forestry` object.
 #' @param noWarning flag to not display warnings
+#' @param metric A parameter to determine how the predictions of the forest with
+#'   a permuted variable are compared to the predictions of the standard forest.
+#'   Must be one of c("mse","auc","tnr"), "mse" gives the percentage increase in
+#'   mse when the feature is permuted, "auc" gives the percentage decrease in AUC
+#'   when the feature is permuted, and "tnr" gives the percentage decrease in
+#'   TNR when the TPR is 99\% when the feature is permuted.
 #' @param seed A parameter to seed the random number generator for shuffling
 #'   the features of X.
-#' @note No seed is passed to this function so it is
-#'   not possible in the current implementation to replicate the vector
-#'   permutations used when measuring feature importance.
+#' @note Pass a seed to this function so it is
+#'   possible to replicate the vector permutations used when measuring feature importance.
 #' @return The variable importance of the forest.
 #' @export
 getVI <- function(object,
                   noWarning,
+                  metric = "mse",
                   seed = NULL) {
   forest_checker(object)
     # Keep warning for small sample size
@@ -1646,7 +1653,21 @@ getVI <- function(object,
 
     if (!is.null(seed)) {
       set.seed(seed)
+      seed_use = seed
+    } else {
+      seed_use = 1
     }
+
+    if (!(metric %in% c("mse","auc","tnr"))) {
+      stop("metric must be one of mse, auc, or tnr")
+    }
+
+    if (metric %in% c("auc","tnr")) {
+      if (length(unique(object@processed_dta$y)) != 2) {
+        stop("forest must be trained for binary classification if the metric is set to be auc or tnr")
+      }
+    }
+
 
     # In order to call predict, need categorical variables changed back to strings
     x = object@processed_dta$processed_x
@@ -1659,16 +1680,44 @@ getVI <- function(object,
     }
 
     vi <- rep(NA, object@processed_dta$numColumns)
-    oob_mse <- mean((predict(object, aggregation = "oob") - object@processed_dta$y)**2)
-    for (feat_i in 1:object@processed_dta$numColumns) {
-      x_mod = x
-      shuffled = x[sample(1:object@processed_dta$nObservations),feat_i]
-      x_mod[,feat_i] = shuffled
-      mse_i = mean((predict(object, newdata = x_mod, aggregation = "oob", seed = 1)
-                    - object@processed_dta$y)**2)
-      vi[feat_i] = sqrt(mse_i)/sqrt(oob_mse) - 1
-    }
 
+
+    if (metric == "mse") {
+      oob_mse <- mean((predict(object, aggregation = "oob") - object@processed_dta$y)**2)
+      for (feat_i in 1:object@processed_dta$numColumns) {
+        x_mod = x
+        shuffled = x[sample(1:object@processed_dta$nObservations),feat_i]
+        x_mod[,feat_i] = shuffled
+        mse_i = mean((predict(object, newdata = x_mod, aggregation = "oob", seed = seed_use)
+                      - object@processed_dta$y)**2)
+        vi[feat_i] = sqrt(mse_i)/sqrt(oob_mse) - 1
+      }
+    } else if (metric %in% c("auc","tnr")) {
+      evalAUC <- function(truth, pred){
+        roc_model <- roc(response = truth, predictor = as.numeric(pred),quiet=TRUE)
+        idx <- tail(which(roc_model$sensitivities >= 0.99), 1)
+        tnr_model <- roc_model$specificities[idx]
+        return(round(c(roc_model$auc, tnr_model), 7))
+      }
+
+      # Pull oob predictions and then cycle through and get the increase in different metrics
+      oob_predictions <- predict(object, aggregation = "oob")
+      metrics_oob <- evalAUC(truth = object@processed_dta$y, pred = oob_predictions)
+      for (feat_i in 1:object@processed_dta$numColumns) {
+        x_mod = x
+        shuffled = x[sample(1:object@processed_dta$nObservations),feat_i]
+        x_mod[,feat_i] = shuffled
+        predict_i = predict(object, newdata = x_mod, aggregation = "oob", seed = seed_use)
+
+        metrics_i = evalAUC(truth = object@processed_dta$y, pred = predict_i)
+
+        if (metric == "auc") {
+          vi[feat_i] = metrics_oob[1]/metrics_i[1] - 1
+        } else if (metric == "tnr") {
+          vi[feat_i] = metrics_oob[2]/metrics_i[2] - 1
+        }
+      }
+    }
     return(vi)
 }
 
@@ -1948,8 +1997,8 @@ make_savable <- function(object) {
 .onAttach <- function( ... )
 {
   Lib <- dirname(system.file(package = "Rforestry"))
-  version <- utils::packageDescription("Rforestry", lib.loc = Lib)$Version
-  BuildDate <- utils::packageDescription("Rforestry", lib.loc = Lib)$Built
+  version <- utils::packageDescription("Rforestry")$Version
+  BuildDate <- utils::packageDescription("Rforestry")$Built
 
   message <- paste("## \n##  Rforestry (Version ", version, ", Build Date: ", BuildDate, ")\n",
                    "##  See https://github.com/forestry-labs for additional documentation.\n",
