@@ -149,8 +149,9 @@ training_data_checker <- function(x,
   observationWeights <- observationWeights/sum(observationWeights)
 
   if (length(customSplittingSample) != 0 || length(customAveragingSample) != 0) {
+    message("When customSplittingSample is set, other sampling parameters are ignored")
 
-    if (splitratio !=1 || OOBhonest) {
+    if (splitratio != 1 || OOBhonest) {
       warning("When customSplittingSample is set, other honesty implementations are ignored")
     }
 
