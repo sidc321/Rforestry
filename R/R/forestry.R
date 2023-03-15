@@ -1636,7 +1636,7 @@ getOOBpreds <- function(object,
 getVI <- function(object,
                   noWarning,
                   metric = "mse",
-                  seed = NULL) {
+                  seed = 1) {
   forest_checker(object)
     # Keep warning for small sample size
     if (!object@replace &&
@@ -1651,12 +1651,8 @@ getVI <- function(object,
       return(NA)
     }
 
-    if (!is.null(seed)) {
-      set.seed(seed)
-      seed_use = seed
-    } else {
-      seed_use = 1
-    }
+    # Set seed for permutations
+    set.seed(seed)
 
     if (!(metric %in% c("mse","auc","tnr"))) {
       stop("metric must be one of mse, auc, or tnr")
@@ -1688,7 +1684,7 @@ getVI <- function(object,
         x_mod = x
         shuffled = x[sample(1:object@processed_dta$nObservations),feat_i]
         x_mod[,feat_i] = shuffled
-        mse_i = mean((predict(object, newdata = x_mod, aggregation = "oob", seed = seed_use)
+        mse_i = mean((predict(object, newdata = x_mod, aggregation = "oob", seed = seed)
                       - object@processed_dta$y)**2)
         vi[feat_i] = sqrt(mse_i)/sqrt(oob_mse) - 1
       }
@@ -1707,7 +1703,7 @@ getVI <- function(object,
         x_mod = x
         shuffled = x[sample(1:object@processed_dta$nObservations),feat_i]
         x_mod[,feat_i] = shuffled
-        predict_i = predict(object, newdata = x_mod, aggregation = "oob", seed = seed_use)
+        predict_i = predict(object, newdata = x_mod, aggregation = "oob", seed = seed)
 
         metrics_i = evalAUC(truth = object@processed_dta$y, pred = predict_i)
 
