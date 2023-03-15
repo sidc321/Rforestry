@@ -28,11 +28,23 @@ test_that("Tests different metrics for permutation VI", {
   auc.metrics <-evalAUC(truth = y, pred = preds)
 
   vi.mse <- getVI(forest, seed = 101, metric = "mse")
+  skip_if_not_mac()
   expect_equal(all(order(-vi.mse)[1:3] %in% c(1:3)), TRUE)
   vi.auc <- getVI(forest, seed = 101, metric = "auc")
+  skip_if_not_mac()
   expect_equal(all(order(-vi.auc)[1:3] %in% c(1:3)), TRUE)
   vi.tnr <- getVI(forest, seed = 101, metric = "tnr")
+  skip_if_not_mac()
   expect_equal(all(order(-vi.tnr)[1:3] %in% c(1:3)), TRUE)
+
+
+  expect_equal(length(vi.tnr),5)
+  expect_equal(length(vi.mse),5)
+  expect_equal(length(vi.auc),5)
+
+  expect_gt(max(vi.tnr),0)
+  expect_gt(max(vi.mse),0)
+  expect_gt(max(vi.auc),0)
 
   # Now try running with different seeds and comparing means to SE's
   # results <- matrix(nrow = 100,ncol=5)
