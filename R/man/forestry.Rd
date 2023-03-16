@@ -23,6 +23,9 @@ forestry(
   featureWeights = NULL,
   deepFeatureWeights = NULL,
   observationWeights = NULL,
+  customSplittingSample = NULL,
+  customAveragingSample = NULL,
+  customExcludedSample = NULL,
   splitratio = 1,
   OOBhonest = FALSE,
   doubleBootstrap = if (OOBhonest) TRUE else FALSE,
@@ -104,6 +107,25 @@ The default is to use uniform probabilities.}
 \item{observationWeights}{Denotes the weights for each training observation
 that determine how likely the observation is to be selected in each bootstrap sample.
 This option is not allowed when sampling is done without replacement.}
+
+\item{customSplittingSample}{List of vectors for user-defined splitting observations per tree. The vector at
+index i contains the indices of the sampled splitting observations, with replacement allowed, for tree i.
+This feature overrides other sampling parameters and must be set in conjunction with customAveragingSample.}
+
+\item{customAveragingSample}{List of vectors for user-defined averaging observations per tree. The vector at
+index i contains the indices of the sampled splitting observations, with replacement allowed, for tree i.
+This feature overrides other sampling parameters and must be set in conjunction with customSplittingSample.}
+
+\item{customExcludedSample}{An optional list of vectors for user-defined excluded observations per tree. The vector at
+index i contains the indices of the excluded observations for tree i. An observation is considered excluded if it does
+not appear in the splitting or averaging set and has been explicitly withheld from being sampled for a tree.
+Excluded observations are not considered out-of-bag, so when we call predict with aggregation = "oob",
+when we predict for an observation, we will only use the predictions of trees in which the
+observation was in the customSplittingSample (and neither in the customAveragingSample nor the customExcludedSample).
+This parameter is optional even when customSplittingSample and customAveragingSample are set.
+It is also optional at the tree level, so can have fewer than ntree entries. When given fewer than
+ntree entries, for example K, the entries will be applied to the first K trees in the forest and
+the remaining trees will have no excludedSamples.}
 
 \item{splitratio}{Proportion of the training data used as the splitting dataset.
 It is a ratio between 0 and 1. If the ratio is 1 (the default), then the splitting

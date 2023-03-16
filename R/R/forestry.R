@@ -29,6 +29,7 @@ training_data_checker <- function(x,
                                   interactionDepth,
                                   splitratio,
                                   OOBhonest,
+                                  doubleBootstrap,
                                   nthread,
                                   middleSplit,
                                   doubleTree,
@@ -38,6 +39,9 @@ training_data_checker <- function(x,
                                   featureWeights,
                                   deepFeatureWeights,
                                   observationWeights,
+                                  customSplittingSample,
+                                  customAveragingSample,
+                                  customExcludedSample,
                                   linear,
                                   scale,
                                   hasNas,
@@ -144,6 +148,77 @@ training_data_checker <- function(x,
 
   observationWeights <- observationWeights/sum(observationWeights)
 
+  if (length(customSplittingSample) != 0 || length(customAveragingSample) != 0) {
+    message("When customSplittingSample is set, other sampling parameters are ignored")
+
+    if (splitratio != 1 || OOBhonest) {
+      warning("When customSplittingSample is set, other honesty implementations are ignored")
+    }
+
+    # Check that we provide splitting samples as well as averaging samples
+    if (length(customSplittingSample) != ntree || length(customAveragingSample) != ntree) {
+      stop("Custom splitting and averaging samples must be provided for every tree")
+    }
+
+    # Check that averaging sample and splitting samples are disjoint
+    for (i in 1:ntree) {
+      if (any(customAveragingSample[[i]] %in% customSplittingSample[[i]])) {
+        stop("Splitting and averaging samples must be disjoint")
+      }
+
+      # Check that provided samples are integers in the correct range
+      if (length(customSplittingSample[[i]]) == 0 ||
+          any(customSplittingSample[[i]] <= 0) ||
+          any(customSplittingSample[[i]] %% 1 != 0) ||
+          any(customSplittingSample[[i]] > nrow(x))) {
+        stop(
+          "customSplittingSample must contain positive integers up to the number of observations in x"
+        )
+      }
+      if (length(customAveragingSample[[i]]) == 0 ||
+          any(customAveragingSample[[i]] <= 0) ||
+          any(customAveragingSample[[i]] %% 1 != 0) ||
+          any(customAveragingSample[[i]] > nrow(x))) {
+        stop(
+          "customAveragingSample must contain positive integers up to the number of observations in x"
+        )
+      }
+    }
+    # Check excluded sample is disjoint from both splitting and averaging set
+    if (length(customExcludedSample) != 0) {
+      if (length(customExcludedSample) != ntree) {
+        stop("customExcludedSample must be equal in length to ntree")
+      }
+
+      for (i in 1:ntree) {
+        if (any(customExcludedSample[[i]] %in% customAveragingSample[[i]])) {
+          stop("Excluded samples must be disjoint from averaging samples")
+        }
+        # Check that included samples are integers in the correct range
+        if (any(customExcludedSample[[i]] <= 0) || any(customExcludedSample[[i]] %% 1 != 0) ||
+            any(customExcludedSample[[i]] > nrow(x))) {
+          stop("customExcludedSample must contain positive integers up to the number of observations in x")
+        }
+      }
+    }
+
+    # Set OOB honest flag to be TRUE so we have proper prediction handling
+    OOBhonest=TRUE
+    doubleBootstrap = TRUE
+
+    # Now since we will pass to C++ the indices need to be 0-indexed, so convert
+    # from R 1-indexed indices to 0 indexed indices
+    for (i in 1:ntree) {
+      customAveragingSample[[i]] = customAveragingSample[[i]]-1
+      customSplittingSample[[i]] = customSplittingSample[[i]]-1
+    }
+    if (length(customExcludedSample) != 0) {
+      for (i in 1:length(customExcludedSample)) {
+        customExcludedSample[[i]] = customExcludedSample[[i]]-1
+      }
+    }
+  }
+
   # if the splitratio is 1, then we use adaptive rf and avgSampleSize is the
   # equal to the total sampsize
   if (splitratio == 0 || splitratio == 1) {
@@ -214,6 +289,25 @@ training_data_checker <- function(x,
     if (length(groups) != nrow(x)) {
       stop("Length of groups must equal the number of observations")
     }
+
+    # Check that the custom samples come from disjoint groups
+    if (length(customSplittingSample) != 0) {
+      # Check splitting and averaging have disjoint groups
+      for (i in 1:ntree) {
+        if (any(groups[customAveragingSample[[i]]+1] %in% groups[customSplittingSample[[i]]+1])) {
+          stop("Splitting and averaging samples must contain disjoint groups")
+        }
+      }
+      # Check customExcludedSample has disjoint groups
+      if (length(customExcludedSample) != 0) {
+        for (i in 1:ntree) {
+          if (any(groups[customExcludedSample[[i]]+1]
+                  %in% union(groups[customAveragingSample[[i]]+1], groups[customSplittingSample[[i]]+1]))) {
+            stop("Excluded samples must contain groups disjoint from those in the splitting and averaging samples")
+          }
+        }
+      }
+    }
   }
 
   if (OOBhonest && (splitratio != 1)) {
@@ -265,6 +359,7 @@ training_data_checker <- function(x,
               "interactionDepth" = interactionDepth,
               "splitratio" = splitratio,
               "OOBhonest" = OOBhonest,
+              "doubleBootstrap" = doubleBootstrap,
               "nthread" = nthread,
               "groups" = groups,
               "middleSplit" = middleSplit,
@@ -275,6 +370,9 @@ training_data_checker <- function(x,
               "scale" = scale,
               "deepFeatureWeights" = deepFeatureWeights,
               "observationWeights" = observationWeights,
+              "customSplittingSample" = customSplittingSample,
+              "customAveragingSample" = customAveragingSample,
+              "customExcludedSample" = customExcludedSample,
               "hasNas" = hasNas,
               "naDirection" = naDirection
         ))
@@ -378,6 +476,9 @@ setClass(
     deepFeatureWeights = "numeric",
     deepFeatureWeightsVariables = "numeric",
     observationWeights = "numeric",
+    customSplittingSample = "list",
+    customAveragingSample = "list",
+    customExcludedSample = "list",
     overfitPenalty = "numeric",
     doubleTree = "logical",
     groupsMapping = "list",
@@ -430,6 +531,22 @@ setClass(
 #' @param observationWeights Denotes the weights for each training observation
 #'   that determine how likely the observation is to be selected in each bootstrap sample.
 #'   This option is not allowed when sampling is done without replacement.
+#' @param customSplittingSample List of vectors for user-defined splitting observations per tree. The vector at
+#'   index i contains the indices of the sampled splitting observations, with replacement allowed, for tree i.
+#'   This feature overrides other sampling parameters and must be set in conjunction with customAveragingSample.
+#' @param customAveragingSample List of vectors for user-defined averaging observations per tree. The vector at
+#'   index i contains the indices of the sampled splitting observations, with replacement allowed, for tree i.
+#'   This feature overrides other sampling parameters and must be set in conjunction with customSplittingSample.
+#' @param customExcludedSample An optional list of vectors for user-defined excluded observations per tree. The vector at
+#'   index i contains the indices of the excluded observations for tree i. An observation is considered excluded if it does
+#'   not appear in the splitting or averaging set and has been explicitly withheld from being sampled for a tree.
+#'   Excluded observations are not considered out-of-bag, so when we call predict with aggregation = "oob",
+#'   when we predict for an observation, we will only use the predictions of trees in which the
+#'   observation was in the customSplittingSample (and neither in the customAveragingSample nor the customExcludedSample).
+#'   This parameter is optional even when customSplittingSample and customAveragingSample are set.
+#'   It is also optional at the tree level, so can have fewer than ntree entries. When given fewer than
+#'   ntree entries, for example K, the entries will be applied to the first K trees in the forest and
+#'   the remaining trees will have no excludedSamples.
 #' @param splitratio Proportion of the training data used as the splitting dataset.
 #'   It is a ratio between 0 and 1. If the ratio is 1 (the default), then the splitting
 #'   set uses the entire data, as does the averaging set---i.e., the standard Breiman RF setup.
@@ -595,6 +712,9 @@ forestry <- function(x,
                      featureWeights = NULL,
                      deepFeatureWeights = NULL,
                      observationWeights = NULL,
+                     customSplittingSample = NULL,
+                     customAveragingSample = NULL,
+                     customExcludedSample = NULL,
                      splitratio = 1,
                      OOBhonest = FALSE,
                      doubleBootstrap = if (OOBhonest)
@@ -674,6 +794,15 @@ forestry <- function(x,
   if(is.null(observationWeights)) {
     observationWeights <- rep(1, nrow(x))
   }
+  if(is.null(customSplittingSample)) {
+    customSplittingSample <- list()
+  }
+  if(is.null(customAveragingSample)) {
+    customAveragingSample <- list()
+  }
+  if(is.null(customExcludedSample)) {
+    customExcludedSample <- list()
+  }
   updated_variables <-
     training_data_checker(
       x = x,
@@ -691,6 +820,7 @@ forestry <- function(x,
       interactionDepth = interactionDepth,
       splitratio = splitratio,
       OOBhonest = OOBhonest,
+      doubleBootstrap = doubleBootstrap,
       nthread = nthread,
       middleSplit = middleSplit,
       doubleTree = doubleTree,
@@ -700,6 +830,9 @@ forestry <- function(x,
       featureWeights = featureWeights,
       deepFeatureWeights = deepFeatureWeights,
       observationWeights = observationWeights,
+      customSplittingSample = customSplittingSample,
+      customAveragingSample = customAveragingSample,
+      customExcludedSample = customExcludedSample,
       linear = linear,
       scale = scale,
       hasNas = hasNas,
@@ -802,6 +935,9 @@ forestry <- function(x,
         deepFeatureWeights =  deepFeatureWeights,
         deepFeatureWeightsVariables = deepFeatureWeightsVariables,
         observationWeights = observationWeights,
+        customSplittingSample = customSplittingSample,
+        customAveragingSample = customAveragingSample,
+        customExcludedSample = customExcludedSample,
         monotonicConstraints = monotonicConstraints,
         groupMemberships = groupVector,
         monotoneAvg = monotoneAvg
@@ -838,6 +974,9 @@ forestry <- function(x,
         deepFeatureWeights,
         deepFeatureWeightsVariables,
         observationWeights,
+        customSplittingSample,
+        customAveragingSample,
+        customExcludedSample,
         monotonicConstraints,
         groupVector,
         minTreesPerFold,
@@ -905,6 +1044,9 @@ forestry <- function(x,
           deepFeatureWeights =  deepFeatureWeights,
           deepFeatureWeightsVariables = deepFeatureWeightsVariables,
           observationWeights = observationWeights,
+          customSplittingSample = customSplittingSample,
+          customAveragingSample = customAveragingSample,
+          customExcludedSample = customExcludedSample,
           hasNas = hasNas,
           naDirection = naDirection,
           linear = linear,
@@ -1000,6 +1142,9 @@ forestry <- function(x,
         deepFeatureWeights =  deepFeatureWeights,
         deepFeatureWeightsVariables = deepFeatureWeightsVariables,
         observationWeights,
+        customSplittingSample,
+        customAveragingSample,
+        customExcludedSample,
         monotonicConstraints,
         groupVector,
         minTreesPerFold,
@@ -1044,6 +1189,9 @@ forestry <- function(x,
           featureWeights = featureWeights,
           deepFeatureWeights = deepFeatureWeights,
           observationWeights = observationWeights,
+          customSplittingSample = customSplittingSample,
+          customAveragingSample = customAveragingSample,
+          customExcludedSample = customExcludedSample,
           hasNas = hasNas,
           naDirection = naDirection,
           linear = linear,
@@ -1880,6 +2028,9 @@ relinkCPP_prt <- function(object) {
       deepFeatureWeights = object@deepFeatureWeights,
       deepFeatureWeightsVariables = object@deepFeatureWeightsVariables,
       observationWeights = object@observationWeights,
+      customSplittingSample = object@customSplittingSample,
+      customAveragingSample = object@customAveragingSample,
+      customExcludedSample = object@customExcludedSample,
       monotonicConstraints = object@monotonicConstraints,
       groupMemberships = as.integer(object@groups),
       monotoneAvg = object@monotoneAvg,
@@ -1948,8 +2099,8 @@ make_savable <- function(object) {
 .onAttach <- function( ... )
 {
   Lib <- dirname(system.file(package = "Rforestry"))
-  version <- utils::packageDescription("Rforestry", lib.loc = Lib)$Version
-  BuildDate <- utils::packageDescription("Rforestry", lib.loc = Lib)$Built
+  version <- utils::packageDescription("Rforestry")$Version
+  BuildDate <- utils::packageDescription("Rforestry")$Built
 
   message <- paste("## \n##  Rforestry (Version ", version, ", Build Date: ", BuildDate, ")\n",
                    "##  See https://github.com/forestry-labs for additional documentation.\n",

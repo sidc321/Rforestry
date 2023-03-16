@@ -29,6 +29,9 @@ SEXP rcpp_cppDataFrameInterface(
     Rcpp::NumericVector deepFeatureWeights,
     Rcpp::NumericVector deepFeatureWeightsVariables,
     Rcpp::NumericVector observationWeights,
+    Rcpp::List customSplittingSample,
+    Rcpp::List customAveragingSample,
+    Rcpp::List customExcludedSample,
     Rcpp::NumericVector monotonicConstraints,
     Rcpp::NumericVector groupMemberships,
     bool monotoneAvg
@@ -91,6 +94,24 @@ SEXP rcpp_cppDataFrameInterface(
         )
     );
 
+    std::unique_ptr<std::vector< std::vector<size_t> > > customSplittingSampleRcpp (
+        new std::vector< std::vector<size_t> >(
+            Rcpp::as< std::vector< std::vector<size_t> > >(customSplittingSample)
+        )
+    );
+
+    std::unique_ptr<std::vector< std::vector<size_t> > > customAveragingSampleRcpp (
+        new std::vector< std::vector<size_t> >(
+            Rcpp::as< std::vector< std::vector<size_t> > >(customAveragingSample)
+        )
+    );
+
+    std::unique_ptr<std::vector< std::vector<size_t> > > customExcludedSampleRcpp (
+        new std::vector< std::vector<size_t> >(
+            Rcpp::as< std::vector< std::vector<size_t> > >(customExcludedSample)
+        )
+    );
+
     std::unique_ptr< std::vector<int> > monotonicConstraintsRcpp (
         new std::vector<int>(
             Rcpp::as< std::vector<int> >(monotonicConstraints)
@@ -115,6 +136,9 @@ SEXP rcpp_cppDataFrameInterface(
         std::move(deepFeatureWeightsRcpp),
         std::move(deepFeatureWeightsVariablesRcpp),
         std::move(observationWeightsRcpp),
+        std::move(customSplittingSampleRcpp),
+        std::move(customAveragingSampleRcpp),
+        std::move(customExcludedSampleRcpp),
         std::move(monotonicConstraintsRcpp),
         std::move(groupMembershipsRcpp),
         (bool) monotoneAvg
@@ -164,6 +188,9 @@ SEXP rcpp_cppBuildInterface(
   Rcpp::NumericVector deepFeatureWeights,
   Rcpp::NumericVector deepFeatureWeightsVariables,
   Rcpp::NumericVector observationWeights,
+  Rcpp::List customSplittingSample,
+  Rcpp::List customAveragingSample,
+  Rcpp::List customExcludedSample,
   Rcpp::NumericVector monotonicConstraints,
   Rcpp::NumericVector groupMemberships,
   int minTreesPerFold,
@@ -286,6 +313,24 @@ SEXP rcpp_cppBuildInterface(
           )
       );
 
+      std::unique_ptr<std::vector< std::vector<size_t> > > customSplittingSampleRcpp (
+          new std::vector< std::vector<size_t> >(
+              Rcpp::as< std::vector< std::vector<size_t> > >(customSplittingSample)
+          )
+      );
+
+      std::unique_ptr<std::vector< std::vector<size_t> > > customAveragingSampleRcpp (
+          new std::vector< std::vector<size_t> >(
+              Rcpp::as< std::vector< std::vector<size_t> > >(customAveragingSample)
+          )
+      );
+
+      std::unique_ptr<std::vector< std::vector<size_t> > > customExcludedSampleRcpp (
+          new std::vector< std::vector<size_t> >(
+              Rcpp::as< std::vector< std::vector<size_t> > >(customExcludedSample)
+          )
+      );
+
       std::unique_ptr< std::vector<int> > monotoneConstraintsRcpp (
           new std::vector<int>(
               Rcpp::as< std::vector<int> >(monotonicConstraints)
@@ -310,6 +355,9 @@ SEXP rcpp_cppBuildInterface(
           std::move(deepFeatureWeightsRcpp),
           std::move(deepFeatureWeightsVariablesRcpp),
           std::move(observationWeightsRcpp),
+          std::move(customSplittingSampleRcpp),
+          std::move(customAveragingSampleRcpp),
+          std::move(customExcludedSampleRcpp),
           std::move(monotoneConstraintsRcpp),
           std::move(groupMembershipsRcpp),
           (bool) monotoneAvg
@@ -693,6 +741,8 @@ Rcpp::List rcpp_CppToR_translator(
 	      Rcpp::wrap(((*forest_dta)[i]).averagingSampleIndex);
       Rcpp::IntegerVector splittingSampleIndex =
 	      Rcpp::wrap(((*forest_dta)[i]).splittingSampleIndex);
+      Rcpp::IntegerVector excludedSampleIndex =
+        Rcpp::wrap(((*forest_dta)[i]).excludedSampleIndex);
       Rcpp::IntegerVector naLeftCounts =
         Rcpp::wrap(((*forest_dta)[i]).naLeftCount);
 
@@ -712,6 +762,7 @@ Rcpp::List rcpp_CppToR_translator(
 			   Rcpp::Named("split_val") = split_val,
 			   Rcpp::Named("averagingSampleIndex") = averagingSampleIndex,
 			   Rcpp::Named("splittingSampleIndex") = splittingSampleIndex,
+			   Rcpp::Named("excludedSampleIndex") = excludedSampleIndex,
 			   Rcpp::Named("naLeftCounts") = naLeftCounts,
 			   Rcpp::Named("naRightCounts") = naRightCounts,
 			   Rcpp::Named("naDefaultDirections") = naDefaultDirections,
@@ -763,6 +814,9 @@ Rcpp::List rcpp_reconstructree(
   Rcpp::NumericVector deepFeatureWeights,
   Rcpp::NumericVector deepFeatureWeightsVariables,
   Rcpp::NumericVector observationWeights,
+  Rcpp::List customSplittingSample,
+  Rcpp::List customAveragingSample,
+  Rcpp::List customExcludedSample,
   Rcpp::NumericVector monotonicConstraints,
   Rcpp::NumericVector groupMemberships,
   bool monotoneAvg,
@@ -795,6 +849,9 @@ Rcpp::List rcpp_reconstructree(
   std::unique_ptr< std::vector< std::vector<size_t> > > splittingSampleIndex(
       new  std::vector< std::vector<size_t> >
   );
+  std::unique_ptr< std::vector< std::vector<size_t> > > excludedSampleIndex(
+      new  std::vector< std::vector<size_t> >
+  );
   std::unique_ptr< std::vector<unsigned int> > tree_seeds(
       new std::vector<unsigned int>
   );
@@ -802,11 +859,12 @@ Rcpp::List rcpp_reconstructree(
           new  std::vector< std::vector<double> >
   );
 
-    // Reserve space for each of the vectors equal to R_forest.size()
+  // Reserve space for each of the vectors equal to R_forest.size()
   var_ids->reserve(R_forest.size());
   split_vals->reserve(R_forest.size());
   averagingSampleIndex->reserve(R_forest.size());
   splittingSampleIndex->reserve(R_forest.size());
+  excludedSampleIndex->reserve(R_forest.size());
   naLeftCounts->reserve(R_forest.size());
   naRightCounts->reserve(R_forest.size());
   naDefaultDirections->reserve(R_forest.size());
@@ -828,20 +886,23 @@ Rcpp::List rcpp_reconstructree(
     splittingSampleIndex->push_back(
         Rcpp::as< std::vector<size_t> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[3])
       );
-    naLeftCounts->push_back(
-        Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[4])
+    excludedSampleIndex->push_back(
+        Rcpp::as< std::vector<size_t> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[4])
     );
-    naRightCounts->push_back(
+    naLeftCounts->push_back(
         Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[5])
     );
-    naDefaultDirections->push_back(
+    naRightCounts->push_back(
         Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[6])
     );
+    naDefaultDirections->push_back(
+        Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[7])
+    );
     tree_seeds->push_back(
-        Rcpp::as< unsigned int > ((Rcpp::as<Rcpp::List>(R_forest[i]))[7])
+        Rcpp::as< unsigned int > ((Rcpp::as<Rcpp::List>(R_forest[i]))[8])
     );
     predictWeights->push_back(
-            Rcpp::as< std::vector<double> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[8])
+            Rcpp::as< std::vector<double> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[9])
     );
   }
 
@@ -908,6 +969,21 @@ Rcpp::List rcpp_reconstructree(
           Rcpp::as< std::vector<double> >(observationWeights)
       )
   );
+  std::unique_ptr<std::vector< std::vector<size_t> > > customSplittingSampleRcpp (
+      new std::vector< std::vector<size_t> >(
+          Rcpp::as< std::vector< std::vector<size_t> > >(customSplittingSample)
+      )
+  );
+  std::unique_ptr<std::vector< std::vector<size_t> > > customAveragingSampleRcpp (
+      new std::vector< std::vector<size_t> >(
+          Rcpp::as< std::vector< std::vector<size_t> > >(customAveragingSample)
+      )
+  );
+  std::unique_ptr<std::vector< std::vector<size_t> > > customExcludedSampleRcpp (
+      new std::vector< std::vector<size_t> >(
+          Rcpp::as< std::vector< std::vector<size_t> > >(customExcludedSample)
+      )
+  );
   std::unique_ptr< std::vector<int> > monotonicConstraintsRcpp (
       new std::vector<int>(
           Rcpp::as< std::vector<int> >(monotonicConstraints)
@@ -931,6 +1007,9 @@ Rcpp::List rcpp_reconstructree(
     std::move(deepFeatureWeightsRcpp),
     std::move(deepFeatureWeightsVariablesRcpp),
     std::move(observationWeightsRcpp),
+    std::move(customSplittingSampleRcpp),
+    std::move(customAveragingSampleRcpp),
+    std::move(customExcludedSampleRcpp),
     std::move(monotonicConstraintsRcpp),
     std::move(groupMembershipsRcpp),
     (bool) monotoneAvg
@@ -975,6 +1054,7 @@ Rcpp::List rcpp_reconstructree(
                                    naDefaultDirections,
                                    averagingSampleIndex,
                                    splittingSampleIndex,
+                                   excludedSampleIndex,
                                    predictWeights
                                    );
 

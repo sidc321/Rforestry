@@ -46,6 +46,8 @@ struct tree_info {
   // contains the indices of the average set.
   std::vector< int > splittingSampleIndex;
   // contains the indices of the splitting set.
+  std::vector< int > excludedSampleIndex;
+  // contains the indices of the excluded set.
   std::vector< int > naLeftCount;
   // Contains the count of NA's which fell to the left for each split value
   // (-1 indicates leaf node, 0 indicates no NA's fell that way)
