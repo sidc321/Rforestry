@@ -2,6 +2,7 @@
 #' @importFrom Rcpp sourceCpp
 #' @importFrom stats predict
 #' @importFrom pROC roc
+#' @importFrom utils tail
 NULL
 
 #' @include R_preprocessing.R
