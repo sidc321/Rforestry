@@ -2,7 +2,7 @@
 
 ## Rforestry: Random Forests, Linear Trees, and Gradient Boosting for Inference and Interpretability
 
-Sören Künzel, Theo Saarinen, Simon Walter, Edward Liu, Allen Tang, Jasjeet Sekhon
+Sören Künzel, Theo Saarinen, Simon Walter, Edward Liu, Sam Antonyan, Allen Tang, Jasjeet Sekhon
 
 ## Introduction
 
