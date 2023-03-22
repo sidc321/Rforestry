@@ -1,7 +1,7 @@
 test_that("Tests custom sampling parameters", {
 
 
-  context("Try indices in the wrong range for the customSplittingSample")
+  context("Try indices in the wrong range for the customSplitSample")
 
   x <- iris[, -1]
   y <- iris[, 1]
@@ -12,11 +12,11 @@ test_that("Tests custom sampling parameters", {
   expect_error(
     rf <- forestry(x = x,
                  y = y,
-                 customSplittingSample = splittingSample,
-                 customAveragingSample = averagingSample,
-                 customExcludedSample = excludedSample,
+                 customSplitSample = splittingSample,
+                 customAvgSample = averagingSample,
+                 customExcludeSample = excludedSample,
                  ntree = 3),
-    "customSplittingSample must contain positive integers up to the number of observations in x"
+    "customSplitSample must contain positive integers up to the number of observations in x"
   )
 
 
@@ -28,11 +28,11 @@ test_that("Tests custom sampling parameters", {
   expect_error(
     rf <- forestry(x = x,
                    y = y,
-                   customSplittingSample = splittingSample,
-                   customAveragingSample = averagingSample,
-                   customExcludedSample = excludedSample,
+                   customSplitSample = splittingSample,
+                   customAvgSample = averagingSample,
+                   customExcludeSample = excludedSample,
                    ntree = 3),
-    "customExcludedSample must be equal in length to ntree"
+    "customExcludeSample must be equal in length to ntree"
   )
 
 
@@ -44,9 +44,9 @@ test_that("Tests custom sampling parameters", {
   expect_error(
     rf <- forestry(x = x,
                    y = y,
-                   customSplittingSample = splittingSample,
-                   customAveragingSample = averagingSample,
-                   customExcludedSample = excludedSample,
+                   customSplitSample = splittingSample,
+                   customAvgSample = averagingSample,
+                   customExcludeSample = excludedSample,
                    ntree = 3),
     "Excluded samples must be disjoint from averaging samples"
   )
@@ -58,9 +58,9 @@ test_that("Tests custom sampling parameters", {
   expect_error(
     rf <- forestry(x = x,
                    y = y,
-                   customSplittingSample = splittingSample,
-                   customAveragingSample = averagingSample,
-                   customExcludedSample = excludedSample,
+                   customSplitSample = splittingSample,
+                   customAvgSample = averagingSample,
+                   customExcludeSample = excludedSample,
                    ntree = 3),
     "Splitting and averaging samples must be disjoint"
   )
@@ -70,23 +70,23 @@ test_that("Tests custom sampling parameters", {
   expect_warning(
     rf <- forestry(x = x,
                    y = y,
-                   customSplittingSample = list(1:10),
-                   customAveragingSample = list(11:20),
-                   customExcludedSample = list(21:30),
+                   customSplitSample = list(1:10),
+                   customAvgSample = list(11:20),
+                   customExcludeSample = list(21:30),
                    OOBhonest = TRUE,
                    ntree = 1),
-    "When customSplittingSample is set, other honesty implementations are ignored"
+    "When customSplitSample is set, other honesty implementations are ignored"
   )
 
   expect_warning(
     rf <- forestry(x = x,
                    y = y,
-                   customSplittingSample = list(1:10),
-                   customAveragingSample = list(11:20),
-                   customExcludedSample = list(21:30),
+                   customSplitSample = list(1:10),
+                   customAvgSample = list(11:20),
+                   customExcludeSample = list(21:30),
                    splitratio = .5,
                    ntree = 1),
-    "When customSplittingSample is set, other honesty implementations are ignored"
+    "When customSplitSample is set, other honesty implementations are ignored"
   )
 
 
@@ -99,9 +99,9 @@ test_that("Tests custom sampling parameters", {
 
   rf <- forestry(x = x,
                  y = y,
-                 customSplittingSample = splittingSample,
-                 customAveragingSample = averagingSample,
-                 customExcludedSample = excludedSample,
+                 customSplitSample = splittingSample,
+                 customAvgSample = averagingSample,
+                 customExcludeSample = excludedSample,
                  ntree = 3)
   rf <- make_savable(rf)
 
@@ -137,9 +137,9 @@ test_that("Tests custom sampling parameters", {
 
   rf <- forestry(x = x,
                  y = y,
-                 customSplittingSample = splittingSample,
-                 customAveragingSample = averagingSample,
-                 customExcludedSample = excludedSample,
+                 customSplitSample = splittingSample,
+                 customAvgSample = averagingSample,
+                 customExcludeSample = excludedSample,
                  ntree = 10)
   rf <- make_savable(rf)
 
@@ -157,9 +157,9 @@ test_that("Tests custom sampling parameters", {
 
   rf <- forestry(x = x,
                  y = y,
-                 customSplittingSample = list(1:10),
-                 customAveragingSample = list(11:20),
-                 customExcludedSample = list(21:30),
+                 customSplitSample = list(1:10),
+                 customAvgSample = list(11:20),
+                 customExcludeSample = list(21:30),
                  ntree = 1)
 
   p <- predict(rf, newdata = x, aggregation = "oob", weightMatrix = TRUE)
@@ -179,9 +179,9 @@ test_that("Tests custom sampling parameters", {
   context("Test when we provide an empty excluded sample for a tree")
   rf <- forestry(x = x,
                  y = y,
-                 customSplittingSample = list(1:10,11:20),
-                 customAveragingSample = list(11:20,21:30),
-                 customExcludedSample = list(21:30, c()),
+                 customSplitSample = list(1:10,11:20),
+                 customAvgSample = list(11:20,21:30),
+                 customExcludeSample = list(21:30, c()),
                  ntree = 2)
 
   p <- predict(rf, newdata = x, aggregation = "oob", weightMatrix = TRUE)
@@ -204,8 +204,8 @@ test_that("Tests custom sampling parameters", {
   context("Test when we no trees excluded samples")
   rf <- forestry(x = x,
                  y = y,
-                 customSplittingSample = list(1:10,11:20),
-                 customAveragingSample = list(11:20,21:30),
+                 customSplitSample = list(1:10,11:20),
+                 customAvgSample = list(11:20,21:30),
                  ntree = 2)
 
   p <- predict(rf, newdata = x, aggregation = "oob", weightMatrix = TRUE)
