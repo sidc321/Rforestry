@@ -10,22 +10,22 @@ void print_vector(
     std::vector<size_t> v
 ){
   for (auto i = v.begin(); i != v.end(); ++i){
-    std::cout << *i << ' ';
+    // std::cout << *i << ' ';
     // Rcpp's equivalent of std::flush
   }
-  std::cout << std::endl;
-  std::cout << std::endl;
+  // std::cout << std::endl;
+  // std::cout << std::endl;
 }
 
 void print_vector(
     std::vector<unsigned int> v
 ){
   for (auto i = v.begin(); i != v.end(); ++i){
-    std::cout << *i << ' ';
+    // std::cout << *i << ' ';
     // Rcpp's equivalent of std::flush
   }
-  std::cout << std::endl;
-  std::cout << std::endl;
+  // std::cout << std::endl;
+  // std::cout << std::endl;
 }
 
 
@@ -33,11 +33,11 @@ void print_vector(
     std::vector<double> v
 ){
   for (auto i = v.begin(); i != v.end(); ++i){
-    std::cout << *i << ' ';
+    // std::cout << *i << ' ';
     // Rcpp's equivalent of std::flush
   }
-  std::cout << std::endl;
-  std::cout << std::endl;
+  // std::cout << std::endl;
+  // std::cout << std::endl;
 }
 
 int add_vector(
