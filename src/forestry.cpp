@@ -227,9 +227,9 @@ void forestry::addTrees(size_t ntree) {
           std::vector<size_t> avgIndicesFill;
           std::vector<size_t> excludedIndicesFill;
 
-          std::vector< std::vector<size_t> >* customSplittingSample = getTrainingData()->getCustomSplittingSample();
+          std::vector< std::vector<size_t> >* customSplitSample = getTrainingData()->getCustomSplitSample();
 
-          if (customSplittingSample->size() == 0) {
+          if (customSplitSample->size() == 0) {
             // Generate the splitting and averaging indices for the ith tree
             generate_sample_indices(
               splitIndicesFill,
@@ -249,11 +249,11 @@ void forestry::addTrees(size_t ntree) {
               getTrainingData()
             );
           } else {
-            splitIndicesFill = customSplittingSample->at(i);
-            avgIndicesFill = getTrainingData()->getCustomAveragingSample()->at(i);
+            splitIndicesFill = customSplitSample->at(i);
+            avgIndicesFill = getTrainingData()->getCustomAvgSample()->at(i);
             // Only set excluded indices if provided
-            if (getTrainingData()->getCustomExcludedSample()->size() > 0) {
-                excludedIndicesFill = getTrainingData()->getCustomExcludedSample()->at(i);
+            if (getTrainingData()->getCustomExcludeSample()->size() > 0) {
+                excludedIndicesFill = getTrainingData()->getCustomExcludeSample()->at(i);
             }
           }
 
