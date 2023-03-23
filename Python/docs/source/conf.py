@@ -14,16 +14,16 @@ import os
 import pathlib
 import sys
 
-sys.path.insert(0, os.path.join(pathlib.Path(__file__).parents[1].resolve().as_posix(), "Rforestry"))
+sys.path.insert(0, os.path.join(pathlib.Path(__file__).parents[1].resolve().as_posix(), "random_forestry"))
 
 # -- Project information -----------------------------------------------------
 
-project = "Rforestry"
-copyright = "2022, Sam Antonyan, Theo Saarinen"
-author = "Sam Antonyan, Theo Saarinen"
+project = "random_forestry"
+copyright = "2022, Sören Künzel, Theo Saarinen, Simon Walter, Edward Liu, Sam Antonyan, Boban Petrovic, Allen Tang, Jasjeet Sekhon"
+author = "Sören Künzel, Theo Saarinen, Simon Walter, Edward Liu, Sam Antonyan, Boban Petrovic, Allen Tang, Jasjeet Sekhon"
 
 # The full version, including alpha/beta/rc tags
-release = "0.9.1.1"
+release = "0.9.1.8"
 
 
 # -- General configuration ---------------------------------------------------
@@ -52,9 +52,9 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_rtd_theme"
+
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
+
