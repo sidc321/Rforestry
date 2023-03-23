@@ -179,36 +179,6 @@ for more details.
     preds = fr.predict(aggregation='doubleOOB')
     print(preds)
 
-
-.. _ci:
-
-Confidence Intervals
----------------------
-
-This is an example how to get confidence intervals. Look into the :meth:`API <forestry.RandomForest.get_ci>` 
-for more details.
-
-.. code-block:: Python
-
-    from random_forestry import RandomForest
-    from sklearn.datasets import load_iris
-    import numpy as np
-    import pandas as pd
-
-    # Getting the dataset
-    data = load_iris()
-    X = pd.DataFrame(data['data'], columns=data['feature_names'])
-    y = data['target']
-
-    # Create a RandomForest object and train
-    fr = RandomForest(oob_honest=True, double_bootstrap=True, scale=False)
-    fr.fit(X, y)
-
-    # Get confidence intervals
-    conf_intervals = fr.get_ci(newdata=X, method='OOB-conformal', level=.99)
-    print(conf_intervals)
-
-
 .. _vi:
 
 Variable Importance
@@ -232,74 +202,6 @@ for more details.
 
     var_importance = fr.get_vi()
     print(var_importance)
-
-
-    # VI DOESN'T WORK BECAUSE OF WEIGHTMATRIX 
-
-
-.. _bias:
-
-Bias Corrected Predictions
----------------------------
-
-This is an example how to use bias correction to make predictions. Check out :meth:`corrected_predict() <forestry.RandomForest.corrected_predict>` 
-for more details.
-
-.. code-block:: Python
-
-    from random_forestry import RandomForest
-    from sklearn.datasets import load_breast_cancer
-    import numpy as np
-
-    # Getting the dataset
-    X, y = load_breast_cancer(return_X_y=True)
-
-    # Create a RandomForest object and train
-    fr = RandomForest(scale=False, oob_honest=True)
-    fr.fit(X, y)
-
-    # Getting the bias corrected predictions
-    corrected_preds = fr.corrected_predict(feats=[0,1,-1], nrounds=10, double=False,
-            simple=False, params_forestry={'scale':False, 'OOBhonest':True})
-
-    # Finding the out of bag error before and after
-    print('OOB error before correction: ' + str(fr.get_oob()))
-    print('OOB error after correction: ' + str(np.mean((corrected_preds - y)**2)))
-
-
-.. _tree_struc:
-
-Retrieve the Tree Structure
----------------------------
-
-This is an example of how to retrieve the underlying tree structure in the forest. To do that,
-we need to use the :meth:`translate_tree() <forestry.RandomForest.translate_tree>` function,
-which fills the :ref:`saved_forest <translate-label>` attribute for the corresponding tree.
-
-.. code-block:: Python
-
-    from random_forestry import RandomForest
-    from sklearn.datasets import load_iris
-    import numpy as np
-    import pandas as pd
-
-    # Getting the dataset
-    data = load_iris()
-    X = pd.DataFrame(data['data'], columns=data['feature_names'])
-    y = data['target']
-
-    # Create a RandomForest object and train
-    fr = RandomForest(scale=False, max_depth=50)
-    fr.fit(X, y)
-
-    # Translate the first tree in the forest
-    fr.translate_tree(0)
-    print(fr.saved_forest[0])
-
-    # Calculate the proportion of splits for each feature_names
-    split_prop = fr.get_split_propotions()
-    print(split_prop)
-
 
 .. _plot:
 
