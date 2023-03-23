@@ -30,9 +30,9 @@ test_that("Tests custom sampling parameters", {
   rf.monotone <- forestry(x = x,
                           y = y,
                           seed = 101,
-                          customSplittingSample = customSpl,
-                          customAveragingSample = customAvg,
-                          customExcludedSample = customEx,
+                          customSplitSample = customSpl,
+                          customAvgSample = customAvg,
+                          customExcludeSample = customEx,
                           monotonicConstraints = c(1,0,0),
                           ntree = 200)
 
@@ -49,9 +49,9 @@ test_that("Tests custom sampling parameters", {
   rf.strict <- forestry(x = x,
                         y = y,
                         seed = 100,
-                        customSplittingSample = customSpl,
-                        customAveragingSample = customAvg,
-                        customExcludedSample = customEx,
+                        customSplitSample = customSpl,
+                        customAvgSample = customAvg,
+                        customExcludeSample = customEx,
                         monotonicConstraints = c(1,0,0),
                         monotoneAvg = TRUE,
                         ntree = 200)
@@ -77,8 +77,8 @@ test_that("Tests custom sampling parameters", {
   rf.groups <- forestry(x = x,
                         y = y,
                         seed = 100,
-                        customSplittingSample = customSpl,
-                        customAveragingSample = customAvg,
+                        customSplitSample = customSpl,
+                        customAvgSample = customAvg,
                         groups = as.factor(as.vector(sapply(1:15, function(x){return(rep(x,10))}))),
                         ntree = 1)
 
@@ -100,9 +100,9 @@ test_that("Tests custom sampling parameters", {
   rf.groups.excluded <- forestry(x = x,
                                  y = y,
                                  seed = 100,
-                                 customSplittingSample = customSpl,
-                                 customAveragingSample = customAvg,
-                                 customExcludedSample = customEx,
+                                 customSplitSample = customSpl,
+                                 customAvgSample = customAvg,
+                                 customExcludeSample = customEx,
                                  groups = as.factor(as.vector(sapply(1:15, function(x){return(rep(x,10))}))),
                                  ntree = 1)
 
@@ -142,9 +142,9 @@ test_that("Tests custom sampling parameters", {
   rf.groups.monotone <- forestry(x = x,
                                  y = y,
                                  seed = 100,
-                                 customSplittingSample = customSpl,
-                                 customAveragingSample = customAvg,
-                                 customExcludedSample = customEx,
+                                 customSplitSample = customSpl,
+                                 customAvgSample = customAvg,
+                                 customExcludeSample = customEx,
                                  monotonicConstraints = c(1,0,0,0),
                                  groups = as.factor(as.vector(sapply(1:75, function(x){return(rep(x,2))}))),
                                  ntree = 200)
@@ -169,9 +169,9 @@ test_that("Tests custom sampling parameters", {
   rf.groups.monotone.strict <- forestry(x = x,
                                         y = y,
                                         seed = 100,
-                                        customSplittingSample = customSpl,
-                                        customAveragingSample = customAvg,
-                                        customExcludedSample = customEx,
+                                        customSplitSample = customSpl,
+                                        customAvgSample = customAvg,
+                                        customExcludeSample = customEx,
                                         monotonicConstraints = c(1,0,0,0),
                                         monotoneAvg = TRUE,
                                         groups = as.factor(as.vector(sapply(1:75, function(x){return(rep(x,2))}))),
@@ -191,9 +191,9 @@ test_that("Tests custom sampling parameters", {
   tree.groups.monotone.strict <- forestry(x = x,
                                           y = y,
                                           seed = 100,
-                                          customSplittingSample = list(2*(1:15)-1),
-                                          customAveragingSample = list(2*(16:30)-1),
-                                          customExcludedSample = list(c(61,63)),
+                                          customSplitSample = list(2*(1:15)-1),
+                                          customAvgSample = list(2*(16:30)-1),
+                                          customExcludeSample = list(c(61,63)),
                                           monotonicConstraints = c(1,0,0,0),
                                           monotoneAvg = TRUE,
                                           groups = as.factor(as.vector(sapply(1:75, function(x){return(rep(x,2))}))),
@@ -218,8 +218,8 @@ test_that("Tests custom sampling parameters", {
     tree.groups.check <- forestry(x = data.frame(x1 = rnorm(12)),
                                           y = rnorm(12),
                                           seed = 100,
-                                          customSplittingSample = list(c(1,3,7)),
-                                          customAveragingSample = list(c(2,4,6)),
+                                          customSplitSample = list(c(1,3,7)),
+                                          customAvgSample = list(c(2,4,6)),
                                           groups = as.factor(as.vector(sapply(1:6, function(x){return(rep(x,2))}))),
                                           ntree = 1),
     "Splitting and averaging samples must contain disjoint groups"
@@ -229,12 +229,12 @@ test_that("Tests custom sampling parameters", {
     tree.groups.check <- forestry(x = data.frame(x1 = rnorm(12)),
                                   y = rnorm(12),
                                   seed = 100,
-                                  customSplittingSample = list(c(1,2,7)),
-                                  customAveragingSample = list(c(3,4,5,6)),
-                                  customExcludedSample = list(c(8)),
+                                  customSplitSample = list(c(3,4,5,6)),
+                                  customAvgSample = list(c(1,2,7)),
+                                  customExcludeSample = list(c(8)),
                                   groups = as.factor(as.vector(sapply(1:6, function(x){return(rep(x,2))}))),
                                   ntree = 1),
-    "Excluded samples must contain groups disjoint from those in the splitting and averaging samples"
+    "Excluded samples must contain groups disjoint from those in the averaging samples"
   )
 
 

@@ -30,9 +30,9 @@ training_data_checker(
   featureWeights,
   deepFeatureWeights,
   observationWeights,
-  customSplittingSample,
-  customAveragingSample,
-  customExcludedSample,
+  customSplitSample,
+  customAvgSample,
+  customExcludeSample,
   linear,
   scale,
   hasNas,
@@ -147,21 +147,21 @@ resampling schemes, and provide predictions consistent with the Out-of-Group set
 that determine how likely the observation is to be selected in each bootstrap sample.
 This option is not allowed when sampling is done without replacement.}
 
-\item{customSplittingSample}{List of vectors for user-defined splitting observations per tree. The vector at
+\item{customSplitSample}{List of vectors for user-defined splitting observations per tree. The vector at
 index i contains the indices of the sampled splitting observations, with replacement allowed, for tree i.
-This feature overrides other sampling parameters and must be set in conjunction with customAveragingSample.}
+This feature overrides other sampling parameters and must be set in conjunction with customAvgSample.}
 
-\item{customAveragingSample}{List of vectors for user-defined averaging observations per tree. The vector at
+\item{customAvgSample}{List of vectors for user-defined averaging observations per tree. The vector at
 index i contains the indices of the sampled splitting observations, with replacement allowed, for tree i.
-This feature overrides other sampling parameters and must be set in conjunction with customSplittingSample.}
+This feature overrides other sampling parameters and must be set in conjunction with customSplitSample.}
 
-\item{customExcludedSample}{An optional list of vectors for user-defined excluded observations per tree. The vector at
+\item{customExcludeSample}{An optional list of vectors for user-defined excluded observations per tree. The vector at
 index i contains the indices of the excluded observations for tree i. An observation is considered excluded if it does
 not appear in the splitting or averaging set and has been explicitly withheld from being sampled for a tree.
 Excluded observations are not considered out-of-bag, so when we call predict with aggregation = "oob",
 when we predict for an observation, we will only use the predictions of trees in which the
-observation was in the customSplittingSample (and neither in the customAveragingSample nor the customExcludedSample).
-This parameter is optional even when customSplittingSample and customAveragingSample are set.
+observation was in the customSplitSample (and neither in the customAvgSample nor the customExcludeSample).
+This parameter is optional even when customSplitSample and customAvgSample are set.
 It is also optional at the tree level, so can have fewer than ntree entries. When given fewer than
 ntree entries, for example K, the entries will be applied to the first K trees in the forest and
 the remaining trees will have no excludedSamples.}

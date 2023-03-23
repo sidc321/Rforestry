@@ -635,32 +635,32 @@ void RFNode::printSubtree(int indentSpace) {
   if (is_leaf()) {
 
     // Print count of samples in the leaf node
-    std::cout << std::string((unsigned long) indentSpace, ' ')
-              << "Leaf Node: # of split samples = "
-              << getSplitCount()
-              << ", # of average samples = "
-              << getAverageCount()
-              << " Weight = "
-              << getPredictWeight()
-              << std::endl;
+    // std::cout << std::string((unsigned long) indentSpace, ' ')
+    //           << "Leaf Node: # of split samples = "
+    //           << getSplitCount()
+    //           << ", # of average samples = "
+    //           << getAverageCount()
+    //           << " Weight = "
+    //           << getPredictWeight()
+    //           << std::endl;
 
   } else {
 
     // Print split feature and split value
-    std::cout << std::string((unsigned long) indentSpace, ' ')
-              << "Tree Node: split feature = "
-              << getSplitFeature()
-              << ", split value = "
-              << getSplitValue()
-              << ", # of average samples = "
-              << getAverageCount()
-              << ", # NA's l,r = "
-              << getNaLeftCount()
-              << " "
-              << getNaRightCount()
-              << " Weight = "
-              << getPredictWeight()
-              << std::endl;
+    // std::cout << std::string((unsigned long) indentSpace, ' ')
+    //           << "Tree Node: split feature = "
+    //           << getSplitFeature()
+    //           << ", split value = "
+    //           << getSplitValue()
+    //           << ", # of average samples = "
+    //           << getAverageCount()
+    //           << ", # NA's l,r = "
+    //           << getNaLeftCount()
+    //           << " "
+    //           << getNaRightCount()
+    //           << " Weight = "
+    //           << getPredictWeight()
+    //           << std::endl;
 
     // Recursively calling its children
     (*getLeftChild()).printSubtree(indentSpace+2);

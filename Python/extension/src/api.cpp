@@ -123,15 +123,15 @@ extern "C" {
             obs_weights->at(i) = observation_weights[i];
         }
     
-        std::unique_ptr< std::vector< std::vector<size_t> > > customSplittingSample(
+        std::unique_ptr< std::vector< std::vector<size_t> > > customSplitSample(
                 new std::vector< std::vector<size_t> >
         );
 
-        std::unique_ptr< std::vector< std::vector<size_t> > > customAveragingSample(
+        std::unique_ptr< std::vector< std::vector<size_t> > > customAvgSample(
                 new std::vector< std::vector<size_t> >
         );
 
-        std::unique_ptr< std::vector< std::vector<size_t> > > customExcludedSample(
+        std::unique_ptr< std::vector< std::vector<size_t> > > customExcludeSample(
                 new std::vector< std::vector<size_t> >
         );
     
@@ -167,9 +167,9 @@ extern "C" {
             std::move(deep_feature_weights),
             std::move(deep_feature_weight_vars),
             std::move(obs_weights),
-            std::move(customSplittingSample),
-            std::move(customAveragingSample),
-            std::move(customExcludedSample),
+            std::move(customSplitSample),
+            std::move(customAvgSample),
+            std::move(customExcludeSample),
             std::move(monotone_constraints),
             std::move(groups),
             monotoneAvg

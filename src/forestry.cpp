@@ -187,8 +187,8 @@ void forestry::addTrees(size_t ntree) {
 
   #if DOPARELLEL
   if (isVerbose()) {
-    std::cout << "Training parallel using " << nthreadToUse << " threads"
-              << std::endl;
+    // std::cout << "Training parallel using " << nthreadToUse << " threads"
+    //           << std::endl;
   }
 
   std::vector<std::thread> allThreads(nthreadToUse);
@@ -227,9 +227,9 @@ void forestry::addTrees(size_t ntree) {
           std::vector<size_t> avgIndicesFill;
           std::vector<size_t> excludedIndicesFill;
 
-          std::vector< std::vector<size_t> >* customSplittingSample = getTrainingData()->getCustomSplittingSample();
+          std::vector< std::vector<size_t> >* customSplitSample = getTrainingData()->getCustomSplitSample();
 
-          if (customSplittingSample->size() == 0) {
+          if (customSplitSample->size() == 0) {
             // Generate the splitting and averaging indices for the ith tree
             generate_sample_indices(
               splitIndicesFill,
@@ -249,11 +249,11 @@ void forestry::addTrees(size_t ntree) {
               getTrainingData()
             );
           } else {
-            splitIndicesFill = customSplittingSample->at(i);
-            avgIndicesFill = getTrainingData()->getCustomAveragingSample()->at(i);
+            splitIndicesFill = customSplitSample->at(i);
+            avgIndicesFill = getTrainingData()->getCustomAvgSample()->at(i);
             // Only set excluded indices if provided
-            if (getTrainingData()->getCustomExcludedSample()->size() > 0) {
-                excludedIndicesFill = getTrainingData()->getCustomExcludedSample()->at(i);
+            if (getTrainingData()->getCustomExcludeSample()->size() > 0) {
+                excludedIndicesFill = getTrainingData()->getCustomExcludeSample()->at(i);
             }
           }
 
@@ -337,7 +337,7 @@ void forestry::addTrees(size_t ntree) {
             #endif
 
             if (isVerbose()) {
-              std::cout << "Finish training tree # " << (i + 1) << std::endl;
+              // std::cout << "Finish training tree # " << (i + 1) << std::endl;
             }
 
             (*getForest()).emplace_back(oneTree);
@@ -430,11 +430,11 @@ std::unique_ptr< std::vector<double> > forestry::predict(
   }
 
   if (isVerbose()) {
-    std::cout << "Prediction parallel using " << nthreadToUse << " threads"
-              << std::endl;
+    // std::cout << "Prediction parallel using " << nthreadToUse << " threads"
+    //           << std::endl;
     if (use_weights) {
-      std::cout << "Weights given by" << std::endl;
-      print_vector(*tree_weights);
+      // std::cout << "Weights given by" << std::endl;
+      // print_vector(*tree_weights);
     }
   }
 
@@ -557,7 +557,7 @@ std::unique_ptr< std::vector<double> > forestry::predict(
             }
 
           } catch (std::runtime_error &err) {
-            std::cerr << err.what() << std::endl;
+            // std::cerr << err.what() << std::endl;
           }
       }
   #if DOPARELLEL
@@ -677,8 +677,8 @@ std::vector<double> forestry::predictOOB(
         nthreadToUse = std::thread::hardware_concurrency();
       }
       if (isVerbose()) {
-        std::cout << "Calculating OOB parallel using " << nthreadToUse << " threads"
-                          << std::endl;
+        // std::cout << "Calculating OOB parallel using " << nthreadToUse << " threads"
+        //                   << std::endl;
       }
       std::vector<std::thread> allThreads(nthreadToUse);
       std::mutex threadLock;
@@ -843,8 +843,8 @@ void forestry::calculateOOBError(
     nthreadToUse = std::thread::hardware_concurrency();
   }
   if (isVerbose()) {
-    std::cout << "Calculating OOB parallel using " << nthreadToUse << " threads"
-              << std::endl;
+    // std::cout << "Calculating OOB parallel using " << nthreadToUse << " threads"
+    //           << std::endl;
   }
 
   std::vector<std::thread> allThreads(nthreadToUse);
@@ -938,7 +938,7 @@ void forestry::fillinTreeInfo(
 ){
 
   if (isVerbose()) {
-    std::cout << "Starting to translate Forest to R.\n";
+    // std::cout << "Starting to translate Forest to R.\n";
   }
 
   for(int i=0; i<((int) getNtree()); i++ ) {
@@ -951,17 +951,17 @@ void forestry::fillinTreeInfo(
       forest_dta->push_back(*treeInfo_i);
 
     } catch (std::runtime_error &err) {
-      std::cerr << err.what() << std::endl;
+      // std::cerr << err.what() << std::endl;
     }
 
     if (isVerbose()) {
-      std::cout << "Done with tree " << i + 1 << " of " << getNtree() << ".\n";
+      // std::cout << "Done with tree " << i + 1 << " of " << getNtree() << ".\n";
     }
 
   }
 
   if (isVerbose()) {
-    std::cout << "Translation done.\n";
+    // std::cout << "Translation done.\n";
   }
 
   return ;
@@ -990,8 +990,8 @@ void forestry::reconstructTrees(
     }
 
     if (isVerbose()) {
-      std::cout << "Reconstructing in parallel using " << nthreadToUse << " threads"
-                        << std::endl;
+      // std::cout << "Reconstructing in parallel using " << nthreadToUse << " threads"
+      //                   << std::endl;
     }
 
     std::vector<std::thread> allThreads(nthreadToUse);
@@ -1046,7 +1046,7 @@ void forestry::reconstructTrees(
         (*getForest()).emplace_back(oneTree);
         _ntree = _ntree + 1;
       } catch (std::runtime_error &err) {
-        std::cerr << err.what() << std::endl;
+        // std::cerr << err.what() << std::endl;
       }
   }
   #if DOPARELLEL
