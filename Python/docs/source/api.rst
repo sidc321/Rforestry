@@ -1,7 +1,7 @@
 API Reference
 ==============
 
-Here, you can find the Python API reference of *Rforestry* classes.
+Here, you can find the Python API reference of *random_forestry* classes.
 
 .. contents:: Contents
     :depth: 3
@@ -9,7 +9,7 @@ Here, you can find the Python API reference of *Rforestry* classes.
 
 Random Forest Regressor
 -----------------------
-.. autoclass:: Rforestry.RandomForest
+.. autoclass:: random_forestry.RandomForest
    :members:
    :undoc-members:
 
@@ -35,7 +35,7 @@ Random Forest Regressor
 Plotting
 ---------
 
-.. autoclass:: Rforestry.ShadowForestryTree
+.. autoclass:: random_forestry.ShadowForestryTree
    :members:
    :undoc-members:
 

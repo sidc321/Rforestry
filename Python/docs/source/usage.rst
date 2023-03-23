@@ -20,7 +20,7 @@ of the forestry.
 
 .. code-block:: Python
 
-    from Rforestry import RandomForest
+    from random_forestry import RandomForest
 
     # Create a RandomForest object
     fr = RandomForest(ntree=100, mtry=3, oob_honest=True)
@@ -47,7 +47,7 @@ predictions.
 
 .. code-block:: Python
 
-    from Rforestry import RandomForest
+    from random_forestry import RandomForest
     from sklearn.datasets import fetch_california_housing
     from sklearn.model_selection import train_test_split
     import numpy as np
@@ -92,7 +92,7 @@ Here is an example of how to use categorical features.
     from sklearn.model_selection import train_test_split
     import numpy as np
     import pandas as pd
-    from Rforestry import RandomForest
+    from random_forestry import RandomForest
 
     # Getting the dataset
     data = load_diabetes(as_frame=True, scaled=False).frame
@@ -128,7 +128,7 @@ for more details.
 
 .. code-block:: Python
 
-    from Rforestry import RandomForest
+    from random_forestry import RandomForest
     from sklearn.datasets import load_iris
     import numpy as np
     import pandas as pd
@@ -159,7 +159,7 @@ for more details.
 
 .. code-block:: Python
 
-    from Rforestry import RandomForest
+    from random_forestry import RandomForest
     from sklearn.datasets import load_iris
     import numpy as np
     import pandas as pd
@@ -190,7 +190,7 @@ for more details.
 
 .. code-block:: Python
 
-    from Rforestry import RandomForest
+    from random_forestry import RandomForest
     from sklearn.datasets import load_iris
     import numpy as np
     import pandas as pd
@@ -219,7 +219,7 @@ for more details.
 
 .. code-block:: Python
 
-    from Rforestry import RandomForest
+    from random_forestry import RandomForest
     from sklearn.datasets import load_breast_cancer
     import numpy as np
 
@@ -247,7 +247,7 @@ for more details.
 
 .. code-block:: Python
 
-    from Rforestry import RandomForest
+    from random_forestry import RandomForest
     from sklearn.datasets import load_breast_cancer
     import numpy as np
 
@@ -278,7 +278,7 @@ which fills the :ref:`saved_forest <translate-label>` attribute for the correspo
 
 .. code-block:: Python
 
-    from Rforestry import RandomForest
+    from random_forestry import RandomForest
     from sklearn.datasets import load_iris
     import numpy as np
     import pandas as pd
@@ -311,7 +311,7 @@ then use the `dtreeviz <https://github.com/parrt/dtreeviz#usage>`_ library for v
 
 .. code-block:: Python
 
-    from Rforestry import RandomForest, ShadowForestryTree
+    from random_forestry import RandomForest, ShadowForestryTree
     from dtreeviz.trees import *
 
     from sklearn.datasets import load_iris

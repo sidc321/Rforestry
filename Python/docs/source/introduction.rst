@@ -21,18 +21,18 @@ A more detailed walkthrough can be found below.
 Installation
 -------------
 
-Rforestry is currently supported on Linux and MacOS. To install the python package,
+random_forestry is currently supported on Linux and MacOS. To install the python package,
 simply use pip:
 
 .. code-block:: console
 
-   $ pip install Rforestry
+   $ pip install random_forestry
 
 To verify that the package is installed, try to import the *RandomForest* class using the following code:
 
 .. code-block:: Python
 
-    from Rforestry import RandomForest
+    from random_forestry import RandomForest
 
 .. _init:
 
@@ -94,7 +94,7 @@ Check out the :doc:`API Reference <api>` for a more detailed overview of :meth:`
 Plotting
 ---------
 
-For visualizing the trees, *Rforestry* uses the `dtreeviz <https://github.com/parrt/dtreeviz#readme>`_ python library. This library
+For visualizing the trees, *random_forestry* uses the `dtreeviz <https://github.com/parrt/dtreeviz#readme>`_ python library. This library
 provides a number of plots for visualizing regression trees. Check out the `Installation Guide <https://github.com/parrt/dtreeviz#install>`_ 
 and the `Usage <https://github.com/parrt/dtreeviz#usage>`_ for further details.
 
@@ -104,7 +104,7 @@ object, which can be passed to *dtreeviz*. Here is a simple example.
 .. code-block:: Python
 
    from dtreeviz.trees import *
-   from Rforestry import ShadowForestryTree
+   from random_forestry import ShadowForestryTree
 
    # Create a ShadowForestryTree object. Since this is a single tree, tree_id must be specified (default=0)
    shadow_forestry = ShadowForestryTree(model, X, y, X.columns.values, 'tagret name', tree_id=0)
