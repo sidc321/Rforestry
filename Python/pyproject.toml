@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "random-forestry"
-version = "0.10.0"
+version = "0.10.0-b1"
 description = "Random forest estimator"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -42,8 +42,8 @@ line-length = 120
 profile = "black"
 
 [tool.bumpver]
-current_version = "0.10.0"
-version_pattern = "MAJOR.MINOR.PATCH"
+current_version = "0.10.0-b1"
+version_pattern = "MAJOR.MINOR.PATCH[-PYTAGNUM]"
 commit_message = "bump version {old_version} -> {new_version}"
 commit = true
 tag = false
@@ -54,6 +54,6 @@ push = false
     'current_version = "{version}"',
     'version = "{version}"'
 ]
-"Rforestry/__init__.py" =[
+"random_forestry/__init__.py" =[
     '^__version__ = "{version}"$'
 ]
