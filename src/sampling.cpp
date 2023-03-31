@@ -433,16 +433,22 @@ void generate_sample_indices(
         std::vector< size_t > AvgIndices;
 
         // Check the double bootstrap, if true, we take another sample
-        // from the OOB indices, otherwise we just take the OOB index
-        // set with standard (uniform) weightings
+        // from the OOB indices, otherwise we just take the OOB index set.
         if (doubleBootstrap) {
-            std::uniform_int_distribution<size_t> uniform_dist(
-                    0, (size_t) (OOBIndex.size() - 1)
+
+            // Generate a weighted distribution using observationWeights
+            std::vector<double>* sampleWeights = (trainingData->getobservationWeights());
+            for (size_t i = 0; i < sampleIndex.size(); i++) {
+                sampleWeights->at(sampleIndex.at(i)) = 0;
+            }
+
+            std::discrete_distribution<size_t> sample_dist(
+                    sampleWeights->begin(), sampleWeights->end()
             );
 
             // Sample with replacement from OOB Indices for the averaging set
             while (AvgIndices.size() < OOBIndex.size()) {
-                size_t randomIndex = uniform_dist(random_number_generator);
+                size_t randomIndex = sample_dist(random_number_generator);
                 AvgIndices.push_back(
                         OOBIndex[randomIndex]
                 );
