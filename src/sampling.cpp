@@ -437,13 +437,13 @@ void generate_sample_indices(
         if (doubleBootstrap) {
 
             // Generate a weighted distribution using observationWeights
-            std::vector<double>* sampleWeights = (trainingData->getobservationWeights());
+            std::vector<double> sampleWeights = *(trainingData->getobservationWeights());
             for (size_t i = 0; i < sampleIndex.size(); i++) {
-                sampleWeights->at(sampleIndex.at(i)) = 0;
+                sampleWeights.at(sampleIndex.at(i)) = 0;
             }
 
             std::discrete_distribution<size_t> sample_dist(
-                    sampleWeights->begin(), sampleWeights->end()
+                    sampleWeights.begin(), sampleWeights.end()
             );
 
             // Sample with replacement from OOB Indices for the averaging set
