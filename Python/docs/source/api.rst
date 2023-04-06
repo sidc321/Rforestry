@@ -1,71 +1,28 @@
-API Reference
-==============
+API
+===
 
-Here, you can find the Python API reference of *Rforestry* classes.
+The main class of the package is the ``random_forestry.RandomForest`` class
+which holds a model and has various member functions for fitting the model,
+getting predictions, saving and loading models, and getting and setting parameters.
 
-.. contents:: Contents
-    :depth: 3
-    :local:
+.. autofunction:: random_forestry.RandomForest
 
-Random Forest Regressor
------------------------
-.. autoclass:: Rforestry.RandomForest
-   :members:
-   :undoc-members:
+.. autofunction:: random_forestry.RandomForest.fit
 
-   .. rubric:: Methods
+.. autofunction:: random_forestry.RandomForest.predict
 
-   .. autosummary::
-         
-      ~RandomForest.corrected_predict
-      ~RandomForest.decision_path
-      ~RandomForest.fit
-      ~RandomForest.get_ci
-      ~RandomForest.get_oob
-      ~RandomForest.get_split_proportions
-      ~RandomForest.get_vi
-      ~RandomForest.get_parameters
-      ~RandomForest.predict
-      ~RandomForest.predict_info
-      ~RandomForest.score
-      ~RandomForest.set_parameters
-      ~RandomForest.translate_tree
+.. autofunction:: random_forestry.RandomForest.get_oob
 
+.. autofunction:: random_forestry.RandomForest.get_vi
 
-Plotting
----------
+.. autofunction:: random_forestry.RandomForest.score
 
-.. autoclass:: Rforestry.ShadowForestryTree
-   :members:
-   :undoc-members:
+.. autofunction:: random_forestry.RandomForest.translate_tree
 
-   .. rubric:: Methods
+.. autofunction:: random_forestry.RandomForest.get_parameters
 
-   .. autosummary::
-         
-      ~ShadowForestryTree.classes
-      ~ShadowForestryTree.criterion
-      ~ShadowForestryTree.get_children_left
-      ~ShadowForestryTree.get_children_right
-      ~ShadowForestryTree.get_class_weight
-      ~ShadowForestryTree.get_class_weights
-      ~ShadowForestryTree.get_feature_path_importance
-      ~ShadowForestryTree.get_features
-      ~ShadowForestryTree.get_max_depth
-      ~ShadowForestryTree.get_min_samples_leaf
-      ~ShadowForestryTree.get_node_criterion
-      ~ShadowForestryTree.get_node_feature
-      ~ShadowForestryTree.get_node_nsamples
-      ~ShadowForestryTree.get_node_nsamples_by_class
-      ~ShadowForestryTree.get_node_samples
-      ~ShadowForestryTree.get_node_split
-      ~ShadowForestryTree.get_prediction
-      ~ShadowForestryTree.get_root_edge_labels
-      ~ShadowForestryTree.get_score
-      ~ShadowForestryTree.get_split_samples
-      ~ShadowForestryTree.get_thresholds
-      ~ShadowForestryTree.is_classifier
-      ~ShadowForestryTree.is_fit
-      ~ShadowForestryTree.nclasses
-      ~ShadowForestryTree.nnodes
-      ~ShadowForestryTree.shouldGoLeftAtSplit
+.. autofunction:: random_forestry.RandomForest.set_parameters
+
+.. autofunction:: random_forestry.RandomForest.save_forestry
+
+.. autofunction:: random_forestry.RandomForest.load_forestry

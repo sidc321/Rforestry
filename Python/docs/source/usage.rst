@@ -9,22 +9,31 @@ overview of all the classes and functions, check out the :doc:`API Reference <ap
     :local:
 
 
+Installation
+------------
+
+To use **random_forestry**, first install it using pip:
+
+.. code-block:: console
+
+   (.venv) $ pip install random_forestry
+
 .. _set_get:
 
 Setting the Parameters
------------------------
+----------------------
 
-Here is an example of how to use :meth:`get_params() <forestry.RandomForest.get_params>` 
-and :meth:`set_params() <forestry.RandomForest.set_params>` to get and set the parameters 
-of the forestry.
+Here is an example of how to use :meth:`get_params() <random_forestry.RandomForest.get_params>`
+and :meth:`set_params() <forestry.RandomForest.set_params>` to get and set the parameters
+of the random_forestry.
 
 .. code-block:: Python
 
-    from Rforestry import RandomForest
+    from random_forestry import RandomForest
 
     # Create a RandomForest object
     fr = RandomForest(ntree=100, mtry=3, oob_honest=True)
-    
+
     # Check out the list of parameters
     print(fr.get_parameters())
 
@@ -39,15 +48,15 @@ of the forestry.
 
 .. _train_test:
 
-Training and Testing
----------------------
+Training and Prediction
+-----------------------
 
-Here is an example of how to train a forestry estimator and use it to make 
-predictions. 
+Here is an example of how to train a RandomForest estimator and use it to make
+predictions.
 
 .. code-block:: Python
 
-    from Rforestry import RandomForest
+    from random_forestry import RandomForest
     from sklearn.datasets import fetch_california_housing
     from sklearn.model_selection import train_test_split
     import numpy as np
@@ -67,16 +76,90 @@ predictions.
     print('Making predictions')
     preds = fr.predict(X_test)
 
-    print('The coefficient of determination is ' + 
+    print('The coefficient of determination is ' +
             str(fr.score(X_test, y_test)))
+
+
+.. _custom:
+
+Custom Sampling Methods
+-----------------------
+The three parameters `groups`, `minTreesPerFold`, and `foldSize` are used for customizing the sampling scheme in a
+random forest model.
+
+The `groups` parameter specifies the group membership of each training observation, which is used in the
+aggregation when doing out of bag predictions. This allows the user to specify custom subgroups which will
+be used to create predictions that do not use any data from a common group to make predictions for any observation
+in the group.
+
+The `minTreesPerFold` parameter specifies the minimum number of trees that we make sure have been created
+leaving out each fold of groups. If this parameter is set to a positive integer, the bootstrap sampling
+scheme is modified to ensure that exactly that many trees have each group left out. This is achieved by,
+for each fold, creating `minTreesPerFold` trees which are built on observations sampled from the set of training
+observations which are not in a group in the current fold.
+
+The `foldSize` parameter specifies the number of groups that are selected randomly for each fold to be left
+out when using `minTreesPerFold`. When `minTreesPerFold` is set and `foldSize` is set, all possible groups will be
+partitioned into folds, each containing `foldSize` unique groups. Then `minTreesPerFold` trees are grown with each
+entire fold of groups left out. If `ntree` is greater than the product of the number of folds and `minTreesPerFold`,
+we create at least `max(# folds * minTreesPerFold, ntree)` total trees, in which at least `minTreesPerFold` are created
+leaving out each fold.
+
+In summary, these parameters allow the user to create custom resampling schemes and provide predictions consistent
+with the out-of-group set. They provide more control over the sampling process in the random forest model and
+can be useful in situations where the default sampling scheme is not appropriate.
+
+.. _missingness:
+
+Treatment of Missing Data
+-------------------------
+
+For the handling of missing data, we now test any potential split by putting all NA's to the right, and
+all NA's to the left, and taking  the choice which gives the best MSE for the split. Under this version of handling
+the potential splits, we will still respect monotonic constraints. So if we put all NA's to either side, and the resulting leaf nodes have means which violate
+the monotone constraints, the split will be rejected.
+
+
+Monotonic Constraints
+---------------------
+
+This example shows how to set the monotonic constraints. They must be specified using an array of size *ncol* specifying monotonic
+relationships between the continuous features and the outcome. Its entries are in -1, 0, 1, in which
+1 indicates an increasing monotonic relationship, -1 indicates a decreasing monotonic relationship, and 0 indicates no constraint.
+
+.. code-block:: Python
+
+    from random_forestry import RandomForest
+    from sklearn.datasets import load_iris
+    import numpy as np
+    import pandas as pd
+
+    # Getting the dataset
+    data = load_iris()
+    X = pd.DataFrame(data['data'], columns=data['feature_names'])
+    y = data['target']
+
+    # Gives a positive monotonic relationship between the first feature and the outcome
+    # a negative monotonic relationship between the second feature, and no
+    # constraints for the other features.
+    constraints = np.array([1, -1, 0, 0])
+    # Create a RandomForest object
+    fr = RandomForest(oob_honest=True, scale=False, monotonic_constraints=constraints)
+
+    print('Traingng the forest')
+    fr.fit(X, y)
+
+    print('Making out-of-bag predictions')
+    preds = fr.predict(aggregation='oob')
+    print('OOB ERROR: ' + str(fr.get_oob()))
 
 
 .. _categorical:
 
 Handling Categorical Data
---------------------------
+-------------------------
 
-Splits are made differently for categorical features. In order for the program to recognize that a given 
+Splits are made differently for categorical features. In order for the program to recognize that a given
 feature is categorical rather than continuous, the user must convert it into a
 `Pandas categorical data type <https://pandas.pydata.org/docs/user_guide/categorical.html#>`_.
 
@@ -86,13 +169,13 @@ feature is categorical rather than continuous, the user must convert it into a
 
 Here is an example of how to use categorical features.
 
-.. code-block::
+.. code-block:: Python
 
     from sklearn.datasets import load_diabetes
     from sklearn.model_selection import train_test_split
     import numpy as np
     import pandas as pd
-    from Rforestry import RandomForest
+    from random_forestry import RandomForest
 
     # Getting the dataset
     data = load_diabetes(as_frame=True, scaled=False).frame
@@ -114,21 +197,21 @@ Here is an example of how to use categorical features.
     print('making predictions')
     preds = fr.predict(X_test)
 
-    print('The coefficient of determination is ' + 
+    print('The coefficient of determination is ' +
                 str(fr.score(X_test, y_test)))
 
 
 .. _oob:
 
-Out of Bag Aggregation
------------------------
+Prediction with Out-of-Bag Aggregation
+--------------------------------------
 
-This is an example of using out-of-bag aggregation. Check out :meth:`predict(..., aggregation='oob') <forestry.RandomForest.predict>` 
+This is an example of using out-of-bag aggregation. Check out :meth:`predict(..., aggregation='oob') <forestry.RandomForest.predict>`
 for more details.
 
 .. code-block:: Python
 
-    from Rforestry import RandomForest
+    from random_forestry import RandomForest
     from sklearn.datasets import load_iris
     import numpy as np
     import pandas as pd
@@ -151,15 +234,15 @@ for more details.
 
 .. _doubleOOB:
 
-Double Out of Bag Aggregation
------------------------------
+Prediction with Double Out-of-Bag Aggregation
+---------------------------------------------
 
-This is an example of using double OOB aggregation. Check out :meth:`predict(..., aggregation='doubleOOB') <forestry.RandomForest.predict>` 
+This is an example of using double OOB aggregation. Check out :meth:`predict(..., aggregation='doubleOOB') <forestry.RandomForest.predict>`
 for more details.
 
 .. code-block:: Python
 
-    from Rforestry import RandomForest
+    from random_forestry import RandomForest
     from sklearn.datasets import load_iris
     import numpy as np
     import pandas as pd
@@ -172,7 +255,7 @@ for more details.
     # Create a RandomForest object
     fr = RandomForest(oob_honest=True, double_bootstrap=True, scale=False)
 
-    print('Traingng the forest')
+    print('Training the forest')
     fr.fit(X, y)
 
     print('Making doubleOOB predictions')
@@ -180,46 +263,17 @@ for more details.
     print(preds)
 
 
-.. _ci:
-
-Confidence Intervals
----------------------
-
-This is an example how to get confidence intervals. Look into the :meth:`API <forestry.RandomForest.get_ci>` 
-for more details.
-
-.. code-block:: Python
-
-    from Rforestry import RandomForest
-    from sklearn.datasets import load_iris
-    import numpy as np
-    import pandas as pd
-
-    # Getting the dataset
-    data = load_iris()
-    X = pd.DataFrame(data['data'], columns=data['feature_names'])
-    y = data['target']
-
-    # Create a RandomForest object and train
-    fr = RandomForest(oob_honest=True, double_bootstrap=True, scale=False)
-    fr.fit(X, y)
-
-    # Get confidence intervals
-    conf_intervals = fr.get_ci(newdata=X, method='OOB-conformal', level=.99)
-    print(conf_intervals)
-
-
 .. _vi:
 
 Variable Importance
 -------------------
 
-This is an example how to get the variable importance. Check out the :meth:`API <forestry.RandomForest.get_vi>` 
+This is an example how to get the variable importance. Check out the :meth:`API <forestry.RandomForest.get_vi>`
 for more details.
 
 .. code-block:: Python
 
-    from Rforestry import RandomForest
+    from random_forestry import RandomForest
     from sklearn.datasets import load_breast_cancer
     import numpy as np
 
@@ -234,39 +288,6 @@ for more details.
     print(var_importance)
 
 
-    # VI DOESN'T WORK BECAUSE OF WEIGHTMATRIX 
-
-
-.. _bias:
-
-Bias Corrected Predictions
----------------------------
-
-This is an example how to use bias correction to make predictions. Check out :meth:`corrected_predict() <forestry.RandomForest.corrected_predict>` 
-for more details.
-
-.. code-block:: Python
-
-    from Rforestry import RandomForest
-    from sklearn.datasets import load_breast_cancer
-    import numpy as np
-
-    # Getting the dataset
-    X, y = load_breast_cancer(return_X_y=True)
-
-    # Create a RandomForest object and train
-    fr = RandomForest(scale=False, oob_honest=True)
-    fr.fit(X, y)
-
-    # Getting the bias corrected predictions
-    corrected_preds = fr.corrected_predict(feats=[0,1,-1], nrounds=10, double=False,
-            simple=False, params_forestry={'scale':False, 'OOBhonest':True})
-
-    # Finding the out of bag error before and after
-    print('OOB error before correction: ' + str(fr.get_oob()))
-    print('OOB error after correction: ' + str(np.mean((corrected_preds - y)**2)))
-
-
 .. _tree_struc:
 
 Retrieve the Tree Structure
@@ -278,7 +299,7 @@ which fills the :ref:`saved_forest <translate-label>` attribute for the correspo
 
 .. code-block:: Python
 
-    from Rforestry import RandomForest
+    from random_forestry import RandomForest
     from sklearn.datasets import load_iris
     import numpy as np
     import pandas as pd
@@ -296,59 +317,3 @@ which fills the :ref:`saved_forest <translate-label>` attribute for the correspo
     fr.translate_tree(0)
     print(fr.saved_forest[0])
 
-    # Calculate the proportion of splits for each feature_names
-    split_prop = fr.get_split_propotions()
-    print(split_prop)
-
-
-.. _plot:
-
-Plotting a Tree
-----------------
-
-To plot a specific tree in the forest, first convert it into a :class:`ShadowForestryTree <forestry_shadow.ShadowForestryTree>` object, 
-then use the `dtreeviz <https://github.com/parrt/dtreeviz#usage>`_ library for visualization. Here is an example of how to do that.
-
-.. code-block:: Python
-
-    from Rforestry import RandomForest, ShadowForestryTree
-    from dtreeviz.trees import *
-
-    from sklearn.datasets import load_iris
-    import numpy as np
-    import pandas as pd
-
-    # Getting the dataset
-    data = load_iris()
-    X = pd.DataFrame(data['data'], columns=data['feature_names'])
-    y = data['target']
-
-    # Create a RandomForest object and train
-    fr = RandomForest(ntree=100, max_depth=8)
-    fr.fit(X, y)
-
-    # Create a ShadowForestryTree object
-    shadow_forestry = ShadowForestryTree(fr, X, y, tree_id=28, feature_names=X.columns.values, target_name='Species')
-
-    # Plot the tree
-    viz = dtreeviz(shadow_forestry,
-                    scale=3.0,
-                    target_name='Species',
-                    feature_names=X.columns.values)
-
-    viz.view()
-
-
-    # Plot the prediction path of an observation
-    obs = X.loc[np.random.randint(0, len(X)),:]  # random sample from training
-
-    viz = dtreeviz(shadow_forestry, 
-                target_name='Species', 
-                orientation ='LR',  # left-right orientation
-                feature_names=X.columns.values,
-                X=obs)  # need to give single observation for prediction
-                
-    viz.view()  
-
-    # See the prediction path in plain english
-    print(explain_prediction_path(shadow_forestry, x=obs, feature_names=X.columns.values, explanation_type='plain_english'))
