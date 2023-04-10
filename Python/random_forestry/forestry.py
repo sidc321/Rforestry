@@ -650,11 +650,11 @@ class RandomForest:
         if newdata is not None and self.processed_dta.n_observations != len(newdata.index) and training_idx is None:
             warnings.warn("Attempting to do OOB predictions on a dataset which doesn't match the training data!")
             return None
-        elif len(training_idx) != len(newdata.index):
-            raise ValueError("Training Indices must be of the same length as newdata")
-
-        if training_idx is not None and (not np.issubdtype(training_idx.dtype, np.integer) or np.any((training_idx < 0) | (training_idx >= self.processed_dta.n_observations))):
-            raise ValueError("Training Indices must contain integers between 0 and the number of training observations - 1")
+        if training_idx:
+            if len(training_idx) != len(newdata.index):
+                raise ValueError("Training Indices must be of the same length as newdata")
+            if (not np.issubdtype(training_idx.dtype, np.integer) or np.any((training_idx < 0) | (training_idx >= self.processed_dta.n_observations))):
+                raise ValueError("Training Indices must contain integers between 0 and the number of training observations - 1")
 
         n_preds = self._get_n_preds(newdata)
         n_weight_matrix = n_preds * self.processed_dta.n_observations if return_weight_matrix else 0
@@ -670,7 +670,7 @@ class RandomForest:
             training_idx is not None,
             n_preds,
             n_weight_matrix,
-            training_idx
+            training_idx if training_idx else []
         )
 
     def _aggregation_double_oob(
@@ -691,12 +691,11 @@ class RandomForest:
             )
             if len(processed_x.index) != self.processed_dta.n_observations and training_idx is None:
                 raise ValueError("Attempting to do OOB predictions on a dataset which doesn't match the training data!")
-            elif len(training_idx) != len(newdata.index):
+            if training_idx and len(training_idx) != len(newdata.index):
                 raise ValueError("Training Indices must be of the same length as newdata")
 
-        if training_idx is not None and (not np.issubdtype(training_idx.dtype, np.integer) or np.any((training_idx < 0) | (training_idx >= self.processed_dta.n_observations))):
+        if training_idx and (not np.issubdtype(training_idx.dtype, np.integer) or np.any((training_idx < 0) | (training_idx >= self.processed_dta.n_observations))):
             raise ValueError("Training Indices must contain integers between 0 and the number of training observations - 1")
-
 
         n_preds = self._get_n_preds(newdata)
         n_weight_matrix = n_preds * self.processed_dta.n_observations if return_weight_matrix else 0
@@ -712,7 +711,7 @@ class RandomForest:
             training_idx is not None,
             n_preds,
             n_weight_matrix,
-            training_idx
+            training_idx if training_idx else []
         )
 
     def _aggregation_coefs(
@@ -870,10 +869,10 @@ class RandomForest:
         """
 
         if aggregation == "oob":
-            predictions, weight_matrix = self._aggregation_oob(newdata, exact, return_weight_matrix)
+            predictions, weight_matrix = self._aggregation_oob(newdata, exact, return_weight_matrix, training_idx)
 
         elif aggregation == "doubleOOB":
-            predictions, weight_matrix = self._aggregation_double_oob(newdata, exact, return_weight_matrix)
+            predictions, weight_matrix = self._aggregation_double_oob(newdata, exact, return_weight_matrix, training_idx)
 
         elif aggregation == "coefs":
             predictions, weight_matrix, coefficients = self._aggregation_coefs(
