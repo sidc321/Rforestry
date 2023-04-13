@@ -314,7 +314,7 @@ class RandomForest:
     fold_size: conint(gt=0, strict=True) = 1
     monotone_avg: StrictBool = False
     overfit_penalty: Union[StrictInt, StrictFloat] = 1
-    scale: StrictBool = False
+    scale: StrictBool = True
     double_tree: StrictBool = False
     na_direction: StrictBool = False
 
@@ -791,7 +791,7 @@ class RandomForest:
         aggregation: str = PredictValidator.DEFAULT_AGGREGATION,
         seed: Optional[int] = None,
         nthread: Optional[int] = None,
-        exact: Optional[bool] = None,
+        exact: Optional[bool] = True,
         trees: Optional[np.ndarray] = None,
         training_idx: Optional[np.ndarray] = None,
         return_weight_matrix: bool = False,
