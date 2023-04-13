@@ -221,16 +221,6 @@ class RandomForest:
      * linear_feature_cols (*numpy.array*) - An array containing the indices of which features to split linearly on
        when using linear penalized splits. Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
 
-     * groups_mapping (*dict*) - Contains informtion about the groups of the training observations.
-       Has the following entries:
-
-        * group_value (*pandas.Index*) - The categories of the groups.
-
-        * group_numeric_value (*numpy.array*) - The categories of the groups encoded into numeric represetation
-
-     * groups (*pandas.Series(..., dtype='category')*) - Specifies the group membership of each training observation.
-       Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
-
      * col_means (*numpy.array of shape[ncols]*) - The mean value of each column.
 
      * col_sd (*numpy.array of shape[ncols]*) - The standard deviation of each column.
@@ -411,7 +401,7 @@ class RandomForest:
         weights_variables = np.array(weights_variables, dtype=np.ulonglong)
         return weights_variables
 
-    def _get_groups_mapping_and_vector(self, x: pd.DataFrame, groups: Optional[pd.Series]) -> Tuple[dict, pd.Series]:
+    def _get_groups(self, x: pd.DataFrame, groups: Optional[pd.Series]) -> Tuple[dict, pd.Series]:
         nrow, _ = x.shape
         groups_mapping = {}
         if groups is not None:
@@ -481,7 +471,7 @@ class RandomForest:
          a decreasing monotonic relationship, and 0 indicating no constraint.
          Constraints supplied for categorical variable will be ignored. Defaults to all 0-s (no constraints).
         :type monotonicConstraints: *array_like of shape [ncols,], optional*
-        :param groups: A pandas categorical Seires specifying the group membership of each training observation.
+        :param groups: A pandas categorical series specifying the group membership of each training observation.
          These groups are used in the aggregation when doing out of bag predictions in
          order to predict with only trees where the entire group was not used for aggregation.
          This allows the user to specify custom subgroups which will be used to create
@@ -526,7 +516,7 @@ class RandomForest:
         if self.replace:
             observation_weights /= np.sum(observation_weights)
 
-        groups_mapping, group_vector = self._get_groups_mapping_and_vector(x, groups)
+        groups_mapping, group_vector = self._get_groups(x, groups)
 
         (
             processed_x,
