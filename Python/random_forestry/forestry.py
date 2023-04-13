@@ -683,7 +683,7 @@ class RandomForest:
         if newdata is None:
             double_oob = True
         else:
-            double_oob = False
+            double_oob = True
             processed_x = preprocessing.preprocess_testing(
                 newdata,
                 self.processed_dta.categorical_feature_cols,
