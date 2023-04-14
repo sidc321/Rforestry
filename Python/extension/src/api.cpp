@@ -48,7 +48,7 @@ extern "C" {
         };
     
         for (size_t i = 0; i < numRows; i++) {
-            outcomeData->at(i) = arr[numColumns*i-1];
+            outcomeData->at(i) = arr[numColumns*(i+1)-1];
         }
     
         numColumns--;
