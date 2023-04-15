@@ -314,7 +314,7 @@ class RandomForest:
     fold_size: conint(gt=0, strict=True) = 1
     monotone_avg: StrictBool = False
     overfit_penalty: Union[StrictInt, StrictFloat] = 1
-    scale: StrictBool = True
+    scale: StrictBool = False
     double_tree: StrictBool = False
     na_direction: StrictBool = False
 
