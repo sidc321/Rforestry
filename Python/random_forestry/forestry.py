@@ -680,10 +680,10 @@ class RandomForest:
         return_weight_matrix: bool,
         training_idx: Optional[np.ndarray]
     ) -> Tuple[np.ndarray, np.ndarray]:
-        if newdata is None:
-            double_oob = True
-        else:
-            double_oob = True
+
+        double_oob = True
+
+        if newdata is not None:
             processed_x = preprocessing.preprocess_testing(
                 newdata,
                 self.processed_dta.categorical_feature_cols,
