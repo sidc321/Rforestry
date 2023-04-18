@@ -640,6 +640,14 @@ class RandomForest:
         )
         return len(processed_x.index)
 
+    def _scale_ret_values(self,
+                          ret_values: Optional[Tuple[np.ndarray, np.ndarray]],
+                          include_coefficients: bool = False
+    ) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+        if include_coefficients:
+            return (ret_values[0] * self.processed_dta.col_sd[-1] + self.processed_dta.col_means[-1], ret_values[1], ret_values[2])
+        return (ret_values[0] * self.processed_dta.col_sd[-1] + self.processed_dta.col_means[-1], ret_values[1])
+
     def _aggregation_oob(
         self,
         newdata: Optional[pd.DataFrame],
@@ -682,7 +690,7 @@ class RandomForest:
         )
         # If the forest was trained with scaled values we need to rescale + re center the predictions
         if self.scale:
-            return (ret_values[0] * self.processed_dta.col_sd[-1] + self.processed_dta.col_means[-1], ret_values[1])
+            return self._scale_ret_values(ret_values)
         else:
             return ret_values
 
@@ -729,7 +737,7 @@ class RandomForest:
 
         # If the forest was trained with scaled values we need to rescale + re center the predictions
         if self.scale:
-            return (ret_values[0]* self.processed_dta.col_sd[-1] + self.processed_dta.col_means[-1], ret_values[1])
+            return self._scale_ret_values(ret_values)
         else:
             return ret_values
 
@@ -765,7 +773,7 @@ class RandomForest:
 
         # If the forest was trained with scaled values we need to rescale + re center the predictions
         if self.scale:
-            return (ret_values[0] * self.processed_dta.col_sd[-1] + self.processed_dta.col_means[-1], ret_values[1],ret_values[2])
+            return self._scale_ret_values(ret_values, include_coefficients=True)
         else:
             return ret_values
 
@@ -818,7 +826,7 @@ class RandomForest:
 
         # If the forest was trained with scaled values we need to rescale + re center the predictions
         if self.scale:
-            return (ret_values[0] * self.processed_dta.col_sd[-1] + self.processed_dta.col_means[-1], ret_values[1],ret_values[2])
+            return self._scale_ret_values(ret_values, include_coefficients=True)
         else:
             return ret_values
 
