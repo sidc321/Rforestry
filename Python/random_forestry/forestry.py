@@ -657,13 +657,12 @@ class RandomForest:
                 raise ValueError("Attempting to do OOB predictions on a dataset which doesn't match the training data!")
             if training_idx and len(training_idx) != len(newdata.index):
                 raise ValueError("Training Indices must be of the same length as newdata")
+            if self.scale:
+                processed_x = preprocessing.scale_center(processed_x, self.processed_dta.categorical_feature_cols,
+                                                         self.processed_dta.col_means,self.processed_dta.col_sd)
 
         if training_idx and (not np.issubdtype(training_idx.dtype, np.integer) or np.any((training_idx < 0) | (training_idx >= self.processed_dta.n_observations))):
             raise ValueError("Training Indices must contain integers between 0 and the number of training observations - 1")
-
-        if newdata is not None and self.scale:
-            processed_x = preprocessing.scale_center(processed_x, self.processed_dta.categorical_feature_cols,
-                                                     self.processed_dta.col_means,self.processed_dta.col_sd)
 
         n_preds = self._get_n_preds(newdata)
         n_weight_matrix = n_preds * self.processed_dta.n_observations if return_weight_matrix else 0
@@ -694,9 +693,6 @@ class RandomForest:
         return_weight_matrix: bool,
         training_idx: Optional[np.ndarray]
     ) -> Tuple[np.ndarray, np.ndarray]:
-
-        double_oob = True
-
         if newdata is not None:
             processed_x = preprocessing.preprocess_testing(
                 newdata,
@@ -707,13 +703,12 @@ class RandomForest:
                 raise ValueError("Attempting to do OOB predictions on a dataset which doesn't match the training data!")
             if training_idx and len(training_idx) != len(newdata.index):
                 raise ValueError("Training Indices must be of the same length as newdata")
+            if self.scale:
+                processed_x = preprocessing.scale_center(processed_x, self.processed_dta.categorical_feature_cols,
+                                                         self.processed_dta.col_means,self.processed_dta.col_sd)
 
         if training_idx and (not np.issubdtype(training_idx.dtype, np.integer) or np.any((training_idx < 0) | (training_idx >= self.processed_dta.n_observations))):
             raise ValueError("Training Indices must contain integers between 0 and the number of training observations - 1")
-
-        if newdata is not None and self.scale:
-            processed_x = preprocessing.scale_center(processed_x, self.processed_dta.categorical_feature_cols,
-                                                     self.processed_dta.col_means,self.processed_dta.col_sd)
 
         n_preds = self._get_n_preds(newdata)
         n_weight_matrix = n_preds * self.processed_dta.n_observations if return_weight_matrix else 0
@@ -722,7 +717,7 @@ class RandomForest:
             self.forest,
             self.dataframe,
             self._get_test_data(processed_x),
-            double_oob,
+            True,
             exact,
             return_weight_matrix,
             self.verbose,
@@ -835,7 +830,7 @@ class RandomForest:
         aggregation: str = PredictValidator.DEFAULT_AGGREGATION,
         seed: Optional[int] = None,
         nthread: Optional[int] = None,
-        exact: Optional[bool] = True,
+        exact: bool = True,
         trees: Optional[np.ndarray] = None,
         training_idx: Optional[np.ndarray] = None,
         return_weight_matrix: bool = False,
