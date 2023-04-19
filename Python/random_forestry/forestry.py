@@ -306,7 +306,7 @@ class RandomForest:
     fold_size: conint(gt=0, strict=True) = 1
     monotone_avg: StrictBool = False
     overfit_penalty: Union[StrictInt, StrictFloat] = 1
-    scale: StrictBool = False
+    scale: StrictBool = True
     double_tree: StrictBool = False
     na_direction: StrictBool = False
 
@@ -412,16 +412,15 @@ class RandomForest:
         if self.min_trees_per_fold > 0 and (-(len(levels) // -self.fold_size)) * self.min_trees_per_fold > 2000:
             warnings.warn(
                 "Using "
-                + len(levels)
-                + " groups with "
-                + str(self.min_trees_per_fold)
-                + " and fold size "
+                + str(len(levels))
+                + " groups with fold size "
                 + str(self.fold_size)
+                + " and "
+                + str(self.min_trees_per_fold)
                 + " trees per fold will train "
                 + str(len(levels) * self.min_trees_per_fold)
                 + " trees in the forest"
             )
-
         return codes
 
     @FitValidator
@@ -1063,7 +1062,7 @@ class RandomForest:
 
             # Initialize arrays to pass to C
             split_info = np.empty(self.sampsize + 1, dtype=np.intc)
-            averaging_info = split_info
+            averaging_info = np.empty(self.sampsize + 1, dtype=np.intc)
 
             tree_info = np.empty(num_nodes * 5 + num_leaf_nodes * 2 + 1, dtype=np.double)
 
