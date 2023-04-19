@@ -218,6 +218,8 @@ class RandomForest:
        1 indicates an increasing monotonic relationship, -1 indicates a decreasing monotonic relationship, and
        0 indicates no constraint. Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
 
+     * group_memberships(*numpy.array of shape[nrows]*) - Factorized group membership of each training observation.
+
      * linear_feature_cols (*numpy.array*) - An array containing the indices of which features to split linearly on
        when using linear penalized splits. Check out :meth:`fit() <forestry.RandomForest.fit>` fot more details.
 
@@ -401,30 +403,26 @@ class RandomForest:
         weights_variables = np.array(weights_variables, dtype=np.ulonglong)
         return weights_variables
 
-    def _get_groups(self, x: pd.DataFrame, groups: Optional[pd.Series]) -> Tuple[dict, pd.Series]:
-        nrow, _ = x.shape
-        groups_mapping = {}
-        if groups is not None:
-            groups_mapping["groupValue"] = groups.cat.categories
-            groups_mapping["groupNumericValue"] = np.arange(len(groups.cat.categories))
+    def _get_group_memberships(self, nrow: int, groups: Optional[pd.Series]) -> np.ndarray:
+        if groups is None:
+            return np.zeros(nrow, dtype=np.ulonglong)
+        codes, levels = pd.factorize(groups)
 
-            group_vector = pd.to_numeric(groups)
+        # Print warning if the group number and minTreesPerFold results in a large forest
+        if self.min_trees_per_fold > 0 and (-(len(levels) // -self.fold_size)) * self.min_trees_per_fold > 2000:
+            warnings.warn(
+                "Using "
+                + len(levels)
+                + " groups with "
+                + str(self.min_trees_per_fold)
+                + " and fold size "
+                + str(self.fold_size)
+                + " trees per fold will train "
+                + str(len(levels) * self.min_trees_per_fold)
+                + " trees in the forest"
+            )
 
-            # Print warning if the group number and minTreesPerFold results in a large forest
-            if self.min_trees_per_fold > 0 and len(groups.cat.categories) * self.min_trees_per_fold > 2000:
-                warnings.warn(
-                    "Using "
-                    + str(len(groups.cat.categories))
-                    + " groups with "
-                    + str(self.min_trees_per_fold)
-                    + " trees per group will train "
-                    + str(len(groups.cat.categories) * self.min_trees_per_fold)
-                    + " trees in the forest"
-                )
-
-        else:
-            group_vector = np.zeros(nrow, dtype=np.ulonglong)
-        return groups_mapping, group_vector
+        return codes
 
     @FitValidator
     def fit(
@@ -471,14 +469,14 @@ class RandomForest:
          a decreasing monotonic relationship, and 0 indicating no constraint.
          Constraints supplied for categorical variable will be ignored. Defaults to all 0-s (no constraints).
         :type monotonicConstraints: *array_like of shape [ncols,], optional*
-        :param groups: A pandas categorical series specifying the group membership of each training observation.
+        :param groups: A pandas series specifying the group membership of each training observation.
          These groups are used in the aggregation when doing out of bag predictions in
          order to predict with only trees where the entire group was not used for aggregation.
          This allows the user to specify custom subgroups which will be used to create
          predictions which do not use any data from a common group to make predictions for
          any observation in the group. This can be used to create general custom
          resampling schemes, and provide predictions consistent with the Out-of-Group set.
-        :type groups: *pandas.Categorical(...), pandas.Series(..., dtype="category"),
+        :type groups: *pandas.Series, optional*,
          or other pandas categorical dtypes, optional, default=None*
         :param seed: Random number generator seed. The default value is the *RandomForest* seed.
         :type seed: *int, optional*
@@ -516,7 +514,7 @@ class RandomForest:
         if self.replace:
             observation_weights /= np.sum(observation_weights)
 
-        groups_mapping, group_vector = self._get_groups(x, groups)
+        group_memberships = self._get_group_memberships(nrow, groups)
 
         (
             processed_x,
@@ -548,7 +546,7 @@ class RandomForest:
             deep_feature_weights_variables.size,
             observation_weights,
             monotonic_constraints,
-            group_vector,
+            group_memberships,
             self.monotone_avg,
             nrow,
             ncol + 1,
@@ -598,8 +596,7 @@ class RandomForest:
             observation_weights=observation_weights,
             monotonic_constraints=monotonic_constraints,
             linear_feature_cols=lin_feats,
-            groups_mapping=groups_mapping,
-            groups=groups,
+            groups=group_memberships,
             col_means=col_means,
             col_sd=col_sd,
             has_nas=x.isnull().values.any(),
@@ -1149,11 +1146,6 @@ class RandomForest:
 
     def __setstate__(self, state: dict) -> None:
         self.__dict__ = state
-        group_vector = (
-            pd.to_numeric(state["processed_dta"].groups)
-            if state["processed_dta"].groups is not None
-            else np.repeat(0, state["processed_dta"].n_observations)
-        )
         state["dataframe"] = extension.get_data(
             np.ascontiguousarray(
                 pd.concat(
@@ -1177,7 +1169,7 @@ class RandomForest:
             state["processed_dta"].deep_feature_weights_variables.size,
             state["processed_dta"].observation_weights,
             state["processed_dta"].monotonic_constraints,
-            group_vector,
+            state["processed_dta"].group_memberships,
             state["monotone_avg"],
             state["processed_dta"].n_observations,
             state["processed_dta"].num_columns + 1,
