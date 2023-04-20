@@ -17,6 +17,8 @@ def get_sampsize(forest, x: pd.DataFrame) -> int:
     nrows, _ = x.shape
     if forest.sampsize is None:
         sampsize = nrows if forest.replace else math.ceil(0.632 * nrows)
+    else:
+        sampsize = forest.sampsize
 
     # only if sample.fraction is given, update sampsize
     if forest.sample_fraction is not None:
