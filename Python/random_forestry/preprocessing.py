@@ -78,7 +78,6 @@ def forest_checker(forest) -> None:
 # Given a dataframe with Y and Y.hat at least, fits an OLS and gives the LOO
 # predictions on the sample
 def loo_pred_helper(data_frame: pd.DataFrame) -> dict:
-
     Y = data_frame["Y"]
     X = data_frame.loc[:, data_frame.columns != "Y"]
     X = sm.add_constant(X)

@@ -362,7 +362,6 @@ class RandomForest:
         return seed
 
     def _set_nodesize_strict(self) -> None:
-
         # if the splitratio is 1, then we use adaptive rf and avgSampleSize is
         # equal to the total sampsize
 
@@ -639,12 +638,15 @@ class RandomForest:
         )
         return len(processed_x.index)
 
-    def _scale_ret_values(self,
-                          ret_values: Optional[Tuple[np.ndarray, np.ndarray]],
-                          include_coefficients: bool = False
+    def _scale_ret_values(
+        self, ret_values: Optional[Tuple[np.ndarray, np.ndarray]], include_coefficients: bool = False
     ) -> Optional[Tuple[np.ndarray, np.ndarray]]:
         if include_coefficients:
-            return (ret_values[0] * self.processed_dta.col_sd[-1] + self.processed_dta.col_means[-1], ret_values[1], ret_values[2])
+            return (
+                ret_values[0] * self.processed_dta.col_sd[-1] + self.processed_dta.col_means[-1],
+                ret_values[1],
+                ret_values[2],
+            )
         return (ret_values[0] * self.processed_dta.col_sd[-1] + self.processed_dta.col_means[-1], ret_values[1])
 
     def _aggregation_oob(
@@ -665,11 +667,20 @@ class RandomForest:
             if training_idx and len(training_idx) != len(newdata.index):
                 raise ValueError("Training Indices must be of the same length as newdata")
             if self.scale:
-                processed_x = preprocessing.scale_center(processed_x, self.processed_dta.categorical_feature_cols,
-                                                         self.processed_dta.col_means,self.processed_dta.col_sd)
+                processed_x = preprocessing.scale_center(
+                    processed_x,
+                    self.processed_dta.categorical_feature_cols,
+                    self.processed_dta.col_means,
+                    self.processed_dta.col_sd,
+                )
 
-        if training_idx and (not np.issubdtype(training_idx.dtype, np.integer) or np.any((training_idx < 0) | (training_idx >= self.processed_dta.n_observations))):
-            raise ValueError("Training Indices must contain integers between 0 and the number of training observations - 1")
+        if training_idx and (
+            not np.issubdtype(training_idx.dtype, np.integer)
+            or np.any((training_idx < 0) | (training_idx >= self.processed_dta.n_observations))
+        ):
+            raise ValueError(
+                "Training Indices must contain integers between 0 and the number of training observations - 1"
+            )
 
         n_preds = self._get_n_preds(newdata)
         n_weight_matrix = n_preds * self.processed_dta.n_observations if return_weight_matrix else 0
@@ -711,8 +722,12 @@ class RandomForest:
             if training_idx and len(training_idx) != len(newdata.index):
                 raise ValueError("Training Indices must be of the same length as newdata")
             if self.scale:
-                processed_x = preprocessing.scale_center(processed_x, self.processed_dta.categorical_feature_cols,
-                                                         self.processed_dta.col_means,self.processed_dta.col_sd)
+                processed_x = preprocessing.scale_center(
+                    processed_x,
+                    self.processed_dta.categorical_feature_cols,
+                    self.processed_dta.col_means,
+                    self.processed_dta.col_sd,
+                )
 
         if training_idx and (
             not np.issubdtype(training_idx.dtype, np.integer)
@@ -755,8 +770,12 @@ class RandomForest:
         )
 
         if self.scale:
-            processed_x = preprocessing.scale_center(processed_x, self.processed_dta.categorical_feature_cols,
-                                                         self.processed_dta.col_means,self.processed_dta.col_sd)
+            processed_x = preprocessing.scale_center(
+                processed_x,
+                self.processed_dta.categorical_feature_cols,
+                self.processed_dta.col_means,
+                self.processed_dta.col_sd,
+            )
 
         ret_values = extension.predict_forest(
             self.forest,
@@ -796,8 +815,12 @@ class RandomForest:
             self.processed_dta.categorical_feature_mapping,
         )
         if self.scale:
-            processed_x = preprocessing.scale_center(processed_x, self.processed_dta.categorical_feature_cols,
-                                                         self.processed_dta.col_means,self.processed_dta.col_sd)
+            processed_x = preprocessing.scale_center(
+                processed_x,
+                self.processed_dta.categorical_feature_cols,
+                self.processed_dta.col_means,
+                self.processed_dta.col_sd,
+            )
 
         tree_weights = np.zeros(self.ntree, dtype=np.ulonglong)
         if trees is not None:
@@ -1074,7 +1097,6 @@ class RandomForest:
                 idx = np.array(tree_ids)
 
         for cur_id in idx:
-
             if self.saved_forest[cur_id]:
                 continue
 

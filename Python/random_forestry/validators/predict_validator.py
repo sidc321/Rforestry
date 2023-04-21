@@ -9,7 +9,6 @@ from .base_validator import BaseValidator
 
 
 class PredictValidator(BaseValidator):
-
     DEFAULT_NEWDATA: Final = None
     DEFAULT_AGGREGATION: Final[str] = "average"
 

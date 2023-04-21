@@ -9,7 +9,6 @@ from random_forestry import RandomForest
 
 
 def test_fit_validator():
-
     forest = RandomForest()
 
     X, y = get_data()

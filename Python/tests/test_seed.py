@@ -9,7 +9,6 @@ from random_forestry import RandomForest
 
 @pytest.mark.skipif(platform.system() == "Darwin", reason="This is expected to fail on MacOS")
 def test_different_predictions():
-
     X, y = get_data()
 
     forest1 = RandomForest(ntree=10, max_depth=2, seed=1, scale=False)
