@@ -15,7 +15,7 @@ def test_groups():
 
     forest = RandomForest()
     groups = Series([i for i in range(len(X) // 10) for _ in range(10)])
-    forest.fit(X, y, groups = groups)
+    forest.fit(X, y, groups=groups)
     pred_avg_groups = forest.predict(X, aggregation="average")
     pred_oob_groups = forest.predict(X, aggregation="oob")
 
@@ -33,7 +33,7 @@ def test_groups_honest():
 
     forest = RandomForest(oob_honest=True)
     groups = Series([i for i in range(len(X) // 10) for _ in range(10)])
-    forest.fit(X, y, groups = groups)
+    forest.fit(X, y, groups=groups)
     pred_avg_groups = forest.predict(X, aggregation="average")
     pred_oob_groups = forest.predict(X, aggregation="oob")
 
