@@ -6,11 +6,10 @@ import sys
 import warnings
 from pathlib import Path
 from random import randrange
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-import statsmodels.api as sm
 from pydantic import (  # pylint: disable=no-name-in-module
     ConfigDict,
     StrictBool,
@@ -243,8 +242,8 @@ class RandomForest:
 
      .. _translate-label:
 
-    :ivar saved_forest: For any tree *i* in the forest, *saved_forest[i]* is a dictionary which gives access to the underlying
-     structrure of that tree. *saved_forest[i]* has the following entries:
+    :ivar saved_forest: For any tree *i* in the forest, *saved_forest[i]* is a dictionary which gives access to the
+     underlying structrure of that tree. *saved_forest[i]* has the following entries:
 
      * children_right (*numpy.array of shape[number of nodes in the tree,]*) - For a node with a given *id*,
        *children_right[id]* gives the id of the right child of that node. If leaf node, *children_right[id]* is *-1*.
@@ -267,8 +266,8 @@ class RandomForest:
 
      .. note::
         When a *RandomForest* is initialized, *saved_forest* is set to a list of *ntree* empty dictionaries. In order to
-        populate those dictionaries, one must use the :meth:`translate_tree() <random_forestry.RandomForest.translate_tree>`
-        method.
+        populate those dictionaries, the :meth:`translate_tree() <random_forestry.RandomForest.translate_tree>` method
+        must be used.
 
     :vartype saved_forest: list[dict]
     :ivar forest: A ctypes pointer to the *forestry* object in C++. It is initially set to *None* and updated only
@@ -355,7 +354,6 @@ class RandomForest:
         return seed
 
     def _set_nodesize_strict(self) -> None:
-
         # if the splitratio is 1, then we use adaptive rf and avgSampleSize is
         # equal to the total sampsize
 
@@ -407,6 +405,8 @@ class RandomForest:
         if groups is None:
             return np.zeros(nrow, dtype=np.ulonglong)
         codes, levels = pd.factorize(groups)
+        # Increment array to avoid having 0s
+        codes += 1
 
         # Print warning if the group number and minTreesPerFold results in a large forest
         if self.min_trees_per_fold > 0 and (-(len(levels) // -self.fold_size)) * self.min_trees_per_fold > 2000:
@@ -626,12 +626,15 @@ class RandomForest:
         )
         return len(processed_x.index)
 
-    def _scale_ret_values(self,
-                          ret_values: Optional[Tuple[np.ndarray, np.ndarray]],
-                          include_coefficients: bool = False
+    def _scale_ret_values(
+        self, ret_values: Optional[Tuple[np.ndarray, np.ndarray]], include_coefficients: bool = False
     ) -> Optional[Tuple[np.ndarray, np.ndarray]]:
         if include_coefficients:
-            return (ret_values[0] * self.processed_dta.col_sd[-1] + self.processed_dta.col_means[-1], ret_values[1], ret_values[2])
+            return (
+                ret_values[0] * self.processed_dta.col_sd[-1] + self.processed_dta.col_means[-1],
+                ret_values[1],
+                ret_values[2],
+            )
         return (ret_values[0] * self.processed_dta.col_sd[-1] + self.processed_dta.col_means[-1], ret_values[1])
 
     def _aggregation_oob(
@@ -639,7 +642,7 @@ class RandomForest:
         newdata: Optional[pd.DataFrame],
         exact: bool,
         return_weight_matrix: bool,
-        training_idx: Optional[np.ndarray]
+        training_idx: Optional[np.ndarray],
     ) -> Optional[Tuple[np.ndarray, np.ndarray]]:
         if newdata is not None:
             processed_x = preprocessing.preprocess_testing(
@@ -652,11 +655,20 @@ class RandomForest:
             if training_idx and len(training_idx) != len(newdata.index):
                 raise ValueError("Training Indices must be of the same length as newdata")
             if self.scale:
-                processed_x = preprocessing.scale_center(processed_x, self.processed_dta.categorical_feature_cols,
-                                                         self.processed_dta.col_means,self.processed_dta.col_sd)
+                processed_x = preprocessing.scale_center(
+                    processed_x,
+                    self.processed_dta.categorical_feature_cols,
+                    self.processed_dta.col_means,
+                    self.processed_dta.col_sd,
+                )
 
-        if training_idx and (not np.issubdtype(training_idx.dtype, np.integer) or np.any((training_idx < 0) | (training_idx >= self.processed_dta.n_observations))):
-            raise ValueError("Training Indices must contain integers between 0 and the number of training observations - 1")
+        if training_idx and (
+            not np.issubdtype(training_idx.dtype, np.integer)
+            or np.any((training_idx < 0) | (training_idx >= self.processed_dta.n_observations))
+        ):
+            raise ValueError(
+                "Training Indices must contain integers between 0 and the number of training observations - 1"
+            )
 
         n_preds = self._get_n_preds(newdata)
         n_weight_matrix = n_preds * self.processed_dta.n_observations if return_weight_matrix else 0
@@ -672,7 +684,7 @@ class RandomForest:
             training_idx is not None,
             n_preds,
             n_weight_matrix,
-            training_idx if training_idx else []
+            training_idx if training_idx else [],
         )
         # If the forest was trained with scaled values we need to rescale + re center the predictions
         if self.scale:
@@ -685,7 +697,7 @@ class RandomForest:
         newdata: Optional[pd.DataFrame],
         exact: bool,
         return_weight_matrix: bool,
-        training_idx: Optional[np.ndarray]
+        training_idx: Optional[np.ndarray],
     ) -> Tuple[np.ndarray, np.ndarray]:
         if newdata is not None:
             processed_x = preprocessing.preprocess_testing(
@@ -698,11 +710,20 @@ class RandomForest:
             if training_idx and len(training_idx) != len(newdata.index):
                 raise ValueError("Training Indices must be of the same length as newdata")
             if self.scale:
-                processed_x = preprocessing.scale_center(processed_x, self.processed_dta.categorical_feature_cols,
-                                                         self.processed_dta.col_means,self.processed_dta.col_sd)
+                processed_x = preprocessing.scale_center(
+                    processed_x,
+                    self.processed_dta.categorical_feature_cols,
+                    self.processed_dta.col_means,
+                    self.processed_dta.col_sd,
+                )
 
-        if training_idx and (not np.issubdtype(training_idx.dtype, np.integer) or np.any((training_idx < 0) | (training_idx >= self.processed_dta.n_observations))):
-            raise ValueError("Training Indices must contain integers between 0 and the number of training observations - 1")
+        if training_idx and (
+            not np.issubdtype(training_idx.dtype, np.integer)
+            or np.any((training_idx < 0) | (training_idx >= self.processed_dta.n_observations))
+        ):
+            raise ValueError(
+                "Training Indices must contain integers between 0 and the number of training observations - 1"
+            )
 
         n_preds = self._get_n_preds(newdata)
         n_weight_matrix = n_preds * self.processed_dta.n_observations if return_weight_matrix else 0
@@ -718,7 +739,7 @@ class RandomForest:
             training_idx is not None,
             n_preds,
             n_weight_matrix,
-            training_idx if training_idx else []
+            training_idx if training_idx else [],
         )
 
         # If the forest was trained with scaled values we need to rescale + re center the predictions
@@ -737,8 +758,12 @@ class RandomForest:
         )
 
         if self.scale:
-            processed_x = preprocessing.scale_center(processed_x, self.processed_dta.categorical_feature_cols,
-                                                         self.processed_dta.col_means,self.processed_dta.col_sd)
+            processed_x = preprocessing.scale_center(
+                processed_x,
+                self.processed_dta.categorical_feature_cols,
+                self.processed_dta.col_means,
+                self.processed_dta.col_sd,
+            )
 
         ret_values = extension.predict_forest(
             self.forest,
@@ -778,8 +803,12 @@ class RandomForest:
             self.processed_dta.categorical_feature_mapping,
         )
         if self.scale:
-            processed_x = preprocessing.scale_center(processed_x, self.processed_dta.categorical_feature_cols,
-                                                         self.processed_dta.col_means,self.processed_dta.col_sd)
+            processed_x = preprocessing.scale_center(
+                processed_x,
+                self.processed_dta.categorical_feature_cols,
+                self.processed_dta.col_means,
+                self.processed_dta.col_sd,
+            )
 
         tree_weights = np.zeros(self.ntree, dtype=np.ulonglong)
         if trees is not None:
@@ -833,7 +862,8 @@ class RandomForest:
         Return the prediction from the forest.
 
         :param newdata: Testing predictors.
-        :type newdata: *pandas.DataFrame, pandas.Series, numpy.ndarray, 2d list of shape [nsamples, ncols], deffault=None*
+        :type newdata: *pandas.DataFrame, pandas.Series, numpy.ndarray, 2d list of shape [nsamples, ncols],
+         default=None*
         :param aggregation: How the individual tree predictions are aggregated:
          'average' returns the mean of all trees in the forest; 'terminalNodes' also returns
          the weightMatrix, as well as "terminalNodes" - a matrix where
@@ -905,7 +935,9 @@ class RandomForest:
             predictions, weight_matrix = self._aggregation_oob(newdata, exact, return_weight_matrix, training_idx)
 
         elif aggregation == "doubleOOB":
-            predictions, weight_matrix = self._aggregation_double_oob(newdata, exact, return_weight_matrix, training_idx)
+            predictions, weight_matrix = self._aggregation_double_oob(
+                newdata, exact, return_weight_matrix, training_idx
+            )
 
         elif aggregation == "coefs":
             predictions, weight_matrix, coefficients = self._aggregation_coefs(
@@ -1030,10 +1062,10 @@ class RandomForest:
 
     def translate_tree(self, tree_ids: Optional[Union[int, np.ndarray]] = None) -> None:
         """
-        Given a trained forest, translates the selected trees by allowing access to its underlying structure.
-        After translating tree *i*, its structure will be stored as a dictionary in :ref:`saved_forest <translate-label>`
-        and can be accessed by ``[RandomForest object].saved_forest[i]`` . Check out the :ref:`saved_forest <translate-label>`
-        attribute for more details about its structure.
+        Given a trained forest, translates the selected trees by allowing access to its underlying structure. After
+        translating tree *i*, its structure will be stored as a dictionary in :ref:`saved_forest <translate-label>`
+        and can be accessed by ``[RandomForest object].saved_forest[i]``. Check out the
+        :ref:`saved_forest <translate-label>` attribute for more details about its structure.
 
         :param tree_ids: The indices of the trees to be translated. By default, all the trees in the forest
          are translated.
@@ -1053,7 +1085,6 @@ class RandomForest:
                 idx = np.array(tree_ids)
 
         for cur_id in idx:
-
             if self.saved_forest[cur_id]:
                 continue
 
@@ -1068,22 +1099,24 @@ class RandomForest:
 
             extension.fill_tree_info(self.forest, cur_id, tree_info, split_info, averaging_info)
 
-            self.saved_forest[cur_id]["feature"] = np.empty(num_nodes+num_leaf_nodes, dtype=np.intc)
+            self.saved_forest[cur_id]["feature"] = np.empty(num_nodes + num_leaf_nodes, dtype=np.intc)
             self.saved_forest[cur_id]["threshold"] = np.empty(num_nodes, dtype=np.double)
             self.saved_forest[cur_id]["values"] = np.empty(num_leaf_nodes, dtype=np.double)
             self.saved_forest[cur_id]["na_left_count"] = np.empty(num_nodes, dtype=np.intc)
             self.saved_forest[cur_id]["na_right_count"] = np.empty(num_nodes, dtype=np.intc)
             self.saved_forest[cur_id]["na_default_direction"] = np.empty(num_nodes, dtype=np.intc)
 
-            for i in range(num_nodes+num_leaf_nodes):
+            for i in range(num_nodes + num_leaf_nodes):
                 self.saved_forest[cur_id]["feature"][i] = int(tree_info[i])
             for i in range(num_leaf_nodes):
-                self.saved_forest[cur_id]["values"][i] = tree_info[num_nodes+num_leaf_nodes + i]
+                self.saved_forest[cur_id]["values"][i] = tree_info[num_nodes + num_leaf_nodes + i]
             for i in range(num_nodes):
                 self.saved_forest[cur_id]["threshold"][i] = tree_info[num_nodes + num_leaf_nodes * 2 + i]
                 self.saved_forest[cur_id]["na_left_count"][i] = int(tree_info[num_nodes * 2 + num_leaf_nodes * 2 + i])
                 self.saved_forest[cur_id]["na_right_count"][i] = int(tree_info[num_nodes * 3 + num_leaf_nodes * 2 + i])
-                self.saved_forest[cur_id]["na_default_direction"][i] = int(tree_info[num_nodes * 4 + num_leaf_nodes * 2 + i])
+                self.saved_forest[cur_id]["na_default_direction"][i] = int(
+                    tree_info[num_nodes * 4 + num_leaf_nodes * 2 + i]
+                )
 
             num_split_idx = int(split_info[0])
             self.saved_forest[cur_id]["splitting_sample_idx"] = np.empty(num_split_idx, dtype=np.intc)
@@ -1190,7 +1223,7 @@ class RandomForest:
             tree_counts[3 * i + 3] = state["saved_forest"][i]["values"].size
             total_leaf_nodes += tree_counts[3 * i + 3]
 
-        features = np.empty(total_nodes+total_leaf_nodes, dtype=np.intc)
+        features = np.empty(total_nodes + total_leaf_nodes, dtype=np.intc)
 
         thresholds = np.empty(total_nodes, dtype=np.double)
         na_left_counts = np.empty(total_nodes, dtype=np.intc)
@@ -1223,7 +1256,7 @@ class RandomForest:
                 ind_a += 1
 
             for j in range(tree_counts[3 * i + 3]):
-                features[tree_counts[3 * i]+ind_val] = state["saved_forest"][i]["feature"][j]
+                features[tree_counts[3 * i] + ind_val] = state["saved_forest"][i]["feature"][j]
                 predict_weights[ind_val] = state["saved_forest"][i]["values"][j]
                 ind_val += 1
 

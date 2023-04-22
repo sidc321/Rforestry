@@ -1,13 +1,14 @@
+import re
+
 import numpy as np
 import pytest
-import re
 from helpers import get_data
 from numpy.testing import assert_array_equal
+
 from random_forestry import RandomForest
 
 
 def test_fit_validator():
-
     forest = RandomForest()
 
     X, y = get_data()
@@ -75,7 +76,7 @@ def test_observation_weights():
     X, y = get_data()
     forest = RandomForest()
     observation_weights = np.array([1] * X.shape[0])
-    forest.fit(X, y, observation_weights = observation_weights)
+    forest.fit(X, y, observation_weights=observation_weights)
     pred_avg = forest.predict(X, aggregation="average")
 
     assert len(pred_avg) == len(X)
@@ -84,9 +85,9 @@ def test_observation_weights():
     observation_weights = np.array([0] * X.shape[0])
     n_weighted_obs = 10
     observation_weights[0:n_weighted_obs] = 1
-    forest.fit(X, y, observation_weights = observation_weights)
+    forest.fit(X, y, observation_weights=observation_weights)
     pred = forest.predict(X, aggregation="average")
     pred_weight_matrix = forest.predict(X, aggregation="average", return_weight_matrix=True)
 
-    assert_array_equal(pred, pred_weight_matrix['predictions'])
-    assert not np.any(pred_weight_matrix['weightMatrix'][:, n_weighted_obs:(X.shape[0])])
+    assert_array_equal(pred, pred_weight_matrix["predictions"])
+    assert not np.any(pred_weight_matrix["weightMatrix"][:, n_weighted_obs : (X.shape[0])])

@@ -9,7 +9,6 @@ legacy/
 playground.R
 Tune/XLearner/tuneXRsparseT2weak12N1000.csv
 *~
-.*
 !.github
 *.out
 *.Rout
@@ -44,7 +43,6 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 _deps
-.vscode
 !**/.gitignore
 !.gitmodules
 *.cbp

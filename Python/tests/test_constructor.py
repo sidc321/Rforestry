@@ -1,10 +1,10 @@
 import pytest
 from pydantic import ValidationError
+
 from random_forestry import RandomForest
 
 
 def test_properties():
-
     assert RandomForest(oob_honest=True, splitratio=0.3).splitratio == 1
 
     assert RandomForest(oob_honest=True, replace=False).replace
