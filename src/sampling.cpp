@@ -120,6 +120,16 @@ void generate_sample_indices(
     size_t currentFold;
     std::vector <size_t> groups_to_remove;
 
+    // See if the weights are uniform or not
+    std::unordered_set<double> uniqueWeights;
+    std::vector<double>* sampleWeights = (trainingData->getobservationWeights());
+    // Iterate through the vector and insert each value into the unordered_set
+    for (const auto& value : (*sampleWeights)) {
+        uniqueWeights.insert(value);
+    }
+
+    // use weights if multiple unique values
+    bool use_weights = uniqueValues.size() != 1;
 
     // If using groups with honesty, we split the groups into either splitting or
     // averaging groups before taking the bootstrap sample
@@ -352,8 +362,81 @@ void generate_sample_indices(
         averageSampleIndexReturn = averageSampleIndex_;
         return;
 
-    } else if (replacement) {
+    } else if (replacement && oobHonest && use_weights) {
 
+        // Now we generate a weighted distribution using observationWeights
+        std::vector<double>* sampleWeights = (trainingData->getobservationWeights());
+
+        // First assign the unique observations into the splitting set, averaging set, or double OOB set for the tree
+        // With the ratios:
+        //  - Splitting set = .632
+        //  - Averaging set = .233
+        //  - Double OOB set = .135
+        std::vector<size_t> all_unique_indices(sampleSize);
+        std::iota(all_unique_indices.begin(), all_unique_indices.end(), 1);
+        std::shuffle(all_unique_indices.begin(), all_unique_indices.end(), random_number_generator);
+
+        size_t doob_count = std::max((size_t) 1, (size_t) std::floor(.135 * (double) numSamples));
+        size_t avg_count = std::max((size_t) 1, (size_t) std::floor(.233 * (double) numSamples));
+
+        std::vector<size_t> unique_doob_indices(all_unique_indices.begin(),
+                                                all_unique_indices.begin() + doob_count);
+
+        std::vector<size_t> unique_avg_indices(all_unique_indices.begin() + doob_count,
+                                               all_unique_indices.begin() + doob_count + avg_count);
+
+        std::vector<size_t> unique_spl_indices(all_unique_indices.begin() + doob_count + avg_count,
+                                               all_unique_indices.end());
+
+        // Create a vector of the potential sampling indices for the tree, as well as sets of the unique avging +
+        // splitting indices to check the membership of sampled observations quickly
+        std::vector<size_t> potential_sample_indices(all_unique_indices.begin() + doob_count,
+                                                     all_unique_indices.end());
+
+        std::unordered_set<size_t> unique_avg_indices_set;
+
+        // Add averaging indices to a set
+        for (const auto& value : unique_avg_indices) {
+            unique_avg_indices_set.insert(value);
+        }
+
+        // Get the weights from the original weights vector and assign them to the potential observations
+        std::vector<size_t> potential_sample_weights(potential_sample_indices.size());
+        for (size_t i = 0; i < potential_sample_weights.size(); i++) {
+            potential_sample_weights[i] = sampleWeights->at(potential_sample_indices[i]);
+        }
+
+        // Create weighted distribution over the potential indices
+        // Note it is okay not to normalize the weights since std::discrete_distribution does this already
+        std::discrete_distribution<size_t> potential_sample_dist(
+                potential_sample_weights->begin(), potential_sample_weights->end()
+        );
+
+        // Now carry out the sampling from the two partitions
+        std::vector <size_t> splitSampleIndex_;
+        std::vector <size_t> averageSampleIndex_;
+
+        // Generate index with replacement
+        for (size_t j = 0; j < sampleSize; j++) {
+            size_t randomIndex = potential_sample_dist(random_number_generator);
+            size_t correspondingSampleIdx = potential_sample_indices[randomIndex];
+
+            // See if the sampled observation belongs to the splitting or averaging set and assign the right vector
+            // Check inclusion in the averaging set since it is smaller
+            if (unique_avg_indices_set.find(correspondingSampleIdx) != unique_avg_indices_set.end()) {
+                averageSampleIndex_.push_back(correspondingSampleIdx);
+            } else {
+                splitSampleIndex_.push_back(correspondingSampleIdx);
+            }
+        }
+
+        // Set the indices and return
+        splitSampleIndexReturn = splitSampleIndex_;
+        averageSampleIndexReturn = averageSampleIndex_;
+        return;
+
+        // Standard replacement sampling
+    } else if (replacement) {
         // Now we generate a weighted distribution using observationWeights
         std::vector<double>* sampleWeights = (trainingData->getobservationWeights());
         std::discrete_distribution<size_t> sample_dist(
