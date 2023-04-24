@@ -397,10 +397,12 @@ void generate_sample_indices(
         }
 
         // Get the weights from the original weights vector and assign them to the potential observations
-        std::vector<size_t> potential_sample_weights(potential_sample_indices.size());
+        std::vector<double> potential_sample_weights(potential_sample_indices.size());
         for (size_t i = 0; i < potential_sample_weights.size(); i++) {
             potential_sample_weights[i] = sampleWeights->at(potential_sample_indices[i]);
         }
+
+
 
         // Create weighted distribution over the potential indices
         // Note it is okay not to normalize the weights since std::discrete_distribution does this already
