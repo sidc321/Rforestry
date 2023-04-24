@@ -41,7 +41,7 @@ test_that("Tests using observation weights + OOBhonesty", {
                     length(unique(rf@R_forest[[i]]$splittingSampleIndex))) / 150
     res <- c(res, pct_unique)
   }
-  expect_lte(mean(res), 0.5939828, tolerance = 1e-3)
+  expect_lte(mean(res), 0.5939828)
   
   
   context("See weights in each tree")
