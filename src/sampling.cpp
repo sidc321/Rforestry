@@ -6,6 +6,7 @@
 #include <random>
 #include <algorithm>
 #include <cmath>
+#include <unordered_set>
 
 // Given a number of groups, we assign each group to a
 // fold of size foldSize (if numGroups % foldSize != 0, one
@@ -129,7 +130,7 @@ void generate_sample_indices(
     }
 
     // use weights if multiple unique values
-    bool use_weights = uniqueValues.size() != 1;
+    bool use_weights = uniqueWeights.size() != 1;
 
     // If using groups with honesty, we split the groups into either splitting or
     // averaging groups before taking the bootstrap sample
@@ -376,17 +377,11 @@ void generate_sample_indices(
         std::iota(all_unique_indices.begin(), all_unique_indices.end(), 1);
         std::shuffle(all_unique_indices.begin(), all_unique_indices.end(), random_number_generator);
 
-        size_t doob_count = std::max((size_t) 1, (size_t) std::floor(.135 * (double) numSamples));
-        size_t avg_count = std::max((size_t) 1, (size_t) std::floor(.233 * (double) numSamples));
-
-        std::vector<size_t> unique_doob_indices(all_unique_indices.begin(),
-                                                all_unique_indices.begin() + doob_count);
+        size_t doob_count = std::max((size_t) 1, (size_t) std::floor(.135 * (double) sampleSize));
+        size_t avg_count = std::max((size_t) 1, (size_t) std::floor(.233 * (double) sampleSize));
 
         std::vector<size_t> unique_avg_indices(all_unique_indices.begin() + doob_count,
                                                all_unique_indices.begin() + doob_count + avg_count);
-
-        std::vector<size_t> unique_spl_indices(all_unique_indices.begin() + doob_count + avg_count,
-                                               all_unique_indices.end());
 
         // Create a vector of the potential sampling indices for the tree, as well as sets of the unique avging +
         // splitting indices to check the membership of sampled observations quickly
@@ -409,7 +404,7 @@ void generate_sample_indices(
         // Create weighted distribution over the potential indices
         // Note it is okay not to normalize the weights since std::discrete_distribution does this already
         std::discrete_distribution<size_t> potential_sample_dist(
-                potential_sample_weights->begin(), potential_sample_weights->end()
+                potential_sample_weights.begin(), potential_sample_weights.end()
         );
 
         // Now carry out the sampling from the two partitions
