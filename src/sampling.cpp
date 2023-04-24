@@ -374,7 +374,8 @@ void generate_sample_indices(
         //  - Averaging set = .233
         //  - Double OOB set = .135
         std::vector<size_t> all_unique_indices(sampleSize);
-        std::iota(all_unique_indices.begin(), all_unique_indices.end(), 1);
+
+        std::iota(all_unique_indices.begin(), all_unique_indices.end(), 0);
         std::shuffle(all_unique_indices.begin(), all_unique_indices.end(), random_number_generator);
 
         size_t doob_count = std::max((size_t) 1, (size_t) std::floor(.135 * (double) sampleSize));
