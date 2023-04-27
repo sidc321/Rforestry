@@ -375,57 +375,55 @@ void generate_sample_indices(
         //  - Double OOB set = .135
         std::vector<size_t> all_unique_indices(sampleSize);
 
+        // Create a random partition with the correct sizes by shuffling and taking the first
+        // .135 for doob, next .233 for averaging, and next .632 for splitting
         std::iota(all_unique_indices.begin(), all_unique_indices.end(), 0);
         std::shuffle(all_unique_indices.begin(), all_unique_indices.end(), random_number_generator);
 
         size_t doob_count = std::max((size_t) 1, (size_t) std::floor(.135 * (double) sampleSize));
         size_t avg_count = std::max((size_t) 1, (size_t) std::floor(.233 * (double) sampleSize));
+        size_t spl_count = sampleSize - doob_count - avg_count;
 
+        // Create a vector of the unique avging + splitting indices for this tree
         std::vector<size_t> unique_avg_indices(all_unique_indices.begin() + doob_count,
                                                all_unique_indices.begin() + doob_count + avg_count);
 
-        // Create a vector of the potential sampling indices for the tree, as well as sets of the unique avging +
-        // splitting indices to check the membership of sampled observations quickly
-        std::vector<size_t> potential_sample_indices(all_unique_indices.begin() + doob_count,
-                                                     all_unique_indices.end());
+        std::vector<size_t> unique_spl_indices(all_unique_indices.begin() + doob_count + avg_count,
+                                               all_unique_indices.end());
 
-        std::unordered_set<size_t> unique_avg_indices_set;
-
-        // Add averaging indices to a set
-        for (const auto& value : unique_avg_indices) {
-            unique_avg_indices_set.insert(value);
+        // Get the weights from the original weights vector and assign them to the unique averaging + splitting observations
+        std::vector<double> potential_avg_weights(unique_avg_indices.size());
+        for (size_t i = 0; i < unique_avg_indices.size(); i++) {
+            potential_avg_weights[i] = sampleWeights->at(unique_avg_indices[i]);
+        }
+        std::vector<double> potential_spl_weights(unique_spl_indices.size());
+        for (size_t i = 0; i < unique_spl_indices.size(); i++) {
+            potential_spl_weights[i] = sampleWeights->at(unique_spl_indices[i]);
         }
 
-        // Get the weights from the original weights vector and assign them to the potential observations
-        std::vector<double> potential_sample_weights(potential_sample_indices.size());
-        for (size_t i = 0; i < potential_sample_weights.size(); i++) {
-            potential_sample_weights[i] = sampleWeights->at(potential_sample_indices[i]);
-        }
-
-
-
-        // Create weighted distribution over the potential indices
-        // Note it is okay not to normalize the weights since std::discrete_distribution does this already
-        std::discrete_distribution<size_t> potential_sample_dist(
-                potential_sample_weights.begin(), potential_sample_weights.end()
+        // Create weighted distribution over the potential averaging and splitting indices
+        // Note it is okay not to explicitly normalize the weights since std::discrete_distribution does this already
+        std::discrete_distribution<size_t> potential_avg_dist(
+                potential_avg_weights.begin(), potential_avg_weights.end()
+        );
+        std::discrete_distribution<size_t> potential_spl_dist(
+                potential_spl_weights.begin(), potential_spl_weights.end()
         );
 
         // Now carry out the sampling from the two partitions
         std::vector <size_t> splitSampleIndex_;
         std::vector <size_t> averageSampleIndex_;
 
-        // Generate index with replacement
-        for (size_t j = 0; j < sampleSize; j++) {
-            size_t randomIndex = potential_sample_dist(random_number_generator);
-            size_t correspondingSampleIdx = potential_sample_indices[randomIndex];
+        // Generate index with replacement for averaging set
+        for (size_t j = 0; j < avg_count; j++) {
+            size_t randomIndex = potential_avg_dist(random_number_generator);
+            averageSampleIndex_.push_back(unique_avg_indices[randomIndex]);
+        }
 
-            // See if the sampled observation belongs to the splitting or averaging set and assign the right vector
-            // Check inclusion in the averaging set since it is smaller
-            if (unique_avg_indices_set.find(correspondingSampleIdx) != unique_avg_indices_set.end()) {
-                averageSampleIndex_.push_back(correspondingSampleIdx);
-            } else {
-                splitSampleIndex_.push_back(correspondingSampleIdx);
-            }
+        // Generate index with replacement for averaging set
+        for (size_t j = 0; j < spl_count; j++) {
+            size_t randomIndex = potential_spl_dist(random_number_generator);
+            splitSampleIndex_.push_back(unique_spl_indices[randomIndex]);
         }
 
         // Set the indices and return

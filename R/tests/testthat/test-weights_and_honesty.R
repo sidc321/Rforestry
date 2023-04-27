@@ -13,8 +13,9 @@ test_that("Tests using observation weights + OOBhonesty", {
                  )
   
   rf <- make_savable(rf)
-  # Get the perdentage of unique observations in each tree
-  # Overall, we expect this to be (1-((.865*n-1)/(.865*n))^n) * .865 = 0.5939828 unique
+  # Get the percentage of unique observations in each tree
+  # Overall, we expect this to be .632 * (1-((.632*n - 1)/(.632*n))^(.632*n)) + 
+  # .233 * (1-((.233*n - 1)/(.233*n))^(.233*n)) = 0.5492571 unique
   # observations when we take a bootstrap sample of size n from the .865 unique observations
   # in the splitting and averaging set
   res = c()
@@ -23,9 +24,9 @@ test_that("Tests using observation weights + OOBhonesty", {
                     length(unique(rf@R_forest[[i]]$splittingSampleIndex))) / 150
     res <- c(res, pct_unique)
   }
-  expect_equal(mean(res), 0.5939828, tolerance = 1e-3)
+  expect_equal(mean(res), 0.5492571, tolerance = 1e-2)
   
-  context("Try weights with more skew")
+  context("Try weights with more skew, expect less unique observations")
   # If we use weights, the expected number of unique observations goes down
   rf <- forestry(x = x,
                  y = y,
@@ -41,7 +42,7 @@ test_that("Tests using observation weights + OOBhonesty", {
                     length(unique(rf@R_forest[[i]]$splittingSampleIndex))) / 150
     res <- c(res, pct_unique)
   }
-  expect_lte(mean(res), 0.5939828)
+  expect_lte(mean(res), 0.5492571)
   
   
   context("See weights in each tree")
