@@ -3,6 +3,7 @@ import sys
 from contextlib import contextmanager
 
 from numpy import ndarray
+from pandas import Series
 from random_forestry import RandomForest
 from sklearn import datasets
 
@@ -46,3 +47,25 @@ with suppress_stdout():
 
 test_stdout("OOB honest: average", pred_avg)
 test_stdout("OOB honest: oob", pred_oob)
+
+# Test groups
+groups = Series([i for i in range(len(X) // 10) for _ in range(10)])
+with suppress_stdout():
+    forest = RandomForest(seed=2)
+    forest.fit(X, y, groups=groups)
+    pred_avg = forest.predict(X, aggregation="average")
+    pred_oob = forest.predict(X, aggregation="oob")
+
+test_stdout("Groups: average", pred_avg)
+test_stdout("Groups: oob", pred_oob)
+
+# Test oob honest and groups
+with suppress_stdout():
+    forest = RandomForest(seed=2, oob_honest=True)
+    groups = Series([i for i in range(len(X) // 10) for _ in range(10)])
+    forest.fit(X, y, groups=groups)
+    pred_avg = forest.predict(X, aggregation="average")
+    pred_oob = forest.predict(X, aggregation="oob")
+
+test_stdout("OOB honest and groups: average", pred_avg)
+test_stdout("OOB honest and groups: oob", pred_oob)
