@@ -107,16 +107,9 @@ class FitValidator(BaseValidator):
     def validate_groups(self, *_, **kwargs):
         if "groups" in kwargs:
             groups = kwargs["groups"]
-            if not pd.api.types.is_categorical_dtype(groups):
-                raise ValueError(
-                    "groups must have a data dtype of categorical. ",
-                    'Try using pd.Categorical(...) or pd.Series(..., dtype="category").',
-                )
             if len(groups.unique()) == 1:
                 raise ValueError("groups must have more than 1 level to be left out from sampling.")
-
-            return pd.Series(groups, dtype="category")
-
+            return groups
         return None
 
     def __call__(self, *args, **kwargs):
