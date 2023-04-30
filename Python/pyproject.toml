@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "random-forestry"
-version = "0.10.0-b2"
+version = "0.10.0"
 description = "Random forest estimator"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -43,7 +43,7 @@ line-length = 120
 profile = "black"
 
 [tool.bumpver]
-current_version = "0.10.0-b2"
+current_version = "0.10.0"
 version_pattern = "MAJOR.MINOR.PATCH[-PYTAGNUM]"
 commit_message = "bump version {old_version} -> {new_version}"
 commit = true
