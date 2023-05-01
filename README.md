@@ -6,8 +6,7 @@ Sören Künzel, Theo Saarinen, Simon Walter, Edward Liu, Sam Antonyan, Allen Tan
 
 ## Introduction
 
-Rforestry is a fast implementation of Honest Random Forests, Gradient Boosting,
-and Linear Random Forests, with an emphasis on inference and interpretability.
+Rforestry is a fast implementation of Honest Random Forests, Gradient Boosting, and Linear Random Forests, with an emphasis on inference and interpretability. 
 
 ## How to install
 1. The GFortran compiler has to be up to date. GFortran Binaries can be found [here](https://gcc.gnu.org/wiki/GFortranBinaries).
@@ -18,7 +17,10 @@ and Linear Random Forests, with an emphasis on inference and interpretability.
 
 ## Documentation
 
-For full documentation, see the documentation site [here](https://forestry-labs.github.io/Rforestry/).
+For the Python package, see the documentation [here](https://random-forestry.readthedocs.io/en/latest/) and install from PyPI [here](https://pypi.org/project/random-forestry/). 
+For the R package, see the documentation [here](https://forestry-labs.github.io/Rforestry/) and install from CRAN [here](https://cran.r-project.org/web/packages/Rforestry/index.html). 
+For the source code for both packages, see the Github [here](https://github.com/forestry-labs/Rforestry)
+
 
 
 ## Usage

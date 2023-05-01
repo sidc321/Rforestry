@@ -1,40 +1,25 @@
-[![R-CMD-check](https://github.com/forestry-labs/Rforestry/actions/workflows/check-noncontainerized.yaml/badge.svg)](https://github.com/forestry-labs/Rforestry/actions/workflows/check-noncontainerized.yaml)
-
-## This is an experimental fork of Rforestry, for the package repo, see (https://github.com/forestry-labs/Rforestry)
-
 ## Rforestry: Random Forests, Linear Trees, and Gradient Boosting for Inference and Interpretability
 
-Sören Künzel, Theo Saarinen, Simon Walter, Sam Antonyan, Edward Liu, Allen Tang, Jasjeet Sekhon
+Sören Künzel, Theo Saarinen, Simon Walter, Sam Antonyan, Edward Liu, Boban Petrovic, Allen Tang, Jasjeet Sekhon
 
 
 ## Introduction
 
-Rforestry is a fast implementation of Honest Random Forests, Gradient Boosting,
-and Linear Random Forests, with an emphasis on inference and interpretability.
+random_forestry is a Python library that contains a fast implementation of Honest Random Forests, decision trees, and Linear Random Forests, with an emphasis on inference and interpretability. Training and predicting with a model matches the scikit-learn API in order to allow easy integration with existing packages.
 
-## How to install - R Package
-1. The GFortran compiler has to be up to date. GFortran Binaries can be found [here](https://gcc.gnu.org/wiki/GFortranBinaries).
-2. The [devtools](https://github.com/r-lib/devtools) package has to be installed. You can install it using,  `install.packages("devtools")`.
-3. The package contains compiled code, and you must have a development environment to install the development version. You can use `devtools::has_devel()` to check whether you do. If no development environment exists, Windows users download and install [Rtools](https://cran.r-project.org/bin/windows/Rtools/) and macOS users download and install [Xcode](https://apps.apple.com/us/app/xcode/id497799835).
-4. The latest development version can then be installed using
-`devtools::install_github("forestry-labs/Rforestry")`. For Windows users, you'll need to skip 64-bit compilation `devtools::install_github("forestry-labs/Rforestry", INSTALL_opts = c('--no-multiarch'))` due to an outstanding gcc issue.
+Several features are specific to this library and allow for the training of tree based models with useful properties, including:
+
+ - Honesty: the practice of splitting the training data set into two disjoint sets and using one set to determine the tree structure of a decision tree, and the other to determine the node values used for predictions.
+ - Monotonic Constraints: the ability to specify a constraint on the decision tree or random forest model that forces the prediction of the model to be monotonic
+ - Custom Bootstrap sampling methods: several different methods to determine how the samples for each tree in a forest are selected. This can be useful when the observations are not i.i.d. and the sampling scheme can exploit patterns in the data. This also interacts with honesty.
+ - Linear aggregation: rather than using the average training outcome to predict for new observations, one can run a Ridge regression within each terminal node and use this for the predictions of that tree. Tree construction is modified according to an algorithm proposed in Linear Aggregation in Tree-based Estimators (https://www.tandfonline.com/doi/full/10.1080/10618600.2022.2026780) to select recursive splitting points that are optimal for downstream Ridge regression aggregation.
+ 
+These are some of the current interesting features, and more will be added in the future.
+
+For full documentation, see the documentation site (https://random-forestry.readthedocs.io/en/latest/) and for the source code, see the github repo (https://github.com/forestry-labs/Rforestry).
 
 
-## How to install - Python Package
-
-The python package must be compiled before it can be used. 
-Note that to compile and link the C++ version of forestry, one must be using either OSX or Linux and must have a C++ compiler installed.
-For example, one can run:
-
-```
-mkdir build
-cd build
-cmake .
-make
-
-```
-
-## Python Package Usage
+### Python Package Usage
 
 Then the python code can be called:
 
@@ -85,19 +70,3 @@ viz.view()
 
 ```
 
-
-## R Package Usage
-
-
-
-
-set.seed(292315)
-test_idx <- sample(nrow(iris), 3)
-x_train <- iris[-test_idx, -1]
-y_train <- iris[-test_idx, 1]
-x_test <- iris[test_idx, -1]
-
-rf <- forestry(x = x_train, y = y_train, nthread = 2)
-
-predict(rf, x_test)
-```
