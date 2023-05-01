@@ -35,8 +35,8 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: 3.9
-          cache: "pip"
-          cache-dependency-path: "Python/ci-requirements.txt"
+          cache: pip
+          cache-dependency-path: Python/ci-requirements.txt
 
       - name: Install CI dependencies
         working-directory: Python/
@@ -118,15 +118,15 @@ jobs:
 
   build_macos_wheels:
     name: macos wheels build for ${{ matrix.config.arch }}
-    runs-on: macos-10.15
+    runs-on: macos-11
     permissions:
       packages: read
     strategy:
       fail-fast: false
       matrix:
         config:
-          - { arch: "x86_64" }
-          - { arch: "arm64" }
+          - { arch: x86_64 }
+          - { arch: arm64 }
 
     steps:
       - name: Checkout
@@ -139,10 +139,8 @@ jobs:
         env:
           CIBW_ARCHS: ${{ matrix.config.arch }}
           CIBW_BUILD: cp38-* cp39-* cp310-* cp311-*
-          CIBW_TEST_EXTRAS: "test"
-          CIBW_TEST_COMMAND: "pytest work/Rforestry/Rforestry/Python/tests -v --color=yes"
-          CIBW_BEFORE_ALL: >
-            brew install armadillo
+          CIBW_TEST_EXTRAS: test
+          CIBW_TEST_COMMAND: pytest work/Rforestry/Rforestry/Python/tests -v --color=yes
         with:
           package-dir: Python/
           output-dir: Python/dist
