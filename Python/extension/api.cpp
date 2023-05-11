@@ -618,10 +618,10 @@ extern "C" {
         predictWeights->reserve(ntree);
     
         // Now actually populate the vectors
-        size_t ind = 0, ind_s = 0, ind_a = 0;
+        size_t ind = 0, ind_s = 0, ind_a = 0, ind_var = 0, ind_weights = 0;
         for(size_t i = 0; i < ntree; i++){
-            // Should be num splitting nodes + 2*num leaf nodes
-            std::vector<int> cur_var_ids((tree_counts[3*i]+2*tree_counts[3*i+3]), 0);
+            // Should be num total nodes + num leaf nodes
+            std::vector<int> cur_var_ids((tree_counts[3*i]+tree_counts[3*i+3]), 0);
             std::vector<double> cur_split_vals(tree_counts[3*i], 0);
             std::vector<int> curNaLeftCounts(tree_counts[3*i], 0);
             std::vector<int> curNaRightCounts(tree_counts[3*i], 0);
@@ -631,14 +631,22 @@ extern "C" {
             std::vector<double> cur_predict_weights(tree_counts[3*i+3], 0);
     
             for(size_t j = 0; j < tree_counts[3*i]; j++){
-                cur_var_ids.at(j) = features[ind];
                 cur_split_vals.at(j) = thresholds[ind];
                 curNaLeftCounts.at(j) = na_left_count[ind];
                 curNaRightCounts.at(j) = na_right_count[ind];
                 curNaDefaultDirections.at(j) = na_default_directions[ind];
-                cur_predict_weights.at(j) = predict_weights[ind];
     
                 ind++;
+            }
+
+            for (size_t j = 0; j < tree_counts[3*i+3]; j++){
+                cur_predict_weights.at(j) = predict_weights[ind_weights];
+                ind_weights++;
+            }
+
+            for (size_t j = 0; j < (tree_counts[3*i]+tree_counts[3*i+3]); j++) {
+                cur_var_ids.at(j) = features[ind_var];
+                ind_var++;
             }
     
             for(size_t j = 0; j < tree_counts[3*i+1]; j++){
