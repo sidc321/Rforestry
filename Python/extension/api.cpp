@@ -620,14 +620,15 @@ extern "C" {
         // Now actually populate the vectors
         size_t ind = 0, ind_s = 0, ind_a = 0;
         for(size_t i = 0; i < ntree; i++){
-            std::vector<int> cur_var_ids(tree_counts[3*i], 0);
+            // Should be num splitting nodes + 2*num leaf nodes
+            std::vector<int> cur_var_ids((tree_counts[3*i]+2*tree_counts[3*i+3]), 0);
             std::vector<double> cur_split_vals(tree_counts[3*i], 0);
             std::vector<int> curNaLeftCounts(tree_counts[3*i], 0);
             std::vector<int> curNaRightCounts(tree_counts[3*i], 0);
             std::vector<int> curNaDefaultDirections(tree_counts[3*i], 0);
             std::vector<size_t> curSplittingSampleIndex(tree_counts[3*i+1], 0);
             std::vector<size_t> curAveragingSampleIndex(tree_counts[3*i+2], 0);
-            std::vector<double> cur_predict_weights(tree_counts[3*i], 0);
+            std::vector<double> cur_predict_weights(tree_counts[3*i+3], 0);
     
             for(size_t j = 0; j < tree_counts[3*i]; j++){
                 cur_var_ids.at(j) = features[ind];
