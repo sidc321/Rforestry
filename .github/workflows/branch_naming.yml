@@ -20,4 +20,4 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           regex: '^[a-z]{2,3}/.*$'
         # flags: i
-        # delete: true
+          delete: true
