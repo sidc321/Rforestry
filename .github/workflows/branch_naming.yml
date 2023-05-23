@@ -6,18 +6,14 @@ on:
   pull_request:
 
 jobs:
-  branch-naming-policy:
+  branch_name:
     runs-on: ubuntu-latest
-
+    name: Branch Name
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Run Branch Naming Policy Action
-        uses: nicklegan/github-repo-branch-naming-policy-action@v1.1.0
-        if: github.ref_type == 'branch' || github.ref_type == 'pull_request'
+      - uses: AlbertHernandez/branch-name-action@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          regex: '^[a-z]{2,3}/.*$'
-        # flags: i
-          delete: true
+          branch_pattern: '^[a-z]{2,3}/.*'
+          comment_for_invalid_branch_name: Ups! This branch name is not following the standards!
+          fail_if_invalid_branch_name: true
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
