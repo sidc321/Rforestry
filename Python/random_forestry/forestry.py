@@ -1209,8 +1209,6 @@ class RandomForest:
         )
 
         tree_counts = np.empty(state["ntree"] * 4, dtype=np.intc)
-        print("Number of values in tree 0")
-        print(tree_counts[3])
         total_nodes, total_leaf_nodes, total_split_nodes, total_split_idx, total_av_idx = 0, 0, 0, 0, 0
         for i in range(state["ntree"]):
             tree_counts[4 * i] = state["saved_forest"][i]["threshold"].size
@@ -1221,9 +1219,7 @@ class RandomForest:
 
             tree_counts[4 * i + 2] = state["saved_forest"][i]["averaging_sample_idx"].size
             total_av_idx += tree_counts[4 * i + 2]
-            print("Number of averaging_sample_idx in tree i")
-            print(i)
-            print(tree_counts[4 * i + 2])
+
 
             tree_counts[4 * i + 3] = state["saved_forest"][i]["values"].size
             total_leaf_nodes += tree_counts[4 * i + 3]
@@ -1240,12 +1236,6 @@ class RandomForest:
 
         predict_weights = np.empty(total_leaf_nodes, dtype=np.double)
         tree_seeds = np.empty(state["ntree"], dtype=np.uintc)
-
-        print("ntree", state["ntree"])
-        print("total_leaf_nodes", total_leaf_nodes)
-
-        print("Number of values in tree 0")
-        print(tree_counts[3])
 
         ind, ind_s, ind_a, ind_val, ft_val = 0, 0, 0, 0, 0
         for i in range(state["ntree"]):
@@ -1273,10 +1263,7 @@ class RandomForest:
                 ft_val += 1
 
             tree_seeds[i] = state["saved_forest"][i]["seed"]
-        print("Thresholds, predict_weights, features")
-        print(thresholds)
-        print(predict_weights)
-        print(features)
+
 
         state["forest"] = extension.reconstruct_tree(
             state["dataframe"],

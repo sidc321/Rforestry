@@ -671,7 +671,7 @@ extern "C" {
             predictWeights->push_back(cur_predict_weights);
             treeSeeds->push_back(tree_seeds[i]);
         }
-        
+
         // call reconstructTrees
         forest->reconstructTrees(
             categoricalFeatureCols_copy,
