@@ -611,6 +611,7 @@ extern "C" {
         split_vals->reserve(ntree);
         averagingSampleIndex->reserve(ntree);
         splittingSampleIndex->reserve(ntree);
+        excludedSampleIndex->reserve(ntree);
         naLeftCounts->reserve(ntree);
         naRightCounts->reserve(ntree);
         naDefaultDirections->reserve(ntree);
@@ -666,9 +667,63 @@ extern "C" {
             naDefaultDirections->push_back(curNaDefaultDirections);
             splittingSampleIndex->push_back(curSplittingSampleIndex);
             averagingSampleIndex->push_back(curAveragingSampleIndex);
+            excludedSampleIndex->push_back(std::vector<size_t>());
             predictWeights->push_back(cur_predict_weights);
             treeSeeds->push_back(tree_seeds[i]);
         }
+
+        std::cout << "In C++, split_vals[0] and predictWeights[0] are: \n";
+        std::cout << split_vals->at(0).size() << "\n";
+        std::cout << predictWeights->at(0).size() << "\n";
+
+        std::cout << "\nIn C++, var_ids are: \n";
+        for (const auto entry : var_ids->at(0)) {
+            std::cout << entry << " ";
+        }
+
+        std::cout << "\nIn C++, split_vals are: \n";
+        for (const auto entry : split_vals->at(0)) {
+            std::cout << entry << " ";
+        }
+
+        std::cout << "\nIn C++, naLeftCounts are: \n";
+        for (const auto entry : naLeftCounts->at(0)) {
+            std::cout << entry << " ";
+        }
+        std::cout << "\nIn C++, naRightCounts are: \n";
+        for (const auto entry : naRightCounts->at(0)) {
+            std::cout << entry << " ";
+        }
+
+        std::cout << "\nIn C++, naDefaultDirections are: \n";
+        for (const auto entry : naDefaultDirections->at(0)) {
+            std::cout << entry << " ";
+        }
+
+        // Use same format to print splittingSampleIndex and averagingSampleIndex
+        std::cout << "\nIn C++, splittingSampleIndex are: \n";
+        for (const auto entry : splittingSampleIndex->at(0)) {
+            std::cout << entry << " ";
+        }
+        std::cout << "\nIn C++, averagingSampleIndex are: \n";
+        for (const auto entry : averagingSampleIndex->at(0)) {
+            std::cout << entry << " ";
+        }
+
+        std::cout << "\nIn C++, predictWeights are: \n";
+        for (const auto entry : predictWeights->at(0)) {
+            std::cout << entry << " ";
+        }
+
+        // Use same format to print tree seeds
+        std::cout << "\nIn C++, treeSeeds are: \n";
+        for (const auto entry : *treeSeeds) {
+            std::cout << entry << " ";
+        }
+
+        std::cout << std::flush;
+        //print_vector(split_vals->at(0));
+        //print_vector(predictWeights->at(0));
         
         // call reconstructTrees
         forest->reconstructTrees(
