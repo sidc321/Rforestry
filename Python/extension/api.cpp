@@ -622,16 +622,16 @@ extern "C" {
         size_t ind = 0, ind_s = 0, ind_a = 0, ind_var = 0, ind_weights = 0;
         for(size_t i = 0; i < ntree; i++){
             // Should be num total nodes + num leaf nodes
-            std::vector<int> cur_var_ids((tree_counts[3*i]+tree_counts[3*i+3]), 0);
-            std::vector<double> cur_split_vals(tree_counts[3*i], 0);
-            std::vector<int> curNaLeftCounts(tree_counts[3*i], 0);
-            std::vector<int> curNaRightCounts(tree_counts[3*i], 0);
-            std::vector<int> curNaDefaultDirections(tree_counts[3*i], 0);
-            std::vector<size_t> curSplittingSampleIndex(tree_counts[3*i+1], 0);
-            std::vector<size_t> curAveragingSampleIndex(tree_counts[3*i+2], 0);
-            std::vector<double> cur_predict_weights(tree_counts[3*i+3], 0);
+            std::vector<int> cur_var_ids((tree_counts[4*i]+tree_counts[4*i+3]), 0);
+            std::vector<double> cur_split_vals(tree_counts[4*i], 0);
+            std::vector<int> curNaLeftCounts(tree_counts[4*i], 0);
+            std::vector<int> curNaRightCounts(tree_counts[4*i], 0);
+            std::vector<int> curNaDefaultDirections(tree_counts[4*i], 0);
+            std::vector<size_t> curSplittingSampleIndex(tree_counts[4*i+1], 0);
+            std::vector<size_t> curAveragingSampleIndex(tree_counts[4*i+2], 0);
+            std::vector<double> cur_predict_weights(tree_counts[4*i+3], 0);
     
-            for(size_t j = 0; j < tree_counts[3*i]; j++){
+            for(size_t j = 0; j < tree_counts[4*i]; j++){
                 cur_split_vals.at(j) = thresholds[ind];
                 curNaLeftCounts.at(j) = na_left_count[ind];
                 curNaRightCounts.at(j) = na_right_count[ind];
@@ -640,22 +640,22 @@ extern "C" {
                 ind++;
             }
 
-            for (size_t j = 0; j < tree_counts[3*i+3]; j++){
+            for (size_t j = 0; j < tree_counts[4*i+3]; j++){
                 cur_predict_weights.at(j) = predict_weights[ind_weights];
                 ind_weights++;
             }
 
-            for (size_t j = 0; j < (tree_counts[3*i]+tree_counts[3*i+3]); j++) {
+            for (size_t j = 0; j < (tree_counts[4*i]+tree_counts[4*i+3]); j++) {
                 cur_var_ids.at(j) = features[ind_var];
                 ind_var++;
             }
     
-            for(size_t j = 0; j < tree_counts[3*i+1]; j++){
+            for(size_t j = 0; j < tree_counts[4*i+1]; j++){
                 curSplittingSampleIndex.at(j) = split_idx[ind_s];
                 ind_s++;
             }
     
-            for(size_t j = 0; j < tree_counts[3*i+2]; j++){
+            for(size_t j = 0; j < tree_counts[4*i+2]; j++){
                 curAveragingSampleIndex.at(j) = average_idx[ind_a];
                 ind_a++;
             }
