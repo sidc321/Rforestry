@@ -1224,8 +1224,7 @@ class RandomForest:
             total_leaf_nodes += tree_counts[3 * i + 3]
 
         features = np.empty(total_nodes + total_leaf_nodes, dtype=np.intc)
-        print("Number of trees")
-        print(state["ntree"])
+
         thresholds = np.empty(total_nodes, dtype=np.double)
         na_left_counts = np.empty(total_nodes, dtype=np.intc)
         na_right_counts = np.empty(total_nodes, dtype=np.intc)
@@ -1236,7 +1235,6 @@ class RandomForest:
 
         predict_weights = np.empty(total_leaf_nodes, dtype=np.double)
         tree_seeds = np.empty(state["ntree"], dtype=np.uintc)
-
 
         ind, ind_s, ind_a, ind_val, ft_val = 0, 0, 0, 0, 0
         for i in range(state["ntree"]):
@@ -1258,12 +1256,13 @@ class RandomForest:
             for j in range(tree_counts[3 * i + 3]):
                 predict_weights[ind_val] = state["saved_forest"][i]["values"][j]
                 ind_val += 1
-            print((tree_counts[3 * i] + tree_counts[3 * i + 3]))
+
             for j in range((tree_counts[3 * i] + tree_counts[3 * i + 3])):
                 features[ft_val] = state["saved_forest"][i]["feature"][j]
                 ft_val += 1
 
             tree_seeds[i] = state["saved_forest"][i]["seed"]
+
 
         state["forest"] = extension.reconstruct_tree(
             state["dataframe"],
