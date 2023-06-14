@@ -1220,7 +1220,6 @@ class RandomForest:
             tree_counts[4 * i + 2] = state["saved_forest"][i]["averaging_sample_idx"].size
             total_av_idx += tree_counts[4 * i + 2]
 
-
             tree_counts[4 * i + 3] = state["saved_forest"][i]["values"].size
             total_leaf_nodes += tree_counts[4 * i + 3]
 
@@ -1263,7 +1262,6 @@ class RandomForest:
                 ft_val += 1
 
             tree_seeds[i] = state["saved_forest"][i]["seed"]
-
 
         state["forest"] = extension.reconstruct_tree(
             state["dataframe"],
