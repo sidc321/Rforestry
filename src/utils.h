@@ -33,11 +33,18 @@ struct tree_info {
   std::vector< int > var_id;
   // contains the variable id for a splitting node and the negative number of
   // observations in a leaf for a leaf node
+
+  std::vector< int > average_count;
+  // contains the number of observations in the averaging set in each node
+
   std::vector< long double > split_val;
   // contains the split values for regular nodes
   std::vector< double > values;
   // contains the weights used for prediction in each node
   // 0.0 for interior nodes
+  std::vector< double > valuesFull;
+  // contains the weights used for prediction in each node
+  // Not 0.0 for interior nodes
   std::vector< int > num_spl_samples;
   // Counts of splitting samples at each node
   std::vector< int > num_avg_samples;

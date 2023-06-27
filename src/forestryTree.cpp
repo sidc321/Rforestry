@@ -917,6 +917,7 @@ void forestryTree::recursivePartition(
     assignNodeId(node_id,
                  true);
     (*rootNode).setSplitNode(
+        averagingSampleIndex->size(),
         bestSplitFeature,
         bestSplitValue,
         std::move(leftChild),
@@ -924,7 +925,8 @@ void forestryTree::recursivePartition(
         naLeftCount,
         naRightCount,
         node_id,
-        bestSplitNaDir
+        bestSplitNaDir,
+        trainingData->partitionMean(averagingSampleIndex)
     );
   }
 }
@@ -1846,11 +1848,12 @@ void forestryTree::recursive_reconstruction(
       naDefaultDirections,
       weights
     );
-
+    // TEMPORARY  FIX -- just to get things to compile sidc
     size_t node_id;
     assignNodeId(node_id,
                  true);
     (*currentNode).setSplitNode(
+        (size_t) var_id - 1,
         (size_t) var_id - 1,
         split_val,
         std::move(leftChild),
@@ -1858,7 +1861,8 @@ void forestryTree::recursive_reconstruction(
         naLeftCount,
         naRightCount,
         node_id,
-        naDefaultDirection
+        naDefaultDirection,
+        0
     );
 
     return;

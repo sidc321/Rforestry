@@ -39,6 +39,7 @@ void RFNode::setLeafNode(
 }
 
 void RFNode::setSplitNode(
+  size_t averagingSampleIndexSize,
   size_t splitFeature,
   double splitValue,
   std::unique_ptr< RFNode > leftChild,
@@ -46,9 +47,11 @@ void RFNode::setSplitNode(
   size_t naLeftCount,
   size_t naRightCount,
   size_t nodeId,
-  int naDefaultDirection
+  int naDefaultDirection,
+  double predictWeight
 ) {
   // Split node constructor
+  _averageCount= averagingSampleIndexSize;
   _splitCount = 0;
   _splitFeature = splitFeature;
   _splitValue = splitValue;
@@ -58,6 +61,7 @@ void RFNode::setSplitNode(
   _naLeftCount = naLeftCount;
   _naRightCount = naRightCount;
   _naDefaultDirection = naDefaultDirection;
+  _predictWeight = predictWeight;
   _nodeId = nodeId;
 }
 
@@ -615,8 +619,9 @@ void RFNode::getPath(
 }
 
 bool RFNode::is_leaf() {
-  int ave_ct = getAverageCount();
-  return !(ave_ct == 0);
+  // int ave_ct = getAverageCount();
+  // return !(ave_ct == 0);
+  return !(_leftChild||_rightChild);
 }
 
 size_t RFNode::getAverageCountAlways() {
@@ -678,6 +683,9 @@ void RFNode::write_node_info(
     // If it is a leaf: set everything to be 0
     treeInfo->var_id.push_back(-getAverageCount());
     treeInfo->var_id.push_back(-getSplitCount());
+
+    treeInfo->average_count.push_back(getAverageCount());
+
     treeInfo->split_val.push_back(0);
     treeInfo->naLeftCount.push_back(-1);
     treeInfo->naRightCount.push_back(-1);
@@ -686,14 +694,21 @@ void RFNode::write_node_info(
     treeInfo->num_avg_samples.push_back(getAverageCount());
     treeInfo->num_spl_samples.push_back(getSplitCount());
     treeInfo->values.push_back(getPredictWeight());
+
+    treeInfo->valuesFull.push_back(getPredictWeight());
   } else {
     // If it is a usual node: remember split var and split value and recursively
     // call write_node_info on the left and the right child.
     treeInfo->var_id.push_back(getSplitFeature() + 1);
+
+    treeInfo->average_count.push_back(getAverageCount());
+
     treeInfo->split_val.push_back(getSplitValue());
     treeInfo->naLeftCount.push_back(getNaLeftCount());
     treeInfo->naRightCount.push_back(getNaRightCount());
     treeInfo->naDefaultDirection.push_back(getNaDefaultDirection());
+
+    treeInfo->valuesFull.push_back(getPredictWeight());
 
     getLeftChild()->write_node_info(treeInfo, trainingData);
     getRightChild()->write_node_info(treeInfo, trainingData);

@@ -24,6 +24,7 @@ public:
   );
 
   void setSplitNode(
+      size_t averagingSampleIndexSize,
       size_t splitFeature,
       double splitValue,
       std::unique_ptr< RFNode > leftChild,
@@ -31,7 +32,8 @@ public:
       size_t naLeftCount,
       size_t naRightCount,
       size_t nodeId,
-      int naDefaultDirection
+      int naDefaultDirection,
+      double predictWeight
   );
 
   void setRidgeCoefficients(

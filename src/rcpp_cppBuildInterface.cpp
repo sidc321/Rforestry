@@ -726,6 +726,7 @@ Rcpp::List rcpp_CppToR_translator(
 ){
   try {
     Rcpp::XPtr< forestry > testFullForest(forest) ;
+    // acceses tree info
     std::unique_ptr< std::vector<tree_info> > forest_dta(
       new std::vector<tree_info>
     );
@@ -736,6 +737,9 @@ Rcpp::List rcpp_CppToR_translator(
 
     for(size_t i=0; i!=forest_dta->size(); i++){
       Rcpp::IntegerVector var_id = Rcpp::wrap(((*forest_dta)[i]).var_id);
+
+      Rcpp::IntegerVector average_count = Rcpp::wrap(((*forest_dta)[i]).average_count);
+
       Rcpp::NumericVector split_val = Rcpp::wrap(((*forest_dta)[i]).split_val);
       Rcpp::IntegerVector averagingSampleIndex =
 	      Rcpp::wrap(((*forest_dta)[i]).averagingSampleIndex);
@@ -754,11 +758,16 @@ Rcpp::List rcpp_CppToR_translator(
 
       Rcpp::NumericVector predictWeights =
               Rcpp::wrap(((*forest_dta)[i]).values);
+      Rcpp::NumericVector predictWeightsFull =
+              Rcpp::wrap(((*forest_dta)[i]).valuesFull);
 
 
         Rcpp::List list_i =
         Rcpp::List::create(
 			   Rcpp::Named("var_id") = var_id,
+
+         Rcpp::Named("average_count") = average_count,
+
 			   Rcpp::Named("split_val") = split_val,
 			   Rcpp::Named("averagingSampleIndex") = averagingSampleIndex,
 			   Rcpp::Named("splittingSampleIndex") = splittingSampleIndex,
@@ -767,7 +776,8 @@ Rcpp::List rcpp_CppToR_translator(
 			   Rcpp::Named("naRightCounts") = naRightCounts,
 			   Rcpp::Named("naDefaultDirections") = naDefaultDirections,
 			   Rcpp::Named("seed") = (*forest_dta)[i].seed, // Add the seeds to the list we return
-               Rcpp::Named("weights") = predictWeights
+               Rcpp::Named("weights") = predictWeights,
+               Rcpp::Named("weightsFull") = predictWeightsFull
         );
       list_to_return.push_back(list_i);
     }
