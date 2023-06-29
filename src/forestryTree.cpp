@@ -1716,7 +1716,7 @@ void forestryTree::reconstruct_tree(
     unsigned int seed,
     std::vector<size_t> categoricalFeatureColsRcpp,
     std::vector<int> var_ids,
-    std::vector<int> average_count,
+    std::vector<int> average_counts,
     std::vector<double> split_vals,
     std::vector<int> naLeftCounts,
     std::vector<int> naRightCounts,
@@ -1768,7 +1768,7 @@ void forestryTree::reconstruct_tree(
   recursive_reconstruction(
     _root.get(),
     &var_ids,
-    &average_count,
+    &average_counts,
     &split_vals,
     &naLeftCounts,
     &naRightCounts,
@@ -1784,7 +1784,7 @@ void forestryTree::reconstruct_tree(
 void forestryTree::recursive_reconstruction(
   RFNode* currentNode,
   std::vector<int> * var_ids,
-  std::vector<int> *average_count,
+  std::vector<int> *average_counts,
   std::vector<double> * split_vals,
   std::vector<int> * naLeftCounts,
   std::vector<int> * naRightCounts,
@@ -1794,8 +1794,8 @@ void forestryTree::recursive_reconstruction(
 ) {
   int var_id = (*var_ids)[0];
     (*var_ids).erase((*var_ids).begin());
-  int average_counts = (*average_count)[0];
-    (*average_count).erase((*average_count).begin());
+  int average_count = (*average_counts)[0];
+    (*average_counts).erase((*average_counts).begin());
   double  split_val = (*split_vals)[0];
     (*split_vals).erase((*split_vals).begin());
 
@@ -1842,7 +1842,7 @@ void forestryTree::recursive_reconstruction(
     recursive_reconstruction(
       leftChild.get(),
       var_ids,
-      average_count,
+      average_counts,
       split_vals,
       naLeftCounts,
       naRightCounts,
@@ -1854,7 +1854,7 @@ void forestryTree::recursive_reconstruction(
     recursive_reconstruction(
       rightChild.get(),
       var_ids,
-      average_count,
+      average_counts,
       split_vals,
       naLeftCounts,
       naRightCounts,
@@ -1868,7 +1868,7 @@ void forestryTree::recursive_reconstruction(
                  true);
     (*currentNode).setSplitNode(
         (size_t) var_id - 1,
-        (size_t) average_counts,
+        (size_t) average_count,
         split_val,
         std::move(leftChild),
         std::move(rightChild),

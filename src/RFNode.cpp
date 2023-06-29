@@ -5,9 +5,6 @@
 #include <thread>
 #include "utils.h"
 
-#include <RcppArmadillo.h>
-
-
 std::mutex mutex_weightMatrix;
 
 
@@ -175,7 +172,7 @@ void RFNode::predict(
   size_t nodesizeStrictAvg,
   std::vector<size_t>* OOBIndex
 ) {
-  //Rcpp::Rcout<<"nodein"<<std::endl;
+
   // If the node is a leaf, aggregate all its averaging data samples
   if (is_leaf()) {
 
@@ -188,7 +185,7 @@ void RFNode::predict(
                      trainingData,
                      lambda);
       } else {
-        //Rcpp::Rcout<<"inleaf"<<std::endl;
+
         double predictedMean;
         // Calculate the mean of current node
         if (getAverageCount() == 0) {
@@ -250,7 +247,7 @@ void RFNode::predict(
 
   // If not a leaf then we need to separate the prediction tasks
   } else {
-    //Rcpp::Rcout<<"insplit"<<std::endl;
+
     // Separate prediction tasks to two children
     std::vector<size_t>* leftPartitionIndex = new std::vector<size_t>();
     std::vector<size_t>* rightPartitionIndex = new std::vector<size_t>();
@@ -687,7 +684,7 @@ void RFNode::write_node_info(
     treeInfo->var_id.push_back(-getAverageCount());
     treeInfo->var_id.push_back(-getSplitCount());
 
-    treeInfo->average_count.push_back(getAverageCount());
+    treeInfo->average_counts.push_back(getAverageCount());
 
     treeInfo->split_val.push_back(0);
     treeInfo->naLeftCount.push_back(-1);
@@ -704,7 +701,7 @@ void RFNode::write_node_info(
     // call write_node_info on the left and the right child.
     treeInfo->var_id.push_back(getSplitFeature() + 1);
 
-    treeInfo->average_count.push_back(getAverageCount());
+    treeInfo->average_counts.push_back(getAverageCount());
 
     treeInfo->split_val.push_back(getSplitValue());
     treeInfo->naLeftCount.push_back(getNaLeftCount());

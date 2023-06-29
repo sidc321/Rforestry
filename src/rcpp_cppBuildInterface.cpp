@@ -738,7 +738,7 @@ Rcpp::List rcpp_CppToR_translator(
     for(size_t i=0; i!=forest_dta->size(); i++){
       Rcpp::IntegerVector var_id = Rcpp::wrap(((*forest_dta)[i]).var_id);
 
-      Rcpp::IntegerVector average_count = Rcpp::wrap(((*forest_dta)[i]).average_count);
+      Rcpp::IntegerVector average_counts = Rcpp::wrap(((*forest_dta)[i]).average_counts);
 
       Rcpp::NumericVector split_val = Rcpp::wrap(((*forest_dta)[i]).split_val);
       Rcpp::IntegerVector averagingSampleIndex =
@@ -766,7 +766,7 @@ Rcpp::List rcpp_CppToR_translator(
         Rcpp::List::create(
 			   Rcpp::Named("var_id") = var_id,
 
-         Rcpp::Named("average_count") = average_count,
+         Rcpp::Named("average_counts") = average_counts,
 
 			   Rcpp::Named("split_val") = split_val,
 			   Rcpp::Named("averagingSampleIndex") = averagingSampleIndex,
@@ -841,7 +841,7 @@ Rcpp::List rcpp_reconstructree(
   std::unique_ptr< std::vector< std::vector<int> > > var_ids(
       new std::vector< std::vector<int> >
   );
-  std::unique_ptr< std::vector< std::vector<int> > > average_count(
+  std::unique_ptr< std::vector< std::vector<int> > > average_counts(
       new std::vector< std::vector<int> >
   );
   std::unique_ptr< std::vector< std::vector<double> > > split_vals(
@@ -877,7 +877,7 @@ Rcpp::List rcpp_reconstructree(
 
   // Reserve space for each of the vectors equal to R_forest.size()
   var_ids->reserve(R_forest.size());
-  average_count->reserve(R_forest.size());
+  average_counts->reserve(R_forest.size());
   split_vals->reserve(R_forest.size());
   averagingSampleIndex->reserve(R_forest.size());
   splittingSampleIndex->reserve(R_forest.size());
@@ -893,7 +893,7 @@ Rcpp::List rcpp_reconstructree(
     var_ids->push_back(
         Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[0])
       );
-    average_count->push_back(
+    average_counts->push_back(
         Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[1])
       );
     split_vals->push_back(
@@ -1070,7 +1070,7 @@ Rcpp::List rcpp_reconstructree(
   testFullForest->reconstructTrees(categoricalFeatureColsRcpp_copy,
                                    tree_seeds,
                                    var_ids,
-                                   average_count,
+                                   average_counts,
                                    split_vals,
                                    naLeftCounts,
                                    naRightCounts,

@@ -90,7 +90,7 @@ public:
       unsigned int seed,
       std::vector<size_t> categoricalFeatureColsRcpp,
       std::vector<int> var_ids,
-      std::vector<int> average_count,
+      std::vector<int> average_counts,
       std::vector<double> split_vals,
       std::vector<int> naLeftCounts,
       std::vector<int> naRightCounts,
@@ -104,7 +104,7 @@ public:
   void recursive_reconstruction(
       RFNode* currentNode,
       std::vector<int> * var_ids,
-      std::vector<int> * average_count,
+      std::vector<int> * average_counts,
       std::vector<double> * split_vals,
       std::vector<int> * naLeftCounts,
       std::vector<int> * naRightCounts,
