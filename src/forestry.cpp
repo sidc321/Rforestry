@@ -972,6 +972,7 @@ void forestry::reconstructTrees(
     std::unique_ptr< std::vector<size_t> > & categoricalFeatureColsRcpp,
     std::unique_ptr< std::vector<unsigned int> > & tree_seeds,
     std::unique_ptr< std::vector< std::vector<int> >  > & var_ids,
+    std::unique_ptr< std::vector< std::vector<int> >  > & average_count,
     std::unique_ptr< std::vector< std::vector<double> >  > & split_vals,
     std::unique_ptr< std::vector< std::vector<int> >  > & naLeftCounts,
     std::unique_ptr< std::vector< std::vector<int> >  > & naRightCounts,
@@ -979,7 +980,8 @@ void forestry::reconstructTrees(
     std::unique_ptr< std::vector< std::vector<size_t> >  > & averagingSampleIndex,
     std::unique_ptr< std::vector< std::vector<size_t> >  > & splittingSampleIndex,
     std::unique_ptr< std::vector< std::vector<size_t> >  > & excludedSampleIndex,
-    std::unique_ptr< std::vector< std::vector<double> >  > & weights){
+    std::unique_ptr< std::vector< std::vector<double> >  > & weights,
+    std::unique_ptr< std::vector< std::vector<double> >  > & weightsFull){
 
     #if DOPARELLEL
     size_t nthreadToUse = this->getNthread();
@@ -1030,6 +1032,7 @@ void forestry::reconstructTrees(
                 (*tree_seeds)[i],
                 (*categoricalFeatureColsRcpp),
                 (*var_ids)[i],
+                (*average_count)[i],
                 (*split_vals)[i],
                 (*naLeftCounts)[i],
                 (*naRightCounts)[i],
@@ -1037,7 +1040,8 @@ void forestry::reconstructTrees(
                 (*averagingSampleIndex)[i],
                 (*splittingSampleIndex)[i],
                 (*excludedSampleIndex)[i],
-                (*weights)[i]);
+                (*weights)[i],
+                (*weightsFull)[i]);
 
 #if DOPARELLEL
         std::lock_guard<std::mutex> lock(threadLock);

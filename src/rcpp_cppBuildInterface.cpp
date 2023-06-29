@@ -841,6 +841,9 @@ Rcpp::List rcpp_reconstructree(
   std::unique_ptr< std::vector< std::vector<int> > > var_ids(
       new std::vector< std::vector<int> >
   );
+  std::unique_ptr< std::vector< std::vector<int> > > average_count(
+      new std::vector< std::vector<int> >
+  );
   std::unique_ptr< std::vector< std::vector<double> > > split_vals(
       new  std::vector< std::vector<double> >
   );
@@ -868,9 +871,13 @@ Rcpp::List rcpp_reconstructree(
   std::unique_ptr< std::vector< std::vector<double> > > predictWeights(
           new  std::vector< std::vector<double> >
   );
+  std::unique_ptr< std::vector< std::vector<double> > > predictWeightsFull(
+          new  std::vector< std::vector<double> >
+  );
 
   // Reserve space for each of the vectors equal to R_forest.size()
   var_ids->reserve(R_forest.size());
+  average_count->reserve(R_forest.size());
   split_vals->reserve(R_forest.size());
   averagingSampleIndex->reserve(R_forest.size());
   splittingSampleIndex->reserve(R_forest.size());
@@ -880,39 +887,44 @@ Rcpp::List rcpp_reconstructree(
   naDefaultDirections->reserve(R_forest.size());
   tree_seeds->reserve(R_forest.size());
   predictWeights->reserve(R_forest.size());
-
-
+  predictWeightsFull->reserve(R_forest.size());
   // Now actually populate the vectors
   for(int i=0; i!=R_forest.size(); i++){
     var_ids->push_back(
         Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[0])
       );
+    average_count->push_back(
+        Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[1])
+      );
     split_vals->push_back(
-        Rcpp::as< std::vector<double> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[1])
+        Rcpp::as< std::vector<double> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[2])
       );
     averagingSampleIndex->push_back(
-        Rcpp::as< std::vector<size_t> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[2])
-      );
-    splittingSampleIndex->push_back(
         Rcpp::as< std::vector<size_t> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[3])
       );
-    excludedSampleIndex->push_back(
+    splittingSampleIndex->push_back(
         Rcpp::as< std::vector<size_t> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[4])
+      );
+    excludedSampleIndex->push_back(
+        Rcpp::as< std::vector<size_t> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[5])
     );
     naLeftCounts->push_back(
-        Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[5])
-    );
-    naRightCounts->push_back(
         Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[6])
     );
-    naDefaultDirections->push_back(
+    naRightCounts->push_back(
         Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[7])
     );
+    naDefaultDirections->push_back(
+        Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[8])
+    );
     tree_seeds->push_back(
-        Rcpp::as< unsigned int > ((Rcpp::as<Rcpp::List>(R_forest[i]))[8])
+        Rcpp::as< unsigned int > ((Rcpp::as<Rcpp::List>(R_forest[i]))[9])
     );
     predictWeights->push_back(
-            Rcpp::as< std::vector<double> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[9])
+            Rcpp::as< std::vector<double> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[10])
+    );
+    predictWeightsFull->push_back(
+            Rcpp::as< std::vector<double> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[11])
     );
   }
 
@@ -1058,6 +1070,7 @@ Rcpp::List rcpp_reconstructree(
   testFullForest->reconstructTrees(categoricalFeatureColsRcpp_copy,
                                    tree_seeds,
                                    var_ids,
+                                   average_count,
                                    split_vals,
                                    naLeftCounts,
                                    naRightCounts,
@@ -1065,7 +1078,8 @@ Rcpp::List rcpp_reconstructree(
                                    averagingSampleIndex,
                                    splittingSampleIndex,
                                    excludedSampleIndex,
-                                   predictWeights
+                                   predictWeights,
+                                   predictWeightsFull
                                    );
 
   Rcpp::XPtr<forestry> ptr(testFullForest, true);

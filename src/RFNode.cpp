@@ -5,6 +5,9 @@
 #include <thread>
 #include "utils.h"
 
+#include <RcppArmadillo.h>
+
+
 std::mutex mutex_weightMatrix;
 
 
@@ -39,8 +42,8 @@ void RFNode::setLeafNode(
 }
 
 void RFNode::setSplitNode(
-  size_t averagingSampleIndexSize,
   size_t splitFeature,
+  size_t averagingSampleIndexSize,
   double splitValue,
   std::unique_ptr< RFNode > leftChild,
   std::unique_ptr< RFNode > rightChild,
@@ -172,7 +175,7 @@ void RFNode::predict(
   size_t nodesizeStrictAvg,
   std::vector<size_t>* OOBIndex
 ) {
-
+  //Rcpp::Rcout<<"nodein"<<std::endl;
   // If the node is a leaf, aggregate all its averaging data samples
   if (is_leaf()) {
 
@@ -185,7 +188,7 @@ void RFNode::predict(
                      trainingData,
                      lambda);
       } else {
-
+        //Rcpp::Rcout<<"inleaf"<<std::endl;
         double predictedMean;
         // Calculate the mean of current node
         if (getAverageCount() == 0) {
@@ -247,7 +250,7 @@ void RFNode::predict(
 
   // If not a leaf then we need to separate the prediction tasks
   } else {
-
+    //Rcpp::Rcout<<"insplit"<<std::endl;
     // Separate prediction tasks to two children
     std::vector<size_t>* leftPartitionIndex = new std::vector<size_t>();
     std::vector<size_t>* rightPartitionIndex = new std::vector<size_t>();

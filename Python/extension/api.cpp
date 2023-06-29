@@ -578,6 +578,9 @@ extern "C" {
         std::unique_ptr< std::vector< std::vector<int> > > var_ids(
           new std::vector< std::vector<int> >
         );
+        std::unique_ptr< std::vector< std::vector<int> > > average_count(
+          new std::vector< std::vector<int> >
+        );
         std::unique_ptr< std::vector< std::vector<double> > > split_vals(
             new std::vector< std::vector<double> >
         );
@@ -605,9 +608,13 @@ extern "C" {
         std::unique_ptr< std::vector< std::vector<double> > > predictWeights(
             new std::vector< std::vector<double> >
         );
+        std::unique_ptr< std::vector< std::vector<double> > > predictWeightsFull(
+            new std::vector< std::vector<double> >
+        );
     
         // Reserve space for each of the vectors equal to ntree
         var_ids->reserve(ntree);
+        average_count->reserve(ntree);
         split_vals->reserve(ntree);
         averagingSampleIndex->reserve(ntree);
         splittingSampleIndex->reserve(ntree);
@@ -617,12 +624,14 @@ extern "C" {
         naDefaultDirections->reserve(ntree);
         treeSeeds->reserve(ntree);
         predictWeights->reserve(ntree);
+        predictWeightsFull->reserve(ntree);
     
         // Now actually populate the vectors
-        size_t ind = 0, ind_s = 0, ind_a = 0, ind_var = 0, ind_weights = 0;
+        size_t ind = 0, ind_s = 0, ind_a = 0, ind_var = 0, ind_avg=0, ind_weights = 0, ind_weights_full = 0;
         for(size_t i = 0; i < ntree; i++){
             // Should be num total nodes + num leaf nodes
             std::vector<int> cur_var_ids((tree_counts[4*i]+tree_counts[4*i+3]), 0);
+            std::vector<int> cur_average_count((tree_counts[4*i]), 0);
             std::vector<double> cur_split_vals(tree_counts[4*i], 0);
             std::vector<int> curNaLeftCounts(tree_counts[4*i], 0);
             std::vector<int> curNaRightCounts(tree_counts[4*i], 0);
@@ -630,6 +639,7 @@ extern "C" {
             std::vector<size_t> curSplittingSampleIndex(tree_counts[4*i+1], 0);
             std::vector<size_t> curAveragingSampleIndex(tree_counts[4*i+2], 0);
             std::vector<double> cur_predict_weights(tree_counts[4*i+3], 0);
+            std::vector<double> cur_predict_weights_full(tree_counts[4*i], 0);
     
             for(size_t j = 0; j < tree_counts[4*i]; j++){
                 cur_split_vals.at(j) = thresholds[ind];
@@ -645,9 +655,19 @@ extern "C" {
                 ind_weights++;
             }
 
+            for (size_t j = 0; j < tree_counts[4*i]; j++){
+                cur_predict_weights_full.at(j) = predict_weights[ind_weights_full];
+                ind_weights_full++;
+            }
+
             for (size_t j = 0; j < (tree_counts[4*i]+tree_counts[4*i+3]); j++) {
                 cur_var_ids.at(j) = features[ind_var];
                 ind_var++;
+            }
+            
+            for (size_t j = 0; j < (tree_counts[4*i]); j++) {
+                cur_average_count.at(j) = features[ind_avg];
+                ind_avg++;
             }
     
             for(size_t j = 0; j < tree_counts[4*i+1]; j++){
@@ -661,6 +681,7 @@ extern "C" {
             }
     
             var_ids->push_back(cur_var_ids);
+            average_count->push_back(cur_average_count);
             split_vals->push_back(cur_split_vals);
             naLeftCounts->push_back(curNaLeftCounts);
             naRightCounts->push_back(curNaRightCounts);
@@ -669,6 +690,7 @@ extern "C" {
             averagingSampleIndex->push_back(curAveragingSampleIndex);
             excludedSampleIndex->push_back(std::vector<size_t>());
             predictWeights->push_back(cur_predict_weights);
+            predictWeightsFull->push_back(cur_predict_weights_full);
             treeSeeds->push_back(tree_seeds[i]);
         }
 
@@ -677,6 +699,7 @@ extern "C" {
             categoricalFeatureCols_copy,
             treeSeeds,
             var_ids,
+            average_count,
             split_vals,
             naLeftCounts,
             naRightCounts,
@@ -684,7 +707,8 @@ extern "C" {
             averagingSampleIndex,
             splittingSampleIndex,
             excludedSampleIndex,
-            predictWeights
+            predictWeights,
+            predictWeightsFull
         );
     
         return forest;

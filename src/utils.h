@@ -44,7 +44,7 @@ struct tree_info {
   // 0.0 for interior nodes
   std::vector< double > valuesFull;
   // contains the weights used for prediction in each node
-  // Not 0.0 for interior nodes
+  // Weights for interior nodes also included
   std::vector< int > num_spl_samples;
   // Counts of splitting samples at each node
   std::vector< int > num_avg_samples;
