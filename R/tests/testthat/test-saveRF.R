@@ -59,7 +59,7 @@ test_that("Tests that saving RF and laoding it works", {
   # y_pred_after <- predict(forest, x)
 
 
-  for (i in 1:6) {
+  for (i in 1:length(before)) {
     testthat::expect_equal(after[[i]], before[[i]])
   }
 
