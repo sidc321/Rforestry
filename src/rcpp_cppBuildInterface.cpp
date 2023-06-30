@@ -736,7 +736,7 @@ Rcpp::List rcpp_CppToR_translator(
 
     for(size_t i=0; i!=forest_dta->size(); i++){
       Rcpp::IntegerVector var_id = Rcpp::wrap(((*forest_dta)[i]).var_id);
-      Rcpp::IntegerVector average_counts = Rcpp::wrap(((*forest_dta)[i]).average_counts);
+      Rcpp::IntegerVector average_count = Rcpp::wrap(((*forest_dta)[i]).average_count);
       Rcpp::NumericVector split_val = Rcpp::wrap(((*forest_dta)[i]).split_val);
       Rcpp::IntegerVector averagingSampleIndex =
 	      Rcpp::wrap(((*forest_dta)[i]).averagingSampleIndex);
@@ -762,7 +762,7 @@ Rcpp::List rcpp_CppToR_translator(
         Rcpp::List list_i =
         Rcpp::List::create(
 			   Rcpp::Named("var_id") = var_id,
-         Rcpp::Named("average_counts") = average_counts,
+         Rcpp::Named("average_count") = average_count,
 			   Rcpp::Named("split_val") = split_val,
 			   Rcpp::Named("averagingSampleIndex") = averagingSampleIndex,
 			   Rcpp::Named("splittingSampleIndex") = splittingSampleIndex,

@@ -14,6 +14,6 @@ test_that("Tests hierarchical shrinkage works as expected", {
   # Now check things are the right size
   var_id  = rf@R_forest[[1]]$var_id
   num_nodes = length(var_id[var_id>=0]) + length(var_id[var_id < 0])/2
-  expect_equal(length(rf@R_forest[[1]]$average_counts),num_nodes)
+  expect_equal(length(rf@R_forest[[1]]$average_count),num_nodes)
   expect_equal(length(rf@R_forest[[1]]$weightsFull),num_nodes)
 })
