@@ -726,7 +726,6 @@ Rcpp::List rcpp_CppToR_translator(
 ){
   try {
     Rcpp::XPtr< forestry > testFullForest(forest) ;
-    // acceses tree info
     std::unique_ptr< std::vector<tree_info> > forest_dta(
       new std::vector<tree_info>
     );
@@ -737,9 +736,7 @@ Rcpp::List rcpp_CppToR_translator(
 
     for(size_t i=0; i!=forest_dta->size(); i++){
       Rcpp::IntegerVector var_id = Rcpp::wrap(((*forest_dta)[i]).var_id);
-
       Rcpp::IntegerVector average_counts = Rcpp::wrap(((*forest_dta)[i]).average_counts);
-
       Rcpp::NumericVector split_val = Rcpp::wrap(((*forest_dta)[i]).split_val);
       Rcpp::IntegerVector averagingSampleIndex =
 	      Rcpp::wrap(((*forest_dta)[i]).averagingSampleIndex);
@@ -765,9 +762,7 @@ Rcpp::List rcpp_CppToR_translator(
         Rcpp::List list_i =
         Rcpp::List::create(
 			   Rcpp::Named("var_id") = var_id,
-
          Rcpp::Named("average_counts") = average_counts,
-
 			   Rcpp::Named("split_val") = split_val,
 			   Rcpp::Named("averagingSampleIndex") = averagingSampleIndex,
 			   Rcpp::Named("splittingSampleIndex") = splittingSampleIndex,
@@ -888,6 +883,8 @@ Rcpp::List rcpp_reconstructree(
   tree_seeds->reserve(R_forest.size());
   predictWeights->reserve(R_forest.size());
   predictWeightsFull->reserve(R_forest.size());
+
+
   // Now actually populate the vectors
   for(int i=0; i!=R_forest.size(); i++){
     var_ids->push_back(

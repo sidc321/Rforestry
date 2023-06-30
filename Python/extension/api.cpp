@@ -578,7 +578,7 @@ extern "C" {
         std::unique_ptr< std::vector< std::vector<int> > > var_ids(
           new std::vector< std::vector<int> >
         );
-        std::unique_ptr< std::vector< std::vector<int> > > average_count(
+        std::unique_ptr< std::vector< std::vector<int> > > average_counts(
           new std::vector< std::vector<int> >
         );
         std::unique_ptr< std::vector< std::vector<double> > > split_vals(
@@ -614,7 +614,7 @@ extern "C" {
     
         // Reserve space for each of the vectors equal to ntree
         var_ids->reserve(ntree);
-        average_count->reserve(ntree);
+        average_counts->reserve(ntree);
         split_vals->reserve(ntree);
         averagingSampleIndex->reserve(ntree);
         splittingSampleIndex->reserve(ntree);
@@ -631,7 +631,7 @@ extern "C" {
         for(size_t i = 0; i < ntree; i++){
             // Should be num total nodes + num leaf nodes
             std::vector<int> cur_var_ids((tree_counts[4*i]+tree_counts[4*i+3]), 0);
-            std::vector<int> cur_average_count((tree_counts[4*i]), 0);
+            std::vector<int> cur_average_counts((tree_counts[4*i]), 0);
             std::vector<double> cur_split_vals(tree_counts[4*i], 0);
             std::vector<int> curNaLeftCounts(tree_counts[4*i], 0);
             std::vector<int> curNaRightCounts(tree_counts[4*i], 0);
@@ -666,7 +666,7 @@ extern "C" {
             }
             
             for (size_t j = 0; j < (tree_counts[4*i]); j++) {
-                cur_average_count.at(j) = features[ind_avg];
+                cur_average_counts.at(j) = features[ind_avg];
                 ind_avg++;
             }
     
@@ -681,7 +681,7 @@ extern "C" {
             }
     
             var_ids->push_back(cur_var_ids);
-            average_count->push_back(cur_average_count);
+            average_counts->push_back(cur_average_counts);
             split_vals->push_back(cur_split_vals);
             naLeftCounts->push_back(curNaLeftCounts);
             naRightCounts->push_back(curNaRightCounts);
@@ -699,7 +699,7 @@ extern "C" {
             categoricalFeatureCols_copy,
             treeSeeds,
             var_ids,
-            average_count,
+            average_counts,
             split_vals,
             naLeftCounts,
             naRightCounts,

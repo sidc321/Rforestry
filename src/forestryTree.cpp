@@ -1862,7 +1862,7 @@ void forestryTree::recursive_reconstruction(
       weights,
       weightsFull
     );
-    // TEMPORARY  FIX -- just to get things to compile sidc
+
     size_t node_id;
     assignNodeId(node_id,
                  true);
