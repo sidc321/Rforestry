@@ -422,7 +422,9 @@ Rcpp::List rcpp_cppPredictInterface(
   bool use_weights,
   bool use_hold_out_idx,
   Rcpp::NumericVector tree_weights,
-  Rcpp::IntegerVector hold_out_idx
+  Rcpp::IntegerVector hold_out_idx,
+  bool hier_shrinkage=false,
+  double lambda_shrinkage=0
 ){
   try {
 
@@ -561,7 +563,9 @@ Rcpp::List rcpp_cppPredictInterface(
                                 threads_to_use,
                                 exact,
                                 use_weights,
-                                use_weights ? testForestTreeWeights : NULL);
+                                use_weights ? testForestTreeWeights : NULL,
+                                hier_shrinkage,
+                                lambda_shrinkage);
       }
     }
 

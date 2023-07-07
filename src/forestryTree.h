@@ -67,7 +67,10 @@ public:
     bool naDirection = false,
     unsigned int seed = 44,
     size_t nodesizeStrictAvg = 1,
-    std::vector<size_t>* OOBIndex = NULL
+    std::vector<size_t>* OOBIndex = NULL,
+    bool hier_shrinkage=false,
+    double lambda_shrinkage=0,
+    double parentAverageCount=0
   );
 
   std::unique_ptr<tree_info> getTreeInfo(

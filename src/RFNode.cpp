@@ -170,9 +170,20 @@ void RFNode::predict(
   double lambda,
   unsigned int seed,
   size_t nodesizeStrictAvg,
-  std::vector<size_t>* OOBIndex
+  std::vector<size_t>* OOBIndex,
+  bool hier_shrinkage,
+  bool lambda_shrinkage,
+  double parentAverageCount
 ) {
-
+  double predictedMean;
+  // Calculate the mean of current node
+  if (getAverageCount() == 0) {
+    predictedMean = std::numeric_limits<double>::quiet_NaN();
+  } else if (!std::isnan(getPredictWeight())) {
+      predictedMean = getPredictWeight();
+  } else {
+    predictedMean = (*trainingData).partitionMean(getAveragingIndex());
+  }
   // If the node is a leaf, aggregate all its averaging data samples
   if (is_leaf()) {
 
@@ -186,23 +197,17 @@ void RFNode::predict(
                      lambda);
       } else {
 
-        double predictedMean;
-        // Calculate the mean of current node
-        if (getAverageCount() == 0) {
-          predictedMean = std::numeric_limits<double>::quiet_NaN();
-        } else if (!std::isnan(getPredictWeight())) {
-            predictedMean = getPredictWeight();
-        } else {
-          predictedMean = (*trainingData).partitionMean(getAveragingIndex());
-        }
-
         // Give all updateIndex the mean of the node as prediction values
         for (
           std::vector<size_t>::iterator it = (*updateIndex).begin();
           it != (*updateIndex).end();
           ++it
         ) {
+          if(hier_shrinkage){
+            outputPrediction[*it] += predictedMean/(1+lambda_shrinkage/parentAverageCount);
+          } else{
             outputPrediction[*it] = predictedMean;
+          }
         }
     }
 
@@ -485,6 +490,17 @@ void RFNode::predict(
 
       }
 
+    if(hier_shrinkage){
+      for (
+          std::vector<size_t>::iterator it = (*updateIndex).begin();
+          it != (*updateIndex).end();
+          ++it
+        ) {
+          double current_level_weight =  (1+lambda_shrinkage / getAverageCount()); 
+          double parent_level_weight = (1+lambda_shrinkage/parentAverageCount);
+          outputPrediction[*it] += predictedMean*(parent_level_weight-current_level_weight);
+      }
+    }
       // Recursively get predictions from its children
     if ((*leftPartitionIndex).size() > 0) {
       (*getLeftChild()).predict(
@@ -501,7 +517,10 @@ void RFNode::predict(
           lambda,
           seed,
           nodesizeStrictAvg,
-          OOBIndex
+          OOBIndex,
+          hier_shrinkage,
+          lambda_shrinkage,
+          getAverageCount()
       );
     }
 
@@ -520,7 +539,10 @@ void RFNode::predict(
           lambda,
           seed,
           nodesizeStrictAvg,
-          OOBIndex
+          OOBIndex,
+          hier_shrinkage,
+          lambda_shrinkage,
+          getAverageCount()
         );
     }
 
@@ -623,13 +645,7 @@ bool RFNode::is_leaf() {
 }
 
 size_t RFNode::getAverageCountAlways() {
-  if(is_leaf()) {
-    return _averageCount;
-  }
-  else {
-    return (*getRightChild()).getAverageCountAlways() +
-      (*getLeftChild()).getAverageCountAlways();
-  }
+  return _averageCount;
 }
 
 void RFNode::printSubtree(int indentSpace) {

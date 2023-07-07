@@ -56,7 +56,9 @@ public:
     size_t nthread,
     bool exact,
     bool use_weights,
-    std::vector<size_t>* tree_weights
+    std::vector<size_t>* tree_weights,
+    bool hier_shrinkage=false,
+    double lambda_shrinkage =0
   );
 
   std::vector<double> predictOOB(

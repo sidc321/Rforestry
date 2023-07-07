@@ -1325,6 +1325,8 @@ predict.forestry <- function(object,
                              exact = NULL,
                              trees = NULL,
                              weightMatrix = FALSE,
+                             hier_shrinkage = TRUE,
+                             lambda_shrinkage = 1,
                              ...) {
 
   if (is.null(newdata) && !(aggregation == "oob" || aggregation == "doubleOOB")) {
@@ -1547,7 +1549,9 @@ predict.forestry <- function(object,
                                use_weights = use_weights,
                                use_hold_out_idx = FALSE,
                                tree_weights = tree_weights,
-                               hold_out_idx = c(-1))
+                               hold_out_idx = c(-1),
+                               hier_shrinkage,
+                               lambda_shrinkage)
     }, error = function(err) {
       print(err)
       return(NULL)

@@ -382,7 +382,9 @@ std::unique_ptr< std::vector<double> > forestry::predict(
   size_t nthread,
   bool exact,
   bool use_weights,
-  std::vector<size_t>* tree_weights
+  std::vector<size_t>* tree_weights,
+  bool hier_shrinkage,
+  double lambda_shrinkage
 ){
 
   size_t numObservations = (*xNew)[0].size();
@@ -480,7 +482,11 @@ std::unique_ptr< std::vector<double> > forestry::predict(
                   getlinear(),
                   getNaDirection(),
                   seed + i,
-                  getMinNodeSizeToSplitAvg()
+                  getMinNodeSizeToSplitAvg(),
+                  NULL,
+                  hier_shrinkage,
+                  lambda_shrinkage,
+                  std::numeric_limits<double>::infinity()
               );
 
             } else {
@@ -494,7 +500,11 @@ std::unique_ptr< std::vector<double> > forestry::predict(
                   getlinear(),
                   getNaDirection(),
                   seed + i,
-                  getMinNodeSizeToSplitAvg()
+                  getMinNodeSizeToSplitAvg(),
+                  NULL,
+                  hier_shrinkage,
+                  lambda_shrinkage,
+                  std::numeric_limits<double>::infinity()
               );
 
             }

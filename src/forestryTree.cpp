@@ -240,7 +240,10 @@ void forestryTree::predict(
     bool naDirection,
     unsigned int seed,
     size_t nodesizeStrictAvg,
-    std::vector<size_t>* OOBIndex
+    std::vector<size_t>* OOBIndex,
+    bool hier_shrinkage,
+    double lambda_shrinkage,
+    double parentAverageCount
 ){
   // If we are estimating the average in each leaf:
   struct rangeGenerator {
@@ -265,7 +268,10 @@ void forestryTree::predict(
                        getOverfitPenalty(),
                        seed,
                        nodesizeStrictAvg,
-                       OOBIndex);
+                       OOBIndex,
+                       hier_shrinkage,
+                       lambda_shrinkage,
+                       parentAverageCount);
   //std::cout << "Seed is" << seed << ".\n";
 }
 
