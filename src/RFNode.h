@@ -67,7 +67,7 @@ public:
     size_t nodesizeStrictAvg,
     std::vector<size_t>* OOBIndex = NULL,
     bool hier_shrinkage=false,
-    bool lambda_shrinkage=0,
+    double lambda_shrinkage=0,
     double parentAverageCount=0
   );
 

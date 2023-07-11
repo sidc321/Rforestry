@@ -172,7 +172,7 @@ void RFNode::predict(
   size_t nodesizeStrictAvg,
   std::vector<size_t>* OOBIndex,
   bool hier_shrinkage,
-  bool lambda_shrinkage,
+  double lambda_shrinkage,
   double parentAverageCount
 ) {
   double predictedMean;
@@ -496,8 +496,8 @@ void RFNode::predict(
           it != (*updateIndex).end();
           ++it
         ) {
-          double current_level_weight =  (1+lambda_shrinkage / getAverageCount()); 
-          double parent_level_weight = (1+lambda_shrinkage/parentAverageCount);
+          double current_level_weight =  1/(1+lambda_shrinkage / getAverageCount()); 
+          double parent_level_weight = 1/(1+lambda_shrinkage/parentAverageCount);
           outputPrediction[*it] += predictedMean*(parent_level_weight-current_level_weight);
       }
     }

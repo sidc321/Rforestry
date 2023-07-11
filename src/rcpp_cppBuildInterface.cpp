@@ -423,8 +423,8 @@ Rcpp::List rcpp_cppPredictInterface(
   bool use_hold_out_idx,
   Rcpp::NumericVector tree_weights,
   Rcpp::IntegerVector hold_out_idx,
-  bool hier_shrinkage=false,
-  double lambda_shrinkage=0
+  bool hier_shrinkage = false,
+  double lambda_shrinkage = 0
 ){
   try {
 

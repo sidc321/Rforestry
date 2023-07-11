@@ -1312,6 +1312,12 @@ forestry <- function(x,
 #'   matrix of the weights given to each training observation when making each
 #'   prediction. When getting the weight matrix, aggregation must be one of
 #'   `average`, `oob`, and `doubleOOB`.
+#' #' @param hier_shrinkage An indicator of whether or not we should perform hierarchical
+#'   shrinkage. The parameter lambda_shrinkage should also be provided to specify the
+#'   the amount of shrinkage. By default, hier_shrinkage is FALSE.
+#' #' @param lambda_shrinkage The parameter to use for hierarchical shrinkage. By default
+#'   this is set to 0 (equal to zero shrinkage). The parameter hier_shrinkage should also
+#'   be set to TRUE to perform hierarchical shrinkage.
 #' @param ... additional arguments.
 #' @return A vector of predicted responses.
 #' @export
@@ -1325,8 +1331,8 @@ predict.forestry <- function(object,
                              exact = NULL,
                              trees = NULL,
                              weightMatrix = FALSE,
-                             hier_shrinkage = TRUE,
-                             lambda_shrinkage = 1,
+                             hier_shrinkage = FALSE,
+                             lambda_shrinkage = 0,
                              ...) {
 
   if (is.null(newdata) && !(aggregation == "oob" || aggregation == "doubleOOB")) {
