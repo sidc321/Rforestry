@@ -67,7 +67,9 @@ public:
     std::vector<size_t>* treeCounts,
     bool doubleOOB,
     bool exact,
-    std::vector<size_t> &training_idx
+    std::vector<size_t> &training_idx,
+    bool hier_shrinkage,
+    double lambda_shrinkage
   );
 
   void fillinTreeInfo(
@@ -92,7 +94,9 @@ public:
   size_t getTotalNodeCount();
 
   void calculateOOBError(
-      bool doubleOOB = false
+      bool doubleOOB = false,
+      bool hier_shrinkage = false,
+      double lambda_shrinkage = 0
   );
 
   double getOOBError() {

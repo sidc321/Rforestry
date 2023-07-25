@@ -198,6 +198,7 @@ void RFNode::predict(
       } else {
 
         // Give all updateIndex the mean of the node as prediction values
+        // Weight by shrinkage factor if shrinkage is turned on
         for (
           std::vector<size_t>::iterator it = (*updateIndex).begin();
           it != (*updateIndex).end();
@@ -231,8 +232,13 @@ void RFNode::predict(
         }
 
         for (size_t i = 0; i<idx_in_leaf.size(); i++) {
-          (*weightMatrix)(idx, idx_in_leaf[i] - 1) +=
-          (double) 1.0 / ((double) idx_in_leaf.size());
+          if(hier_shrinkage){
+            (*weightMatrix)(idx, idx_in_leaf[i] - 1) +=
+            (double) 1.0 / ((double) idx_in_leaf.size()) * (double) 1.0 /(1+lambda_shrinkage/parentAverageCount);
+          }else{
+            (*weightMatrix)(idx, idx_in_leaf[i] - 1) +=
+            (double) 1.0 / ((double) idx_in_leaf.size());
+          }
         }
       }
     }
@@ -252,6 +258,42 @@ void RFNode::predict(
 
   // If not a leaf then we need to separate the prediction tasks
   } else {
+
+    // shrink predictions (and weight) on non-leaf nodes if hierarchical shrinkage is on
+    if(hier_shrinkage){
+      for (
+          std::vector<size_t>::iterator it = (*updateIndex).begin();
+          it != (*updateIndex).end();
+          ++it
+        ) {
+        double current_level_weight =  1/(1+lambda_shrinkage / getAverageCount());
+        double parent_level_weight = 1/(1+lambda_shrinkage/parentAverageCount);
+        outputPrediction[*it] += predictedMean * (parent_level_weight-current_level_weight);
+
+        // need to update the weights outside leaf node if shrinkage applied
+        if(weightMatrix){
+          // If weightMatrix is not a NULL pointer, then we want to update it,
+          // because we have choosen aggregation = "weightmatrix".
+          std::vector<size_t> idx_in_leaf =
+                    (*trainingData).get_all_row_idx(predictionAveragingIndices);
+
+
+            // The following will lock the access to weightMatrix
+          std::lock_guard<std::mutex> lock(mutex_weightMatrix);
+
+          // Set the row which we update in the weightMatrix
+          size_t idx = *it;
+          if (OOBIndex) {
+            idx = (*OOBIndex)[*it];
+          }
+
+          for (size_t i = 0; i<idx_in_leaf.size(); i++) {
+            (*weightMatrix)(idx, idx_in_leaf[i] - 1) +=
+            (double) 1.0 / ((double) idx_in_leaf.size()) * (parent_level_weight-current_level_weight);
+          }
+        }   
+      }
+    }
 
     // Separate prediction tasks to two children
     std::vector<size_t>* leftPartitionIndex = new std::vector<size_t>();
@@ -490,17 +532,6 @@ void RFNode::predict(
 
       }
 
-    if(hier_shrinkage){
-      for (
-          std::vector<size_t>::iterator it = (*updateIndex).begin();
-          it != (*updateIndex).end();
-          ++it
-        ) {
-          double current_level_weight =  1/(1+lambda_shrinkage / getAverageCount()); 
-          double parent_level_weight = 1/(1+lambda_shrinkage/parentAverageCount);
-          outputPrediction[*it] += predictedMean*(parent_level_weight-current_level_weight);
-      }
-    }
       // Recursively get predictions from its children
     if ((*leftPartitionIndex).size() > 0) {
       (*getLeftChild()).predict(

@@ -660,7 +660,9 @@ std::vector<double> forestry::predictOOB(
     std::vector<size_t>* treeCounts,
     bool doubleOOB,
     bool exact,
-    std::vector<size_t> &training_idx
+    std::vector<size_t> &training_idx,
+    bool hier_shrinkage,
+    double lambda_shrinkage
 ) {
 
   bool use_training_idx = !training_idx.empty();
@@ -721,7 +723,9 @@ std::vector<double> forestry::predictOOB(
                       getMinNodeSizeToSplitAvg(),
                       xNew,
                       weightMatrix,
-                      training_idx
+                      training_idx,
+                      hier_shrinkage,
+                      lambda_shrinkage
                   );
                   #if DOPARELLEL
                   std::lock_guard<std::mutex> lock(threadLock);
@@ -831,7 +835,9 @@ std::vector<double> forestry::predictOOB(
 }
 
 void forestry::calculateOOBError(
-    bool doubleOOB
+    bool doubleOOB,
+    bool hier_shrinkage,
+    double lambda_shrinkage
 ) {
 
   size_t numObservations = getTrainingData()->getNumRows();
@@ -889,7 +895,9 @@ void forestry::calculateOOBError(
               getMinNodeSizeToSplitAvg(),
               nullptr,
               NULL,
-              training_idx
+              training_idx,
+              hier_shrinkage,
+              lambda_shrinkage
             );
 
             #if DOPARELLEL

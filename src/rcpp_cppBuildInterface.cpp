@@ -545,7 +545,9 @@ Rcpp::List rcpp_cppPredictInterface(
                                                        threads_to_use,
                                                        exact,
                                                        false,
-                                                       NULL);
+                                                       NULL,
+                                                       hier_shrinkage,
+                                                       lambda_shrinkage);
     } else {
       // If the weights are zero, we just return NaN's
       if (use_weights &&
@@ -618,7 +620,9 @@ Rcpp::List rcpp_OBBPredictionsInterface(
     bool returnWeightMatrix,
     bool exact,
     bool use_training_idx,
-    Rcpp::IntegerVector training_idx
+    Rcpp::IntegerVector training_idx,
+    bool hier_shrinkage,
+    double lambda_shrinkage
 ){
   // Then we predict with the feature.new data
   if (existing_df) {
@@ -649,7 +653,9 @@ Rcpp::List rcpp_OBBPredictionsInterface(
                                         &treeCounts,
                                         doubleOOB,
                                         exact,
-                                        training_idx_cpp);
+                                        training_idx_cpp,
+                                        hier_shrinkage,
+                                        lambda_shrinkage);
         Rcpp::NumericVector wrapped_preds = Rcpp::wrap(OOBpreds);
 
         return Rcpp::List::create(Rcpp::Named("predictions") = wrapped_preds,
@@ -662,7 +668,9 @@ Rcpp::List rcpp_OBBPredictionsInterface(
                                         NULL,
                                         doubleOOB,
                                         exact,
-                                        training_idx_cpp);
+                                        training_idx_cpp,
+                                        hier_shrinkage,
+                                        lambda_shrinkage);
         Rcpp::NumericVector wrapped_preds = Rcpp::wrap(OOBpreds);
 
         return Rcpp::List::create(Rcpp::Named("predictions") = wrapped_preds);

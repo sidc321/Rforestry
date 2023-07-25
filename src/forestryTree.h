@@ -70,7 +70,7 @@ public:
     std::vector<size_t>* OOBIndex = NULL,
     bool hier_shrinkage=false,
     double lambda_shrinkage=0,
-    double parentAverageCount=0
+    double parentAverageCount=std::numeric_limits<double>::infinity()
   );
 
   std::unique_ptr<tree_info> getTreeInfo(
@@ -211,7 +211,9 @@ public:
     size_t nodesizeStrictAvg,
     std::vector< std::vector<double> >* xNew,
     arma::Mat<double>* weightMatrix,
-    const std::vector<size_t>& training_idx
+    const std::vector<size_t>& training_idx,
+    bool hier_shrinkage,
+    double lambda_shrinkage
   );
 
   size_t getMtry() {

@@ -1471,7 +1471,9 @@ predict.forestry <- function(object,
                                use_weights = use_weights,
                                use_hold_out_idx = TRUE,
                                tree_weights = tree_weights,
-                               hold_out_idx = (holdOutIdx-1)) # Change to 0 indexed for C++
+                               hold_out_idx = (holdOutIdx-1), # Change to 0 indexed for C++
+                               hier_shrinkage,
+                               lambda_shrinkage)
     }, error = function(err) {
       print(err)
       return(NULL)
@@ -1498,7 +1500,9 @@ predict.forestry <- function(object,
                                    weightMatrix,
                                    exact,
                                    useTrainingIndices,
-                                   trainingIndices
+                                   trainingIndices,
+                                   hier_shrinkage,
+                                   lambda_shrinkage
       )
     }, error = function(err) {
       print(err)
@@ -1535,7 +1539,9 @@ predict.forestry <- function(object,
                                    weightMatrix,
                                    exact,
                                    useTrainingIndices,
-                                   trainingIndices
+                                   trainingIndices,
+                                   hier_shrinkage,
+                                   lambda_shrinkage
       )
     }, error = function(err) {
       print(err)
@@ -1695,7 +1701,9 @@ getOOB <- function(object,
 getOOBpreds <- function(object,
                         newdata = NULL,
                         doubleOOB = FALSE,
-                        noWarning = FALSE
+                        noWarning = FALSE,
+                        hier_shrinkage = FALSE,
+                        lambda_shrinkage = FALSE
                         ) {
 
   if (!object@replace &&
@@ -1760,7 +1768,9 @@ getOOBpreds <- function(object,
                                                    FALSE,
                                                    TRUE,
                                                    FALSE,
-                                                   c(-1))
+                                                   c(-1),
+                                                   hier_shrinkage,
+                                                   lambda_shrinkage)
 
     # If we have scaled the observations, we want to rescale the predictions
     if (object@scale) {
@@ -1893,7 +1903,7 @@ getVI <- function(object,
 #' @param aggregation Specifies which aggregation version is used to predict for the
 #' observation, must be one of `average`,`oob`, and `doubleOOB`.
 #' @return A list with four entries. `weightMatrix` is a matrix specifying the
-#'  weight given to training observatio i when prediction on observation j.
+#'  weight given to training observation i when prediction on observation j.
 #'  `avgIndices` gives the indices which are in the averaging set for each new
 #'  observation. `avgWeights` gives the weights corresponding to each averaging
 #'  observation returned in `avgIndices`. `obsInfo` gives the full observation vectors

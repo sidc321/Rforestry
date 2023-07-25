@@ -1542,7 +1542,9 @@ void forestryTree::getOOBPrediction(
     size_t nodesizeStrictAvg,
     std::vector< std::vector<double> >* xNew,
     arma::Mat<double>* weightMatrix,
-    const std::vector<size_t>& training_idx
+    const std::vector<size_t>& training_idx,
+    bool hier_shrinkage,
+    double lambda_shrinkage
 ){
 
   std::vector<size_t> OOBIndex;
@@ -1656,7 +1658,10 @@ void forestryTree::getOOBPrediction(
     getNaDirection(),
     44,
     nodesizeStrictAvg,
-    use_training_idx ? &indexInTrain : &OOBIndex
+    use_training_idx ? &indexInTrain : &OOBIndex,
+    hier_shrinkage,
+    lambda_shrinkage,
+    std::numeric_limits<double>::infinity()
   );
 
   // Now take only the OOB entries in the predictions
