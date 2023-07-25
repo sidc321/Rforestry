@@ -1312,10 +1312,10 @@ forestry <- function(x,
 #'   matrix of the weights given to each training observation when making each
 #'   prediction. When getting the weight matrix, aggregation must be one of
 #'   `average`, `oob`, and `doubleOOB`.
-#' #' @param hier_shrinkage An indicator of whether or not we should perform hierarchical
+#' @param hier_shrinkage An indicator of whether or not we should perform hierarchical
 #'   shrinkage. The parameter lambda_shrinkage should also be provided to specify the
 #'   the amount of shrinkage. By default, hier_shrinkage is FALSE.
-#' #' @param lambda_shrinkage The parameter to use for hierarchical shrinkage. By default
+#' @param lambda_shrinkage The parameter to use for hierarchical shrinkage. By default
 #'   this is set to 0 (equal to zero shrinkage). The parameter hier_shrinkage should also
 #'   be set to TRUE to perform hierarchical shrinkage.
 #' @param ... additional arguments.
@@ -1637,11 +1637,19 @@ predict.forestry <- function(object,
 #' MSE over the entire forest.
 #' @param object A `forestry` object.
 #' @param noWarning flag to not display warnings
+#' @param hier_shrinkage An indicator of whether or not we should perform hierarchical
+#'   shrinkage. The parameter lambda_shrinkage should also be provided to specify the
+#'   the amount of shrinkage since it is defaulted to 0 (no shrinkage).
+#' @param lambda_shrinkage The parameter to use for hierarchical shrinkage. By default
+#'   this is set to 0 (equal to zero shrinkage). The parameter hier_shrinkage should also
+#'   be set to TRUE to ensure we perform hierarchical shrinkage.
 #' @aliases getOOB,forestry-method
 #' @return The OOB error of the forest.
 #' @export
 getOOB <- function(object,
-                   noWarning) {
+                   noWarning,
+                   hier_shrinkage = FALSE,
+                   lambda_shrinkage = 0) {
     # TODO (all): find a better threshold for throwing such warning. 25 is
     # currently set up arbitrarily.
   forest_checker(object)
@@ -1658,7 +1666,7 @@ getOOB <- function(object,
     }
 
     rcppOOB <- tryCatch({
-      preds <- predict(object, aggregation = "oob")
+      preds <- predict(object, aggregation = "oob", hier_shrinkage = hier_shrinkage, lambda_shrinkage = lambda_shrinkage)
       # Only calc mse on non missing predictions
       y_true <- object@processed_dta$y[which(!is.nan(preds))]
 
@@ -1691,6 +1699,13 @@ getOOB <- function(object,
 #'  must have been trained with doubleBootstrap = TRUE for this to be used. Default
 #'  is FALSE.
 #' @param noWarning Flag to not display warnings.
+#' @param hier_shrinkage An indicator of whether or not we should perform hierarchical
+#'   shrinkage. The parameter lambda_shrinkage should also be provided to specify the
+#'   the amount of shrinkage, by default it is 0 (no shrinkage). By default, 
+#'   hier_shrinkage is FALSE.
+#' @param lambda_shrinkage The parameter to use for hierarchical shrinkage. By default
+#'   this is set to 0 (equal to zero shrinkage). The parameter hier_shrinkage should also
+#'   be set to TRUE to perform hierarchical shrinkage.
 #' @return The vector of all training observations, with their out of bag
 #'  predictions. Note each observation is out of bag for different trees, and so
 #'  the predictions will be more or less stable based on the observation. Some

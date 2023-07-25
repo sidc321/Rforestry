@@ -5,7 +5,14 @@
 \alias{getOOBpreds}
 \title{getOOBpreds-forestry}
 \usage{
-getOOBpreds(object, newdata = NULL, doubleOOB = FALSE, noWarning = FALSE)
+getOOBpreds(
+  object,
+  newdata = NULL,
+  doubleOOB = FALSE,
+  noWarning = FALSE,
+  hier_shrinkage = FALSE,
+  lambda_shrinkage = FALSE
+)
 }
 \arguments{
 \item{object}{A trained model object of class "forestry".}
@@ -22,6 +29,15 @@ must have been trained with doubleBootstrap = TRUE for this to be used. Default
 is FALSE.}
 
 \item{noWarning}{Flag to not display warnings.}
+
+\item{hier_shrinkage}{An indicator of whether or not we should perform hierarchical
+shrinkage. The parameter lambda_shrinkage should also be provided to specify the
+the amount of shrinkage, by default it is 0 (no shrinkage). By default, 
+hier_shrinkage is FALSE.}
+
+\item{lambda_shrinkage}{The parameter to use for hierarchical shrinkage. By default
+this is set to 0 (equal to zero shrinkage). The parameter hier_shrinkage should also
+be set to TRUE to perform hierarchical shrinkage.}
 }
 \value{
 The vector of all training observations, with their out of bag
