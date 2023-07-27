@@ -4,17 +4,20 @@ test_that("Tests hierarchical shrinkage works as expected", {
   #set.seed(238943202)
   x <- iris[, -1]
   y <- iris[, 1]
+  ntree <- 10
   rf <- forestry(x,
                 y,
-                ntree = 10,
+                ntree = ntree,
                 maxDepth = 5)
   rf <- make_savable(rf)
 
   # Now check things are the right size
-  var_id  = rf@R_forest[[1]]$var_id
-  num_nodes = length(var_id[var_id>=0]) + length(var_id[var_id < 0])/2
-  expect_equal(length(rf@R_forest[[1]]$average_count),num_nodes)
-  expect_equal(length(rf@R_forest[[1]]$weightsFull),num_nodes)
+  for(i in 1:ntree){
+    num_nodes = length(rf@R_forest[[i]]$var_id)
+    expect_equal(length(rf@R_forest[[i]]$average_count),num_nodes)
+    expect_equal(length(rf@R_forest[[i]]$split_count),num_nodes)
+    expect_equal(length(rf@R_forest[[i]]$weightsFull),num_nodes)
+  }
 
   context("Check output predictions when using hierarchical shrinkage for small tree")
 

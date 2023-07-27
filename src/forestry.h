@@ -81,6 +81,7 @@ public:
       std::unique_ptr< std::vector<unsigned int> > & tree_seeds,
       std::unique_ptr< std::vector< std::vector<int> >  > & var_ids,
       std::unique_ptr< std::vector< std::vector<int> >  > & average_counts,
+      std::unique_ptr< std::vector< std::vector<int> >  > & split_counts,
       std::unique_ptr< std::vector< std::vector<double> >  > & split_vals,
       std::unique_ptr< std::vector< std::vector<int> >  > & naLeftCounts,
       std::unique_ptr< std::vector< std::vector<int> >  > & naRightCounts,
@@ -88,7 +89,6 @@ public:
       std::unique_ptr< std::vector< std::vector<size_t> >  > & averagingSampleIndex,
       std::unique_ptr< std::vector< std::vector<size_t> >  > & splittingSampleIndex,
       std::unique_ptr< std::vector< std::vector<size_t> >  > & excludedSampleIndex,
-      std::unique_ptr< std::vector< std::vector<double> >  > & weights,
       std::unique_ptr< std::vector< std::vector<double> >  > & weightsFull);
 
   size_t getTotalNodeCount();

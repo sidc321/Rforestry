@@ -41,6 +41,7 @@ void RFNode::setLeafNode(
 void RFNode::setSplitNode(
   size_t splitFeature,
   size_t averagingSampleIndexSize,
+  size_t splittingSampleIndexSize,
   double splitValue,
   std::unique_ptr< RFNode > leftChild,
   std::unique_ptr< RFNode > rightChild,
@@ -52,7 +53,7 @@ void RFNode::setSplitNode(
 ) {
   // Split node constructor
   _averageCount= averagingSampleIndexSize;
-  _splitCount = 0;
+  _splitCount= splittingSampleIndexSize;
   _splitFeature = splitFeature;
   _splitValue = splitValue;
   // Give the ownership of the child pointer to the RFNode object
@@ -726,23 +727,22 @@ void RFNode::write_node_info(
 ){
   if (is_leaf()) {
     // If it is a leaf: set everything to be 0
-    treeInfo->var_id.push_back(-getAverageCount());
-    treeInfo->var_id.push_back(-getSplitCount());
+    treeInfo->var_id.push_back(-1);
     treeInfo->average_count.push_back(getAverageCount());
+    treeInfo->split_count.push_back(getSplitCount()); // not used
     treeInfo->split_val.push_back(0);
     treeInfo->naLeftCount.push_back(-1);
     treeInfo->naRightCount.push_back(-1);
     treeInfo->naDefaultDirection.push_back(0);
 
-    treeInfo->num_avg_samples.push_back(getAverageCount());
-    treeInfo->num_spl_samples.push_back(getSplitCount());
-    treeInfo->values.push_back(getPredictWeight());
+    // treeInfo->num_avg_samples.push_back(getAverageCount()); //not used??
     treeInfo->valuesFull.push_back(getPredictWeight());
   } else {
     // If it is a usual node: remember split var and split value and recursively
     // call write_node_info on the left and the right child.
     treeInfo->var_id.push_back(getSplitFeature() + 1);
     treeInfo->average_count.push_back(getAverageCount());
+    treeInfo->split_count.push_back(getSplitCount());
     treeInfo->split_val.push_back(getSplitValue());
     treeInfo->naLeftCount.push_back(getNaLeftCount());
     treeInfo->naRightCount.push_back(getNaRightCount());

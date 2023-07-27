@@ -94,6 +94,7 @@ public:
       std::vector<size_t> categoricalFeatureColsRcpp,
       std::vector<int> var_ids,
       std::vector<int> average_counts,
+      std::vector<int> split_counts,
       std::vector<double> split_vals,
       std::vector<int> naLeftCounts,
       std::vector<int> naRightCounts,
@@ -101,18 +102,17 @@ public:
       std::vector<size_t> averagingSampleIndex,
       std::vector<size_t> splittingSampleIndex,
       std::vector<size_t> excludedSampleIndex,
-      std::vector<double> predictWeights,
       std::vector<double> predictWeightsFull);
 
   void recursive_reconstruction(
       RFNode* currentNode,
       std::vector<int> * var_ids,
       std::vector<int> * average_counts,
+      std::vector<int> * split_counts,
       std::vector<double> * split_vals,
       std::vector<int> * naLeftCounts,
       std::vector<int> * naRightCounts,
       std::vector<int> * naDefaultDirections,
-      std::vector<double> * weights,
       std::vector<double> * weightsFull
   );
 

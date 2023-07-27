@@ -44,8 +44,9 @@ plot.forestry <- function(x, tree.id = 1, print.meta_dta = FALSE,
   feat_names <- colnames(forestry_tree@processed_dta$processed_x)
   split_feat <- forestry_tree@R_forest[[tree.id]]$var_id
   split_val <- forestry_tree@R_forest[[tree.id]]$split_val
-  node_values <- forestry_tree@R_forest[[tree.id]]$weights
-
+  node_values <- forestry_tree@R_forest[[tree.id]]$weightsFull
+  avg_counts <- forestry_tree@R_forest[[tree.id]]$average_count
+  split_counts <- forestry_tree@R_forest[[tree.id]]$split_count
   # get info for the first node ------------------------------------------------
   root_is_leaf <- split_feat[1] < 0
   first_val <- split_val[1]
@@ -57,18 +58,16 @@ plot.forestry <- function(x, tree.id = 1, print.meta_dta = FALSE,
     right_child = NA,
     split_feat = ifelse(root_is_leaf, NA, split_feat[1]),
     split_val = ifelse(root_is_leaf, NA, first_val),
-    num_splitting = ifelse(root_is_leaf, -split_feat[2], 0),
-    num_averaging = ifelse(root_is_leaf, -split_feat[1], 0),
+    num_splitting = ifelse(root_is_leaf, split_counts[1], 0),
+    num_averaging = ifelse(root_is_leaf, avg_counts[1], 0),
     value = 0.0,
     level = 1)
-  if (root_is_leaf) {
-    split_feat <- split_feat[-(1:2)]
-    split_val <- split_val[-1]
-  } else {
-    split_feat <- split_feat[-1]
-    split_val <- split_val[-1]
-  }
-
+  #print(node_info)
+  split_feat <- split_feat[-1]
+  split_val <- split_val[-1]
+  node_values <- node_values[-1]
+  avg_counts <- avg_counts[-1]
+  split_counts <- split_counts[-1]
   # loop through split feat to get all the information -------------------------
   while (length(split_feat) != 0) {
     if (!node_info$is_leaf[nrow(node_info)]) {
@@ -82,6 +81,7 @@ plot.forestry <- function(x, tree.id = 1, print.meta_dta = FALSE,
                                 is.na(node_info$right_child)])
       node_info$right_child[parent] <- nrow(node_info) + 1
     }
+    #(split_feat[1])
     if (split_feat[1] > 0) {
       # it is not a leaf
       node_info <- rbind(
@@ -100,8 +100,6 @@ plot.forestry <- function(x, tree.id = 1, print.meta_dta = FALSE,
           level = node_info$level[parent] + 1
         )
       )
-      split_feat <- split_feat[-1]
-      split_val <- split_val[-1]
     } else {
       #split_feat[1] < 0
       node_info <- rbind(
@@ -114,16 +112,19 @@ plot.forestry <- function(x, tree.id = 1, print.meta_dta = FALSE,
           right_child = NA,
           split_feat = NA,
           split_val = NA,
-          num_splitting = -split_feat[2],
-          num_averaging = -split_feat[1],
+          num_splitting = split_counts[1],
+          num_averaging = avg_counts[1],
           value = node_values[1],
           level = node_info$level[parent] + 1
         )
       )
-      node_values <- node_values[-1]
-      split_feat <- split_feat[-(1:2)]
-      split_val <- split_val[-1]
     }
+
+    split_feat <- split_feat[-1]
+    split_val <- split_val[-1]
+    node_values <- node_values[-1]
+    avg_counts <- avg_counts[-1]
+    split_counts <- split_counts[-1]
   }
 
   for (i in nrow(node_info):1) {

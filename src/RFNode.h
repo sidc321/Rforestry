@@ -26,6 +26,7 @@ public:
   void setSplitNode(
       size_t splitFeature,
       size_t averagingSampleIndexSize,
+      size_t splittingSampleIndexSize,
       double splitValue,
       std::unique_ptr< RFNode > leftChild,
       std::unique_ptr< RFNode > rightChild,
