@@ -463,21 +463,20 @@ extern "C" {
     
         info_holder = forest->getForest()->at(tree_idx)->getTreeInfo(forest->getTrainingData());
         int num_nodes = forest->getForest()->at(tree_idx)->getNodeCount();
-        int num_leaf_nodes = forest->getForest()->at(tree_idx)->getLeafNodeCount();
-        
-        for (int i = 0; i < num_nodes + num_leaf_nodes; i++) {
+        //int num_leaf_nodes = forest->getForest()->at(tree_idx)->getLeafNodeCount();
+        for (int i = 0; i < num_nodes; i++) {
             treeInfo[i] = (double)info_holder->var_id.at(i);
         }
     
         for (int i = 0; i < num_nodes; i++) {
-            treeInfo[num_nodes * 2 + num_leaf_nodes + i] = info_holder->valuesFull.at(i);
+            treeInfo[num_nodes + i] = info_holder->valuesFull.at(i);
         }
     
         for (int i = 0; i < num_nodes; i++) {
-            treeInfo[num_nodes *2 + num_leaf_nodes + i] = info_holder->split_val.at(i);
-            treeInfo[num_nodes *3 + num_leaf_nodes + i] = (double)info_holder->naLeftCount.at(i);
-            treeInfo[num_nodes *4 + num_leaf_nodes + i] = (double)info_holder->naRightCount.at(i);
-            treeInfo[num_nodes *5 + num_leaf_nodes + i] = (double)info_holder->naDefaultDirection.at(i);
+            treeInfo[num_nodes *2 + i] = info_holder->split_val.at(i);
+            treeInfo[num_nodes *3 + i] = (double)info_holder->naLeftCount.at(i);
+            treeInfo[num_nodes *4 + i] = (double)info_holder->naRightCount.at(i);
+            treeInfo[num_nodes *5 + i] = (double)info_holder->naDefaultDirection.at(i);
         }
     
         // Populate splitting samples for the tree
@@ -494,7 +493,7 @@ extern "C" {
             av_info[i+1] = info_holder->averagingSampleIndex.at(i);
         }
     
-        treeInfo[num_nodes *6 + num_leaf_nodes] = info_holder->seed;
+        treeInfo[num_nodes *6] = info_holder->seed;
     }
     
     

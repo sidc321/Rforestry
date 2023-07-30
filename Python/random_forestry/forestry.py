@@ -1089,33 +1089,32 @@ class RandomForest:
                 continue
 
             num_nodes = extension.get_tree_node_count(self.forest, cur_id)
-            num_leaf_nodes = extension.get_tree_leaf_count(self.forest, cur_id)
+            # num_leaf_nodes = extension.get_tree_leaf_count(self.forest, cur_id)
 
             # Initialize arrays to pass to C
             split_info = np.empty(self.sampsize + 1, dtype=np.intc)
             averaging_info = np.empty(self.sampsize + 1, dtype=np.intc)
 
-            tree_info = np.empty(num_nodes * 6 + num_leaf_nodes + 1, dtype=np.double)
+            tree_info = np.empty(num_nodes * 6 + 1, dtype=np.double)
 
             extension.fill_tree_info(self.forest, cur_id, tree_info, split_info, averaging_info)
-
-            self.saved_forest[cur_id]["feature"] = np.empty(num_nodes + num_leaf_nodes, dtype=np.intc)
+            self.saved_forest[cur_id]["feature"] = np.empty(num_nodes, dtype=np.intc)
             self.saved_forest[cur_id]["threshold"] = np.empty(num_nodes, dtype=np.double)
             self.saved_forest[cur_id]["values"] = np.empty(num_nodes, dtype=np.double)
             self.saved_forest[cur_id]["na_left_count"] = np.empty(num_nodes, dtype=np.intc)
             self.saved_forest[cur_id]["na_right_count"] = np.empty(num_nodes, dtype=np.intc)
             self.saved_forest[cur_id]["na_default_direction"] = np.empty(num_nodes, dtype=np.intc)
 
-            for i in range(num_nodes + num_leaf_nodes):
+            for i in range(num_nodes):
                 self.saved_forest[cur_id]["feature"][i] = int(tree_info[i])
             for i in range(num_nodes):
-                self.saved_forest[cur_id]["values"][i] = tree_info[num_nodes + num_leaf_nodes + i]
+                self.saved_forest[cur_id]["values"][i] = tree_info[num_nodes + i]
             for i in range(num_nodes):
-                self.saved_forest[cur_id]["threshold"][i] = tree_info[num_nodes * 2 + num_leaf_nodes  + i]
-                self.saved_forest[cur_id]["na_left_count"][i] = int(tree_info[num_nodes * 3 + num_leaf_nodes + i])
-                self.saved_forest[cur_id]["na_right_count"][i] = int(tree_info[num_nodes * 4 + num_leaf_nodes  + i])
+                self.saved_forest[cur_id]["threshold"][i] = tree_info[num_nodes * 2 + i]
+                self.saved_forest[cur_id]["na_left_count"][i] = int(tree_info[num_nodes * 3 + i])
+                self.saved_forest[cur_id]["na_right_count"][i] = int(tree_info[num_nodes * 4 + i])
                 self.saved_forest[cur_id]["na_default_direction"][i] = int(
-                    tree_info[num_nodes * 5 + num_leaf_nodes + i]
+                    tree_info[num_nodes * 5 + i]
                 )
 
             num_split_idx = int(split_info[0])
@@ -1128,7 +1127,7 @@ class RandomForest:
             for i in range(num_av_idx):
                 self.saved_forest[cur_id]["averaging_sample_idx"][i] = int(averaging_info[i + 1])
 
-            self.saved_forest[cur_id]["seed"] = int(tree_info[num_nodes * 6 + num_leaf_nodes * 1])
+            self.saved_forest[cur_id]["seed"] = int(tree_info[num_nodes * 6])
 
     def get_parameters(self) -> dict:
         """
