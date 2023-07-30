@@ -1113,9 +1113,7 @@ class RandomForest:
                 self.saved_forest[cur_id]["threshold"][i] = tree_info[num_nodes * 2 + i]
                 self.saved_forest[cur_id]["na_left_count"][i] = int(tree_info[num_nodes * 3 + i])
                 self.saved_forest[cur_id]["na_right_count"][i] = int(tree_info[num_nodes * 4 + i])
-                self.saved_forest[cur_id]["na_default_direction"][i] = int(
-                    tree_info[num_nodes * 5 + i]
-                )
+                self.saved_forest[cur_id]["na_default_direction"][i] = int(tree_info[num_nodes * 5 + i])
 
             num_split_idx = int(split_info[0])
             self.saved_forest[cur_id]["splitting_sample_idx"] = np.empty(num_split_idx, dtype=np.intc)
