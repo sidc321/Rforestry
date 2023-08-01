@@ -260,7 +260,9 @@ extern "C" {
         size_t num_test_rows,
         std::vector<double>& predictions,
         std::vector<double>& weight_matrix,
-        std::vector<double>& coefs
+        std::vector<double>& coefs,
+        bool hier_shrinkage,
+        double lambda_shrinkage
     ) {   
     
     
@@ -311,7 +313,9 @@ extern "C" {
                 nthread,
                 exact,
                 false,
-                nullptr
+                nullptr,
+                hier_shrinkage,
+                lambda_shrinkage
             );
     
             size_t idx = 0;
@@ -356,7 +360,9 @@ extern "C" {
                 nthread,
                 exact,
                 use_weights,
-                weights
+                weights,
+                hier_shrinkage,
+                lambda_shrinkage
             );
     
         }
@@ -477,6 +483,8 @@ extern "C" {
             treeInfo[num_nodes *3 + i] = (double)info_holder->naLeftCount.at(i);
             treeInfo[num_nodes *4 + i] = (double)info_holder->naRightCount.at(i);
             treeInfo[num_nodes *5 + i] = (double)info_holder->naDefaultDirection.at(i);
+            treeInfo[num_nodes *6 + i] = (double)info_holder->average_count.at(i);
+            treeInfo[num_nodes *7 + i] = (double)info_holder->split_count.at(i);
         }
     
         // Populate splitting samples for the tree
@@ -493,7 +501,7 @@ extern "C" {
             av_info[i+1] = info_holder->averagingSampleIndex.at(i);
         }
     
-        treeInfo[num_nodes *6] = info_holder->seed;
+        treeInfo[num_nodes *8] = info_holder->seed;
     }
     
     

@@ -643,6 +643,8 @@ class RandomForest:
         exact: bool,
         return_weight_matrix: bool,
         training_idx: Optional[np.ndarray],
+        hier_shrinkage: bool,
+        lambda_shrinkage: float,
     ) -> Optional[Tuple[np.ndarray, np.ndarray]]:
         if newdata is not None:
             processed_x = preprocessing.preprocess_testing(
@@ -685,6 +687,8 @@ class RandomForest:
             n_preds,
             n_weight_matrix,
             training_idx if training_idx else [],
+            hier_shrinkage,
+            lambda_shrinkage,
         )
         # If the forest was trained with scaled values we need to rescale + re center the predictions
         if self.scale:
@@ -698,6 +702,8 @@ class RandomForest:
         exact: bool,
         return_weight_matrix: bool,
         training_idx: Optional[np.ndarray],
+        hier_shrinkage: bool,
+        lambda_shrinkage: float,
     ) -> Tuple[np.ndarray, np.ndarray]:
         if newdata is not None:
             processed_x = preprocessing.preprocess_testing(
@@ -740,6 +746,8 @@ class RandomForest:
             n_preds,
             n_weight_matrix,
             training_idx if training_idx else [],
+            hier_shrinkage,
+            lambda_shrinkage,
         )
 
         # If the forest was trained with scaled values we need to rescale + re center the predictions
@@ -796,6 +804,8 @@ class RandomForest:
         nthread: int,
         return_weight_matrix: bool,
         trees: Optional[np.ndarray],
+        hier_shrinkage: bool,
+        lambda_shrinkage: float,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         processed_x = preprocessing.preprocess_testing(
             newdata,
@@ -837,6 +847,8 @@ class RandomForest:
             n_preds,
             n_weight_matrix,
             0,
+            hier_shrinkage,
+            lambda_shrinkage,
         )
 
         # If the forest was trained with scaled values we need to rescale + re center the predictions
@@ -857,6 +869,8 @@ class RandomForest:
         trees: Optional[np.ndarray] = None,
         training_idx: Optional[np.ndarray] = None,
         return_weight_matrix: bool = False,
+        hier_shrinkage: bool = False,
+        lambda_shrinkage: float = 0,
     ) -> Union[np.ndarray, dict]:
         """
         Return the prediction from the forest.
@@ -927,21 +941,44 @@ class RandomForest:
          prediction. When getting the weight matrix, aggregation must be one of
          'average', 'oob', and 'doubleOOB'. his is a normal text paragraph.
         :type weightMatrix: *bool, optional, default=False*
+        :param hier_shrinkage: An indicator of whether or not we should implement
+         hierarchical shrinkage. If this is set to true, the parameter lambda_shrinkage
+         must also be provided, which indicates the hierarchical shrinkage tuning parameter.
+        :type hier_shrinkage: *bool, optional, default=False*
+        :param lambda_shrinkage: The parameter for hierarchical shrinkage. In order for this
+        to be used, the parameter hier_shrinkage must be set to true, indicating hierarchical
+        shrinkage is turned on.
+        :type lambda_shrinkage: *float optional, default=0*
         :return: An array of predicted responses.
         :rtype: numpy.array
         """
 
         if aggregation == "oob":
-            predictions, weight_matrix = self._aggregation_oob(newdata, exact, return_weight_matrix, training_idx)
+            predictions, weight_matrix = self._aggregation_oob(
+                newdata,
+                exact,
+                return_weight_matrix,
+                training_idx,
+                hier_shrinkage,
+                lambda_shrinkage,
+            )
 
         elif aggregation == "doubleOOB":
             predictions, weight_matrix = self._aggregation_double_oob(
-                newdata, exact, return_weight_matrix, training_idx
+                newdata,
+                exact,
+                return_weight_matrix,
+                training_idx,
+                hier_shrinkage,
+                lambda_shrinkage,
             )
 
         elif aggregation == "coefs":
             predictions, weight_matrix, coefficients = self._aggregation_coefs(
-                newdata, exact, self._get_seed(seed), nthread
+                newdata,
+                exact,
+                self._get_seed(seed),
+                nthread,
             )
             return {
                 "predictions": predictions,
@@ -966,6 +1003,8 @@ class RandomForest:
                 nthread,
                 return_weight_matrix,
                 trees,
+                hier_shrinkage,
+                lambda_shrinkage,
             )
 
         if return_weight_matrix:
@@ -983,7 +1022,9 @@ class RandomForest:
 
         return predictions
 
-    def get_oob(self, no_warning: bool = False) -> Optional[float]:
+    def get_oob(
+        self, no_warning: bool = False, hier_shrinkage: bool = False, lambda_shrinkage: float = 0
+    ) -> Optional[float]:
         """
         Calculate the out-of-bag error of a given forest. This is done
         by using the out-of-bag predictions for each observation, and calculating the
@@ -1003,7 +1044,13 @@ class RandomForest:
                 warnings.warn("Samples are drawn without replacement and sample size is too big!")
             return None
 
-        preds = self.predict(newdata=None, aggregation="oob", exact=True)
+        preds = self.predict(
+            newdata=None,
+            aggregation="oob",
+            exact=True,
+            hier_shrinkage=hier_shrinkage,
+            lambda_shrinkage=lambda_shrinkage,
+        )
         preds = preds[~np.isnan(preds)]
 
         # Only calc mse on non missing predictions
@@ -1095,7 +1142,7 @@ class RandomForest:
             split_info = np.empty(self.sampsize + 1, dtype=np.intc)
             averaging_info = np.empty(self.sampsize + 1, dtype=np.intc)
 
-            tree_info = np.empty(num_nodes * 6 + 1, dtype=np.double)
+            tree_info = np.empty(num_nodes * 8 + 1, dtype=np.double)
 
             extension.fill_tree_info(self.forest, cur_id, tree_info, split_info, averaging_info)
             self.saved_forest[cur_id]["feature"] = np.empty(num_nodes, dtype=np.intc)
@@ -1104,6 +1151,8 @@ class RandomForest:
             self.saved_forest[cur_id]["na_left_count"] = np.empty(num_nodes, dtype=np.intc)
             self.saved_forest[cur_id]["na_right_count"] = np.empty(num_nodes, dtype=np.intc)
             self.saved_forest[cur_id]["na_default_direction"] = np.empty(num_nodes, dtype=np.intc)
+            self.saved_forest[cur_id]["average_count"] = np.empty(num_nodes, dtype=np.intc)
+            self.saved_forest[cur_id]["split_count"] = np.empty(num_nodes, dtype=np.intc)
 
             for i in range(num_nodes):
                 self.saved_forest[cur_id]["feature"][i] = int(tree_info[i])
@@ -1114,6 +1163,8 @@ class RandomForest:
                 self.saved_forest[cur_id]["na_left_count"][i] = int(tree_info[num_nodes * 3 + i])
                 self.saved_forest[cur_id]["na_right_count"][i] = int(tree_info[num_nodes * 4 + i])
                 self.saved_forest[cur_id]["na_default_direction"][i] = int(tree_info[num_nodes * 5 + i])
+                self.saved_forest[cur_id]["average_count"][i] = int(tree_info[num_nodes * 6 + i])
+                self.saved_forest[cur_id]["split_count"][i] = int(tree_info[num_nodes * 7 + i])
 
             num_split_idx = int(split_info[0])
             self.saved_forest[cur_id]["splitting_sample_idx"] = np.empty(num_split_idx, dtype=np.intc)
@@ -1125,7 +1176,7 @@ class RandomForest:
             for i in range(num_av_idx):
                 self.saved_forest[cur_id]["averaging_sample_idx"][i] = int(averaging_info[i + 1])
 
-            self.saved_forest[cur_id]["seed"] = int(tree_info[num_nodes * 6])
+            self.saved_forest[cur_id]["seed"] = int(tree_info[num_nodes * 8])
 
     def get_parameters(self) -> dict:
         """

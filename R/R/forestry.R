@@ -1426,6 +1426,12 @@ predict.forestry <- function(object,
     stop("trees must contain indices which are integers between 1 and ntree")
   }
 
+  # hierarchical shrinkage factor must be positive
+  if (lambda_shrinkage < 0){
+    stop(paste0("The value of the hierarchical shrinkage parameter, lambda_shrinkage, must be",
+                " positive"))
+  }
+
   # If trees are being used, we need to convert them into a weight vector
   if (!is.null(trees)) {
     tree_weights <- rep(0, object@ntree)

@@ -90,7 +90,6 @@ test_that("Tests hierarchical shrinkage works as expected", {
   y = iris[,1]
   rf <- forestry(x=x,y=y,ntree=10)
   shrink_preds = predict(rf,x,weightMatrix = TRUE,hier_shrinkage = T,lambda_shrinkage =10)
-  noshrink  = predict(rf,x,weightMatrix = TRUE)
   # now we reconstruct predictions from the weight matrix and check they match
   weight_preds = as.vector(shrink_preds$weightMatrix %*% y)
   expect_equal(all.equal(weight_preds,shrink_preds$predictions),TRUE)
