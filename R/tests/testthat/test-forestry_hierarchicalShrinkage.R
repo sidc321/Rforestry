@@ -1,7 +1,6 @@
 test_that("Tests hierarchical shrinkage works as expected", {
   context("Check total node number equals length of full weights and count vector")
 
-  #set.seed(238943202)
   x <- iris[, -1]
   y <- iris[, 1]
   ntree <- 10
@@ -11,9 +10,10 @@ test_that("Tests hierarchical shrinkage works as expected", {
                 maxDepth = 5)
   rf <- make_savable(rf)
 
-  # Now check things are the right size
+  # Now check the vectors that were modified to make this feature have the right length
+  # Using naLeftCounts length as number of nodes as this was unmodified
   for(i in 1:ntree){
-    num_nodes = length(rf@R_forest[[i]]$var_id)
+    num_nodes = length(rf@R_forest[[i]]$naLeftCounts)
     expect_equal(length(rf@R_forest[[i]]$average_count),num_nodes)
     expect_equal(length(rf@R_forest[[i]]$split_count),num_nodes)
     expect_equal(length(rf@R_forest[[i]]$weightsFull),num_nodes)
@@ -32,7 +32,7 @@ test_that("Tests hierarchical shrinkage works as expected", {
   rf= make_savable(rf)
   plot(rf)
   fdata <- rf@R_forest[[1]]
-  #classify training
+  # classify test data
   expectedPredictions = numeric(length(x_test[,1]))
   for(i in 1:length(expectedPredictions)){
     if(x_test[i,1]<fdata$split_val[1]){
@@ -41,29 +41,31 @@ test_that("Tests hierarchical shrinkage works as expected", {
       expectedPredictions[i]=2
     }
   }
+  # predictions calculated by hand
   lambda_shrinkage=2
   weightLeftPath = fdata$weightsFull[1]*(1-1/(1+lambda_shrinkage/fdata$average_count[1])) + fdata$weightsFull[2]/(1+lambda_shrinkage/fdata$average_count[1])
   weightRightPath = fdata$weightsFull[1]*(1-1/(1+lambda_shrinkage/fdata$average_count[1])) + fdata$weightsFull[3]/(1+lambda_shrinkage/fdata$average_count[1])
   expectedPredictions[expectedPredictions==1] = weightLeftPath
   expectedPredictions[expectedPredictions==2] = weightRightPath
+  # predictions using implemented hierarchical shrinkage
   shrinked_pred = predict(rf, x_test, hier_shrinkage=T, lambda_shrinkage=lambda_shrinkage)
-  
+  # check the predictions match the predictions calculated by hand
   expect_equal(shrinked_pred,expectedPredictions)
 
   context("Check output predictions when using hierarchical shrinkage for lambda=0 and large lambda")
-  test_idx <- sample(nrow(iris), 100)
-  x_train <- data.frame(width= iris[-test_idx, -1])
-  y_train <- iris[-test_idx, 1]
-  x_test <- data.frame(width= iris[test_idx, -1])
-  y_test <- iris[test_idx, 1]
+  x <- iris[, -1]
+  y <- iris[, 1]
 
-  rf <- forestry(x = x_train, y = y_train, ntree = 10,replace=F,sampsize = length(y_train),mtry=ncol(x))
-  noshrink_predictions = predict(rf,x_test)
-  lambda0_predictions = predict(rf, x_test, hier_shrinkage=T, lambda_shrinkage=0)
+  rf <- forestry(x, y, ntree = 10,replace=F,sampsize = length(y),mtry=ncol(x))
+  # check that predicting using hierarchical shrinkage and lambda = 0 matches what we get when 
+  # hierarchical shrinkage is turned off
+  noshrink_predictions = predict(rf,x)
+  lambda0_predictions = predict(rf, x, hier_shrinkage=T, lambda_shrinkage=0)
   expect_equal(noshrink_predictions,lambda0_predictions)
 
-  lambdalarge_predictions = predict(rf, x_test, hier_shrinkage=T, lambda_shrinkage=1e10)
-  tot_prediction_diffs = lambdalarge_predictions-mean(y_train)
+  # as lambda tends to infinity, the predictions converge to the mean of the averaging set responses
+  lambdalarge_predictions = predict(rf, x, hier_shrinkage=T, lambda_shrinkage=1e10)
+  tot_prediction_diffs = lambdalarge_predictions-mean(y)
   expect_true(all.equal(tot_prediction_diffs ,rep(0,length(tot_prediction_diffs) )))
 
   context("Check hierarchical shrinkage prediction matches getOOBpreds")
@@ -131,6 +133,8 @@ test_that("Tests hierarchical shrinkage works as expected", {
   predict_matrix_lambdalarge <- predict(rf, x, hier_shrinkage = T,lambda_shrinkage = 1e10, weightMatrix = TRUE)
   expect_equal(rowSums(predict_matrix_lambdalarge$weightMatrix),rep(1,ncol(predict_matrix_lambdalarge$weightMatrix)))
   dims = dim(predict_matrix_lambdalarge$weightMatrix)
+  # for large lambda, the weight matrix should become uniform across all features i.e. all features should hae similar
+  # weight
   expect_equal(all.equal(predict_matrix_lambdalarge$weightMatrix,
                          matrix(rep(1/nrow(x),prod(dims)),nrow=dims[1])
                          ),TRUE)
