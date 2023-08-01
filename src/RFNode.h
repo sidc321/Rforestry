@@ -69,7 +69,9 @@ public:
     std::vector<size_t>* OOBIndex = NULL,
     bool hier_shrinkage=false,
     double lambda_shrinkage=0,
-    double parentAverageCount=0
+    double parentAverageCount=0,
+    double curShrinkPred=0,
+    double curShrinkWeight=0
   );
 
   void getPath(
