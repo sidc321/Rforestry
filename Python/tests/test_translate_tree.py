@@ -59,7 +59,6 @@ def test_all_trees(forest: RandomForest):
         assert forest.saved_forest[i]
 
         num_nodes = forest.saved_forest[i]["threshold"].size
-        # num_leaf_nodes = forest.saved_forest[i]["values"].size
         # assert not any(forest.saved_forest[i][key].size != numNodes for key in forest.saved_forest[i].keys())
         assert len(forest.saved_forest[i]["feature"]) == num_nodes
         assert len(forest.saved_forest[i]["na_left_count"]) == num_nodes

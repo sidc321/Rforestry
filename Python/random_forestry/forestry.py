@@ -1136,7 +1136,6 @@ class RandomForest:
                 continue
 
             num_nodes = extension.get_tree_node_count(self.forest, cur_id)
-            # num_leaf_nodes = extension.get_tree_leaf_count(self.forest, cur_id)
 
             # Initialize arrays to pass to C
             split_info = np.empty(self.sampsize + 1, dtype=np.intc)

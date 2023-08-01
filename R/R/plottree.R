@@ -62,7 +62,6 @@ plot.forestry <- function(x, tree.id = 1, print.meta_dta = FALSE,
     num_averaging = ifelse(root_is_leaf, avg_counts[1], 0),
     value = 0.0,
     level = 1)
-  #print(node_info)
   split_feat <- split_feat[-1]
   split_val <- split_val[-1]
   node_values <- node_values[-1]
@@ -81,7 +80,6 @@ plot.forestry <- function(x, tree.id = 1, print.meta_dta = FALSE,
                                 is.na(node_info$right_child)])
       node_info$right_child[parent] <- nrow(node_info) + 1
     }
-    #(split_feat[1])
     if (split_feat[1] > 0) {
       # it is not a leaf
       node_info <- rbind(

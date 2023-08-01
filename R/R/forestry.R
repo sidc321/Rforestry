@@ -1478,8 +1478,8 @@ predict.forestry <- function(object,
                                use_hold_out_idx = TRUE,
                                tree_weights = tree_weights,
                                hold_out_idx = (holdOutIdx-1), # Change to 0 indexed for C++
-                               hier_shrinkage,
-                               lambda_shrinkage)
+                               hier_shrinkage = hier_shrinkage,
+                               lambda_shrinkage = lambda_shrinkage)
     }, error = function(err) {
       print(err)
       return(NULL)
@@ -1568,8 +1568,8 @@ predict.forestry <- function(object,
                                use_hold_out_idx = FALSE,
                                tree_weights = tree_weights,
                                hold_out_idx = c(-1),
-                               hier_shrinkage,
-                               lambda_shrinkage)
+                               hier_shrinkage = hier_shrinkage,
+                               lambda_shrinkage = lambda_shrinkage)
     }, error = function(err) {
       print(err)
       return(NULL)
@@ -1724,7 +1724,7 @@ getOOBpreds <- function(object,
                         doubleOOB = FALSE,
                         noWarning = FALSE,
                         hier_shrinkage = FALSE,
-                        lambda_shrinkage = FALSE
+                        lambda_shrinkage = 0
                         ) {
 
   if (!object@replace &&

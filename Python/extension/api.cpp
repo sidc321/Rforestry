@@ -469,7 +469,6 @@ extern "C" {
     
         info_holder = forest->getForest()->at(tree_idx)->getTreeInfo(forest->getTrainingData());
         int num_nodes = forest->getForest()->at(tree_idx)->getNodeCount();
-        //int num_leaf_nodes = forest->getForest()->at(tree_idx)->getLeafNodeCount();
         for (int i = 0; i < num_nodes; i++) {
             treeInfo[i] = (double)info_holder->var_id.at(i);
         }
@@ -621,9 +620,6 @@ extern "C" {
         std::unique_ptr< std::vector<unsigned int> > treeSeeds(
             new std::vector<unsigned int>
         );
-        std::unique_ptr< std::vector< std::vector<double> > > predictWeights(
-            new std::vector< std::vector<double> >
-        );
         std::unique_ptr< std::vector< std::vector<double> > > predictWeightsFull(
             new std::vector< std::vector<double> >
         );
@@ -640,14 +636,13 @@ extern "C" {
         naRightCounts->reserve(ntree);
         naDefaultDirections->reserve(ntree);
         treeSeeds->reserve(ntree);
-        predictWeights->reserve(ntree);
         predictWeightsFull->reserve(ntree);
     
         // Now actually populate the vectors
-        size_t ind = 0, ind_s = 0, ind_a = 0, ind_var = 0, ind_avg=0;
+        size_t ind = 0, ind_s = 0, ind_a = 0;
         for(size_t i = 0; i < ntree; i++){
-            // Should be num total nodes + num leaf nodes
-            std::vector<int> cur_var_ids((tree_counts[4*i]+tree_counts[4*i+3]), 0);
+            // Should be num total nodes
+            std::vector<int> cur_var_ids((tree_counts[4*i]), 0);
             std::vector<int> cur_average_counts((tree_counts[4*i]), 0);
             std::vector<int> cur_split_counts((tree_counts[4*i]), 0);
             std::vector<double> cur_split_vals(tree_counts[4*i], 0);
@@ -664,18 +659,11 @@ extern "C" {
                 curNaRightCounts.at(j) = na_right_count[ind];
                 curNaDefaultDirections.at(j) = na_default_directions[ind];
                 cur_predict_weights_full.at(j) = predict_weights[ind];
+                cur_var_ids.at(j) = features[ind];
+                cur_average_counts.at(j) = features[ind];
+                cur_split_counts.at(j) = features[ind];
     
                 ind++;
-            }
-
-            for (size_t j = 0; j < (tree_counts[4*i]+tree_counts[4*i+3]); j++) {
-                cur_var_ids.at(j) = features[ind_var];
-                ind_var++;
-            }
-            
-            for (size_t j = 0; j < (tree_counts[4*i]); j++) {
-                cur_average_counts.at(j) = features[ind_avg];
-                ind_avg++;
             }
     
             for(size_t j = 0; j < tree_counts[4*i+1]; j++){
@@ -690,6 +678,7 @@ extern "C" {
     
             var_ids->push_back(cur_var_ids);
             average_counts->push_back(cur_average_counts);
+            split_counts->push_back(cur_split_counts);
             split_vals->push_back(cur_split_vals);
             naLeftCounts->push_back(curNaLeftCounts);
             naRightCounts->push_back(curNaRightCounts);

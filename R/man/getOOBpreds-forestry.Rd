@@ -11,7 +11,7 @@ getOOBpreds(
   doubleOOB = FALSE,
   noWarning = FALSE,
   hier_shrinkage = FALSE,
-  lambda_shrinkage = FALSE
+  lambda_shrinkage = 0
 )
 }
 \arguments{
