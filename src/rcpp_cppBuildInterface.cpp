@@ -423,8 +423,8 @@ Rcpp::List rcpp_cppPredictInterface(
   bool use_hold_out_idx,
   Rcpp::NumericVector tree_weights,
   Rcpp::IntegerVector hold_out_idx,
-  bool hier_shrinkage = false,
-  double lambda_shrinkage = 0
+  bool hierShrinkage = false,
+  double lambdaShrinkage = 0
 ){
   try {
 
@@ -546,8 +546,8 @@ Rcpp::List rcpp_cppPredictInterface(
                                                        exact,
                                                        false,
                                                        NULL,
-                                                       hier_shrinkage,
-                                                       lambda_shrinkage);
+                                                       hierShrinkage,
+                                                       lambdaShrinkage);
     } else {
       // If the weights are zero, we just return NaN's
       if (use_weights &&
@@ -566,8 +566,8 @@ Rcpp::List rcpp_cppPredictInterface(
                                 exact,
                                 use_weights,
                                 use_weights ? testForestTreeWeights : NULL,
-                                hier_shrinkage,
-                                lambda_shrinkage);
+                                hierShrinkage,
+                                lambdaShrinkage);
       }
     }
 
@@ -621,8 +621,8 @@ Rcpp::List rcpp_OBBPredictionsInterface(
     bool exact,
     bool use_training_idx,
     Rcpp::IntegerVector training_idx,
-    bool hier_shrinkage,
-    double lambda_shrinkage
+    bool hierShrinkage,
+    double lambdaShrinkage
 ){
   // Then we predict with the feature.new data
   if (existing_df) {
@@ -654,8 +654,8 @@ Rcpp::List rcpp_OBBPredictionsInterface(
                                         doubleOOB,
                                         exact,
                                         training_idx_cpp,
-                                        hier_shrinkage,
-                                        lambda_shrinkage);
+                                        hierShrinkage,
+                                        lambdaShrinkage);
         Rcpp::NumericVector wrapped_preds = Rcpp::wrap(OOBpreds);
 
         return Rcpp::List::create(Rcpp::Named("predictions") = wrapped_preds,
@@ -669,8 +669,8 @@ Rcpp::List rcpp_OBBPredictionsInterface(
                                         doubleOOB,
                                         exact,
                                         training_idx_cpp,
-                                        hier_shrinkage,
-                                        lambda_shrinkage);
+                                        hierShrinkage,
+                                        lambdaShrinkage);
         Rcpp::NumericVector wrapped_preds = Rcpp::wrap(OOBpreds);
 
         return Rcpp::List::create(Rcpp::Named("predictions") = wrapped_preds);
@@ -766,8 +766,8 @@ Rcpp::List rcpp_CppToR_translator(
       Rcpp::IntegerVector naDefaultDirections =
         Rcpp::wrap(((*forest_dta)[i]).naDefaultDirection);
 
-      Rcpp::NumericVector predictWeightsFull =
-              Rcpp::wrap(((*forest_dta)[i]).valuesFull);
+      Rcpp::NumericVector predictWeights =
+              Rcpp::wrap(((*forest_dta)[i]).values);
 
 
         Rcpp::List list_i =
@@ -783,7 +783,7 @@ Rcpp::List rcpp_CppToR_translator(
 			   Rcpp::Named("naRightCounts") = naRightCounts,
 			   Rcpp::Named("naDefaultDirections") = naDefaultDirections,
 			   Rcpp::Named("seed") = (*forest_dta)[i].seed, // Add the seeds to the list we return
-               Rcpp::Named("weightsFull") = predictWeightsFull
+               Rcpp::Named("weights") = predictWeights
         );
       list_to_return.push_back(list_i);
     }
@@ -877,7 +877,7 @@ Rcpp::List rcpp_reconstructree(
   std::unique_ptr< std::vector<unsigned int> > tree_seeds(
       new std::vector<unsigned int>
   );
-  std::unique_ptr< std::vector< std::vector<double> > > predictWeightsFull(
+  std::unique_ptr< std::vector< std::vector<double> > > predictWeights(
           new  std::vector< std::vector<double> >
   );
 
@@ -893,7 +893,7 @@ Rcpp::List rcpp_reconstructree(
   naRightCounts->reserve(R_forest.size());
   naDefaultDirections->reserve(R_forest.size());
   tree_seeds->reserve(R_forest.size());
-  predictWeightsFull->reserve(R_forest.size());
+  predictWeights->reserve(R_forest.size());
 
 
   // Now actually populate the vectors
@@ -931,7 +931,7 @@ Rcpp::List rcpp_reconstructree(
     tree_seeds->push_back(
         Rcpp::as< unsigned int > ((Rcpp::as<Rcpp::List>(R_forest[i]))[10])
     );
-    predictWeightsFull->push_back(
+    predictWeights->push_back(
             Rcpp::as< std::vector<double> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[11])
     );
   }
@@ -1087,7 +1087,7 @@ Rcpp::List rcpp_reconstructree(
                                    averagingSampleIndex,
                                    splittingSampleIndex,
                                    excludedSampleIndex,
-                                   predictWeightsFull
+                                   predictWeights
                                    );
 
   Rcpp::XPtr<forestry> ptr(testFullForest, true);

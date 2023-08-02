@@ -383,8 +383,8 @@ std::unique_ptr< std::vector<double> > forestry::predict(
   bool exact,
   bool use_weights,
   std::vector<size_t>* tree_weights,
-  bool hier_shrinkage,
-  double lambda_shrinkage
+  bool hierShrinkage,
+  double lambdaShrinkage
 ){
 
   size_t numObservations = (*xNew)[0].size();
@@ -484,8 +484,8 @@ std::unique_ptr< std::vector<double> > forestry::predict(
                   seed + i,
                   getMinNodeSizeToSplitAvg(),
                   NULL,
-                  hier_shrinkage,
-                  lambda_shrinkage,
+                  hierShrinkage,
+                  lambdaShrinkage,
                   std::numeric_limits<double>::infinity()
               );
 
@@ -502,8 +502,8 @@ std::unique_ptr< std::vector<double> > forestry::predict(
                   seed + i,
                   getMinNodeSizeToSplitAvg(),
                   NULL,
-                  hier_shrinkage,
-                  lambda_shrinkage,
+                  hierShrinkage,
+                  lambdaShrinkage,
                   std::numeric_limits<double>::infinity()
               );
 
@@ -661,8 +661,8 @@ std::vector<double> forestry::predictOOB(
     bool doubleOOB,
     bool exact,
     std::vector<size_t> &training_idx,
-    bool hier_shrinkage,
-    double lambda_shrinkage
+    bool hierShrinkage,
+    double lambdaShrinkage
 ) {
 
   bool use_training_idx = !training_idx.empty();
@@ -724,8 +724,8 @@ std::vector<double> forestry::predictOOB(
                       xNew,
                       weightMatrix,
                       training_idx,
-                      hier_shrinkage,
-                      lambda_shrinkage
+                      hierShrinkage,
+                      lambdaShrinkage
                   );
                   #if DOPARELLEL
                   std::lock_guard<std::mutex> lock(threadLock);
@@ -836,8 +836,8 @@ std::vector<double> forestry::predictOOB(
 
 void forestry::calculateOOBError(
     bool doubleOOB,
-    bool hier_shrinkage,
-    double lambda_shrinkage
+    bool hierShrinkage,
+    double lambdaShrinkage
 ) {
 
   size_t numObservations = getTrainingData()->getNumRows();
@@ -896,8 +896,8 @@ void forestry::calculateOOBError(
               nullptr,
               NULL,
               training_idx,
-              hier_shrinkage,
-              lambda_shrinkage
+              hierShrinkage,
+              lambdaShrinkage
             );
 
             #if DOPARELLEL
@@ -999,7 +999,7 @@ void forestry::reconstructTrees(
     std::unique_ptr< std::vector< std::vector<size_t> >  > & averagingSampleIndex,
     std::unique_ptr< std::vector< std::vector<size_t> >  > & splittingSampleIndex,
     std::unique_ptr< std::vector< std::vector<size_t> >  > & excludedSampleIndex,
-    std::unique_ptr< std::vector< std::vector<double> >  > & weightsFull){
+    std::unique_ptr< std::vector< std::vector<double> >  > & weights){
 
     #if DOPARELLEL
     size_t nthreadToUse = this->getNthread();
@@ -1059,7 +1059,7 @@ void forestry::reconstructTrees(
                 (*averagingSampleIndex)[i],
                 (*splittingSampleIndex)[i],
                 (*excludedSampleIndex)[i],
-                (*weightsFull)[i]);
+                (*weights)[i]);
 
 #if DOPARELLEL
         std::lock_guard<std::mutex> lock(threadLock);

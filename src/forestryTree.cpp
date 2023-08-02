@@ -241,8 +241,8 @@ void forestryTree::predict(
     unsigned int seed,
     size_t nodesizeStrictAvg,
     std::vector<size_t>* OOBIndex,
-    bool hier_shrinkage,
-    double lambda_shrinkage,
+    bool hierShrinkage,
+    double lambdaShrinkage,
     double parentAverageCount
 ){
   // If we are estimating the average in each leaf:
@@ -269,8 +269,8 @@ void forestryTree::predict(
                        seed,
                        nodesizeStrictAvg,
                        OOBIndex,
-                       hier_shrinkage,
-                       lambda_shrinkage,
+                       hierShrinkage,
+                       lambdaShrinkage,
                        parentAverageCount);
   //std::cout << "Seed is" << seed << ".\n";
 }
@@ -1544,8 +1544,8 @@ void forestryTree::getOOBPrediction(
     std::vector< std::vector<double> >* xNew,
     arma::Mat<double>* weightMatrix,
     const std::vector<size_t>& training_idx,
-    bool hier_shrinkage,
-    double lambda_shrinkage
+    bool hierShrinkage,
+    double lambdaShrinkage
 ){
 
   std::vector<size_t> OOBIndex;
@@ -1660,8 +1660,8 @@ void forestryTree::getOOBPrediction(
     44,
     nodesizeStrictAvg,
     use_training_idx ? &indexInTrain : &OOBIndex,
-    hier_shrinkage,
-    lambda_shrinkage,
+    hierShrinkage,
+    lambdaShrinkage,
     std::numeric_limits<double>::infinity()
   );
 
@@ -1737,7 +1737,7 @@ void forestryTree::reconstruct_tree(
     std::vector<size_t> averagingSampleIndex,
     std::vector<size_t> splittingSampleIndex,
     std::vector<size_t> excludedSampleIndex,
-    std::vector<double> predictWeightsFull
+    std::vector<double> predictWeights
     ){
   // Setting all the parameters:
   _mtry = mtry;
@@ -1786,7 +1786,7 @@ void forestryTree::reconstruct_tree(
     &naLeftCounts,
     &naRightCounts,
     &naDefaultDirections,
-    &predictWeightsFull
+    &predictWeights
   );
 
   return ;
@@ -1802,7 +1802,7 @@ void forestryTree::recursive_reconstruction(
   std::vector<int> * naLeftCounts,
   std::vector<int> * naRightCounts,
   std::vector<int> * naDefaultDirections,
-  std::vector<double> * weightsFull
+  std::vector<double> * weights
 ) {
   int var_id = (*var_ids)[0];
     (*var_ids).erase((*var_ids).begin());
@@ -1819,8 +1819,8 @@ void forestryTree::recursive_reconstruction(
     (*naRightCounts).erase((*naRightCounts).begin());
     int naDefaultDirection = (*naDefaultDirections)[0];
     (*naDefaultDirections).erase((*naDefaultDirections).begin());
-  double predictionWeightFull = (*weightsFull)[0];
-    (*weightsFull).erase((*weightsFull).begin());
+  double predictionWeight = (*weights)[0];
+    (*weights).erase((*weights).begin());
 
   if(var_id < 0){
 
@@ -1831,7 +1831,7 @@ void forestryTree::recursive_reconstruction(
         average_count,
         split_count,
         node_id,
-        predictionWeightFull
+        predictionWeight
     );
     return;
   } else {
@@ -1853,7 +1853,7 @@ void forestryTree::recursive_reconstruction(
       naLeftCounts,
       naRightCounts,
       naDefaultDirections,
-      weightsFull
+      weights
       );
 
     recursive_reconstruction(
@@ -1865,7 +1865,7 @@ void forestryTree::recursive_reconstruction(
       naLeftCounts,
       naRightCounts,
       naDefaultDirections,
-      weightsFull
+      weights
     );
 
     size_t node_id;
@@ -1882,7 +1882,7 @@ void forestryTree::recursive_reconstruction(
         naRightCount,
         node_id,
         naDefaultDirection,
-        predictionWeightFull
+        predictionWeight
     );
 
     return;

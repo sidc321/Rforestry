@@ -38,7 +38,7 @@ struct tree_info {
   // contains the number of observations in the splitting set in each node
   std::vector< long double > split_val;
   // contains the split values for regular nodes
-  std::vector< double > valuesFull;
+  std::vector< double > values;
   // contains the weights used for prediction in each node
   // Weights for interior nodes also included
   std::vector< int > num_spl_samples;

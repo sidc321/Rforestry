@@ -67,8 +67,8 @@ public:
     unsigned int seed,
     size_t nodesizeStrictAvg,
     std::vector<size_t>* OOBIndex = NULL,
-    bool hier_shrinkage=false,
-    double lambda_shrinkage=0,
+    bool hierShrinkage=false,
+    double lambdaShrinkage=0,
     double parentAverageCount=0
   );
 

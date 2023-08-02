@@ -172,8 +172,8 @@ void RFNode::predict(
   unsigned int seed,
   size_t nodesizeStrictAvg,
   std::vector<size_t>* OOBIndex,
-  bool hier_shrinkage,
-  double lambda_shrinkage,
+  bool hierShrinkage,
+  double lambdaShrinkage,
   double parentAverageCount
 ) {
   double predictedMean;
@@ -205,8 +205,8 @@ void RFNode::predict(
           it != (*updateIndex).end();
           ++it
         ) {
-          if(hier_shrinkage){
-            outputPrediction[*it] += predictedMean/(1+lambda_shrinkage/parentAverageCount);
+          if(hierShrinkage){
+            outputPrediction[*it] += predictedMean/(1+lambdaShrinkage/parentAverageCount);
           } else{
             outputPrediction[*it] = predictedMean;
           }
@@ -233,9 +233,9 @@ void RFNode::predict(
         }
 
         for (size_t i = 0; i<idx_in_leaf.size(); i++) {
-          if(hier_shrinkage){
+          if(hierShrinkage){
             (*weightMatrix)(idx, idx_in_leaf[i] - 1) +=
-            (double) 1.0 / ((double) idx_in_leaf.size()) * (double) 1.0 /(1+lambda_shrinkage/parentAverageCount);
+            (double) 1.0 / ((double) idx_in_leaf.size()) * (double) 1.0 /(1+lambdaShrinkage/parentAverageCount);
           }else{
             (*weightMatrix)(idx, idx_in_leaf[i] - 1) +=
             (double) 1.0 / ((double) idx_in_leaf.size());
@@ -261,14 +261,14 @@ void RFNode::predict(
   } else {
 
     // shrink predictions (and weight) on non-leaf nodes if hierarchical shrinkage is on
-    if(hier_shrinkage){
+    if(hierShrinkage){
       for (
           std::vector<size_t>::iterator it = (*updateIndex).begin();
           it != (*updateIndex).end();
           ++it
         ) {
-        double current_level_weight =  1/(1+lambda_shrinkage / getAverageCount());
-        double parent_level_weight = 1/(1+lambda_shrinkage/parentAverageCount);
+        double current_level_weight =  1/(1+lambdaShrinkage / getAverageCount());
+        double parent_level_weight = 1/(1+lambdaShrinkage/parentAverageCount);
         outputPrediction[*it] += predictedMean * (parent_level_weight-current_level_weight);
 
         // need to update the weights outside leaf node if shrinkage applied
@@ -550,8 +550,8 @@ void RFNode::predict(
           seed,
           nodesizeStrictAvg,
           OOBIndex,
-          hier_shrinkage,
-          lambda_shrinkage,
+          hierShrinkage,
+          lambdaShrinkage,
           getAverageCount()
       );
     }
@@ -572,8 +572,8 @@ void RFNode::predict(
           seed,
           nodesizeStrictAvg,
           OOBIndex,
-          hier_shrinkage,
-          lambda_shrinkage,
+          hierShrinkage,
+          lambdaShrinkage,
           getAverageCount()
         );
     }
@@ -736,7 +736,7 @@ void RFNode::write_node_info(
     treeInfo->naDefaultDirection.push_back(0);
 
     // treeInfo->num_avg_samples.push_back(getAverageCount()); //not used??
-    treeInfo->valuesFull.push_back(getPredictWeight());
+    treeInfo->values.push_back(getPredictWeight());
   } else {
     // If it is a usual node: remember split var and split value and recursively
     // call write_node_info on the left and the right child.
@@ -748,7 +748,7 @@ void RFNode::write_node_info(
     treeInfo->naRightCount.push_back(getNaRightCount());
     treeInfo->naDefaultDirection.push_back(getNaDefaultDirection());
 
-    treeInfo->valuesFull.push_back(getPredictWeight());
+    treeInfo->values.push_back(getPredictWeight());
 
     getLeftChild()->write_node_info(treeInfo, trainingData);
     getRightChild()->write_node_info(treeInfo, trainingData);

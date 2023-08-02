@@ -6,20 +6,15 @@
 \alias{getOOB,forestry-method}
 \title{getOOB-forestry}
 \usage{
-getOOB(object, noWarning, hier_shrinkage = FALSE, lambda_shrinkage = 0)
+getOOB(object, noWarning, hierShrinkageLambda = NULL)
 }
 \arguments{
 \item{object}{A `forestry` object.}
 
 \item{noWarning}{flag to not display warnings}
 
-\item{hier_shrinkage}{An indicator of whether or not we should perform hierarchical
-shrinkage. The parameter lambda_shrinkage should also be provided to specify the
-the amount of shrinkage since it is defaulted to 0 (no shrinkage).}
-
-\item{lambda_shrinkage}{The parameter to use for hierarchical shrinkage. By default
-this is set to 0 (equal to zero shrinkage). The parameter hier_shrinkage should also
-be set to TRUE to ensure we perform hierarchical shrinkage.}
+\item{hierShrinkageLambda}{The shrinkage parameter to use for hierarchical shrinkage.
+By default, this is set to 0 (equal to zero shrinkage).}
 }
 \value{
 The OOB error of the forest.

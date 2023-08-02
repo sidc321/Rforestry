@@ -177,8 +177,8 @@ py::tuple predictOOB_forest_wrapper(
     unsigned int n_preds,
     unsigned int n_weight_matrix,
     py::array_t<size_t> training_idx,
-    bool hier_shrinkage,
-    double lambda_shrinkage
+    bool hierShrinkage,
+    double lambdaShrinkage
 ) {
     py::array_t<double> predictions = create_numpy_array(n_preds);
     std::vector<double> predictions_vector(n_preds);
@@ -202,8 +202,8 @@ py::tuple predictOOB_forest_wrapper(
         predictions_vector,
         weight_matrix_vector,
         training_idx_vector,
-        hier_shrinkage,
-        lambda_shrinkage
+        hierShrinkage,
+        lambdaShrinkage
         );
 
     copy_vector_to_numpy_array(predictions_vector, predictions);
@@ -246,8 +246,8 @@ py::tuple predict_forest_wrapper(
     unsigned int n_preds,
     unsigned int n_weight_matrix,
     unsigned int n_coefficients,
-    bool hier_shrinkage,
-    double lambda_shrinkage
+    bool hierShrinkage,
+    double lambdaShrinkage
 ) {
     py::array_t<double> predictions = create_numpy_array(n_preds);
     std::vector<double> predictions_vector(n_preds);
@@ -273,8 +273,8 @@ py::tuple predict_forest_wrapper(
         predictions_vector,
         weight_matrix_vector,
         coefficients_vector,
-        hier_shrinkage,
-        lambda_shrinkage
+        hierShrinkage,
+        lambdaShrinkage
     );
 
     copy_vector_to_numpy_array(predictions_vector, predictions);

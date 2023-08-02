@@ -44,7 +44,7 @@ plot.forestry <- function(x, tree.id = 1, print.meta_dta = FALSE,
   feat_names <- colnames(forestry_tree@processed_dta$processed_x)
   split_feat <- forestry_tree@R_forest[[tree.id]]$var_id
   split_val <- forestry_tree@R_forest[[tree.id]]$split_val
-  node_values <- forestry_tree@R_forest[[tree.id]]$weightsFull
+  node_values <- forestry_tree@R_forest[[tree.id]]$weights
   avg_counts <- forestry_tree@R_forest[[tree.id]]$average_count
   split_counts <- forestry_tree@R_forest[[tree.id]]$split_count
   # get info for the first node ------------------------------------------------

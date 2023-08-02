@@ -10,8 +10,7 @@ getOOBpreds(
   newdata = NULL,
   doubleOOB = FALSE,
   noWarning = FALSE,
-  hier_shrinkage = FALSE,
-  lambda_shrinkage = 0
+  hierShrinkageLambda = NULL
 )
 }
 \arguments{
@@ -30,14 +29,8 @@ is FALSE.}
 
 \item{noWarning}{Flag to not display warnings.}
 
-\item{hier_shrinkage}{An indicator of whether or not we should perform hierarchical
-shrinkage. The parameter lambda_shrinkage should also be provided to specify the
-the amount of shrinkage, by default it is 0 (no shrinkage). By default, 
-hier_shrinkage is FALSE.}
-
-\item{lambda_shrinkage}{The parameter to use for hierarchical shrinkage. By default
-this is set to 0 (equal to zero shrinkage). The parameter hier_shrinkage should also
-be set to TRUE to perform hierarchical shrinkage.}
+\item{hierShrinkageLambda}{The shrinkage parameter to use for hierarchical shrinkage.
+By default, this is set to 0 (equal to zero shrinkage).}
 }
 \value{
 The vector of all training observations, with their out of bag

@@ -643,8 +643,7 @@ class RandomForest:
         exact: bool,
         return_weight_matrix: bool,
         training_idx: Optional[np.ndarray],
-        hier_shrinkage: bool,
-        lambda_shrinkage: float,
+        hierShrinkageLambda: float,
     ) -> Optional[Tuple[np.ndarray, np.ndarray]]:
         if newdata is not None:
             processed_x = preprocessing.preprocess_testing(
@@ -672,6 +671,16 @@ class RandomForest:
                 "Training Indices must contain integers between 0 and the number of training observations - 1"
             )
 
+        if hierShrinkageLambda is not None:
+            if hierShrinkageLambda < 0:
+                raise ValueError("Hierarchical shrinkage parameter must be positive!")
+            else:
+                hierShrinkage = True
+                lambdaShrinkage = hierShrinkageLambda
+        else:
+            hierShrinkage = False
+            lambdaShrinkage = 0
+
         n_preds = self._get_n_preds(newdata)
         n_weight_matrix = n_preds * self.processed_dta.n_observations if return_weight_matrix else 0
 
@@ -687,8 +696,8 @@ class RandomForest:
             n_preds,
             n_weight_matrix,
             training_idx if training_idx else [],
-            hier_shrinkage,
-            lambda_shrinkage,
+            hierShrinkage,
+            lambdaShrinkage,
         )
         # If the forest was trained with scaled values we need to rescale + re center the predictions
         if self.scale:
@@ -702,8 +711,7 @@ class RandomForest:
         exact: bool,
         return_weight_matrix: bool,
         training_idx: Optional[np.ndarray],
-        hier_shrinkage: bool,
-        lambda_shrinkage: float,
+        hierShrinkageLambda: float,
     ) -> Tuple[np.ndarray, np.ndarray]:
         if newdata is not None:
             processed_x = preprocessing.preprocess_testing(
@@ -731,6 +739,16 @@ class RandomForest:
                 "Training Indices must contain integers between 0 and the number of training observations - 1"
             )
 
+        if hierShrinkageLambda is not None:
+            if hierShrinkageLambda < 0:
+                raise ValueError("Hierarchical shrinkage parameter must be positive!")
+            else:
+                hierShrinkage = True
+                lambdaShrinkage = hierShrinkageLambda
+        else:
+            hierShrinkage = False
+            lambdaShrinkage = 0
+
         n_preds = self._get_n_preds(newdata)
         n_weight_matrix = n_preds * self.processed_dta.n_observations if return_weight_matrix else 0
 
@@ -746,8 +764,8 @@ class RandomForest:
             n_preds,
             n_weight_matrix,
             training_idx if training_idx else [],
-            hier_shrinkage,
-            lambda_shrinkage,
+            hierShrinkage,
+            lambdaShrinkage,
         )
 
         # If the forest was trained with scaled values we need to rescale + re center the predictions
@@ -804,8 +822,7 @@ class RandomForest:
         nthread: int,
         return_weight_matrix: bool,
         trees: Optional[np.ndarray],
-        hier_shrinkage: bool,
-        lambda_shrinkage: float,
+        hierShrinkageLambda: float,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         processed_x = preprocessing.preprocess_testing(
             newdata,
@@ -829,6 +846,16 @@ class RandomForest:
         else:
             use_weights = False
 
+        if hierShrinkageLambda is not None:
+            if hierShrinkageLambda < 0:
+                raise ValueError("Hierarchical shrinkage parameter must be positive!")
+            else:
+                hierShrinkage = True
+                lambdaShrinkage = hierShrinkageLambda
+        else:
+            hierShrinkage = False
+            lambdaShrinkage = 0
+
         n_preds = self._get_n_preds(newdata)
         n_weight_matrix = n_preds * self.processed_dta.n_observations if return_weight_matrix else 0
 
@@ -847,8 +874,8 @@ class RandomForest:
             n_preds,
             n_weight_matrix,
             0,
-            hier_shrinkage,
-            lambda_shrinkage,
+            hierShrinkage,
+            lambdaShrinkage,
         )
 
         # If the forest was trained with scaled values we need to rescale + re center the predictions
@@ -869,8 +896,7 @@ class RandomForest:
         trees: Optional[np.ndarray] = None,
         training_idx: Optional[np.ndarray] = None,
         return_weight_matrix: bool = False,
-        hier_shrinkage: bool = False,
-        lambda_shrinkage: float = 0,
+        hierShrinkageLambda: float = None,
     ) -> Union[np.ndarray, dict]:
         """
         Return the prediction from the forest.
@@ -941,14 +967,9 @@ class RandomForest:
          prediction. When getting the weight matrix, aggregation must be one of
          'average', 'oob', and 'doubleOOB'. his is a normal text paragraph.
         :type weightMatrix: *bool, optional, default=False*
-        :param hier_shrinkage: An indicator of whether or not we should implement
-         hierarchical shrinkage. If this is set to true, the parameter lambda_shrinkage
-         must also be provided, which indicates the hierarchical shrinkage tuning parameter.
-        :type hier_shrinkage: *bool, optional, default=False*
-        :param lambda_shrinkage: The parameter for hierarchical shrinkage. In order for this
-        to be used, the parameter hier_shrinkage must be set to true, indicating hierarchical
-        shrinkage is turned on.
-        :type lambda_shrinkage: *float optional, default=0*
+        :param hierShrinkageLambda The shrinkage parameter to use for hierarchical shrinkage.
+         By default, this is set to 0 (equal to zero shrinkage).
+        :type hierShrinkageLambda: *float, optional, default=None*
         :return: An array of predicted responses.
         :rtype: numpy.array
         """
@@ -959,8 +980,7 @@ class RandomForest:
                 exact,
                 return_weight_matrix,
                 training_idx,
-                hier_shrinkage,
-                lambda_shrinkage,
+                hierShrinkageLambda,
             )
 
         elif aggregation == "doubleOOB":
@@ -969,8 +989,7 @@ class RandomForest:
                 exact,
                 return_weight_matrix,
                 training_idx,
-                hier_shrinkage,
-                lambda_shrinkage,
+                hierShrinkageLambda,
             )
 
         elif aggregation == "coefs":
@@ -1003,8 +1022,7 @@ class RandomForest:
                 nthread,
                 return_weight_matrix,
                 trees,
-                hier_shrinkage,
-                lambda_shrinkage,
+                hierShrinkageLambda,
             )
 
         if return_weight_matrix:
@@ -1022,9 +1040,7 @@ class RandomForest:
 
         return predictions
 
-    def get_oob(
-        self, no_warning: bool = False, hier_shrinkage: bool = False, lambda_shrinkage: float = 0
-    ) -> Optional[float]:
+    def get_oob(self, no_warning: bool = False, hierShrinkageLambda: float = None) -> Optional[float]:
         """
         Calculate the out-of-bag error of a given forest. This is done
         by using the out-of-bag predictions for each observation, and calculating the
@@ -1048,8 +1064,7 @@ class RandomForest:
             newdata=None,
             aggregation="oob",
             exact=True,
-            hier_shrinkage=hier_shrinkage,
-            lambda_shrinkage=lambda_shrinkage,
+            hierShrinkageLambda=hierShrinkageLambda,
         )
         preds = preds[~np.isnan(preds)]
 

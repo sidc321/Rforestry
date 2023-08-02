@@ -57,8 +57,8 @@ public:
     bool exact,
     bool use_weights,
     std::vector<size_t>* tree_weights,
-    bool hier_shrinkage=false,
-    double lambda_shrinkage =0
+    bool hierShrinkage=false,
+    double lambdaShrinkage =0
   );
 
   std::vector<double> predictOOB(
@@ -68,8 +68,8 @@ public:
     bool doubleOOB,
     bool exact,
     std::vector<size_t> &training_idx,
-    bool hier_shrinkage,
-    double lambda_shrinkage
+    bool hierShrinkage,
+    double lambdaShrinkage
   );
 
   void fillinTreeInfo(
@@ -89,14 +89,14 @@ public:
       std::unique_ptr< std::vector< std::vector<size_t> >  > & averagingSampleIndex,
       std::unique_ptr< std::vector< std::vector<size_t> >  > & splittingSampleIndex,
       std::unique_ptr< std::vector< std::vector<size_t> >  > & excludedSampleIndex,
-      std::unique_ptr< std::vector< std::vector<double> >  > & weightsFull);
+      std::unique_ptr< std::vector< std::vector<double> >  > & weights);
 
   size_t getTotalNodeCount();
 
   void calculateOOBError(
       bool doubleOOB = false,
-      bool hier_shrinkage = false,
-      double lambda_shrinkage = 0
+      bool hierShrinkage = false,
+      double lambdaShrinkage = 0
   );
 
   double getOOBError() {

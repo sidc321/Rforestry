@@ -68,8 +68,8 @@ public:
     unsigned int seed = 44,
     size_t nodesizeStrictAvg = 1,
     std::vector<size_t>* OOBIndex = NULL,
-    bool hier_shrinkage=false,
-    double lambda_shrinkage=0,
+    bool hierShrinkage=false,
+    double lambdaShrinkage=0,
     double parentAverageCount=std::numeric_limits<double>::infinity()
   );
 
@@ -102,7 +102,7 @@ public:
       std::vector<size_t> averagingSampleIndex,
       std::vector<size_t> splittingSampleIndex,
       std::vector<size_t> excludedSampleIndex,
-      std::vector<double> predictWeightsFull);
+      std::vector<double> predictWeights);
 
   void recursive_reconstruction(
       RFNode* currentNode,
@@ -113,7 +113,7 @@ public:
       std::vector<int> * naLeftCounts,
       std::vector<int> * naRightCounts,
       std::vector<int> * naDefaultDirections,
-      std::vector<double> * weightsFull
+      std::vector<double> * weights
   );
 
   void recursivePartition(
@@ -212,8 +212,8 @@ public:
     std::vector< std::vector<double> >* xNew,
     arma::Mat<double>* weightMatrix,
     const std::vector<size_t>& training_idx,
-    bool hier_shrinkage,
-    double lambda_shrinkage
+    bool hierShrinkage,
+    double lambdaShrinkage
   );
 
   size_t getMtry() {
