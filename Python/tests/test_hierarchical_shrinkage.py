@@ -31,14 +31,14 @@ def forest2():
 def test_lambda0_predictions(forest1: RandomForest):
     X, _ = get_data()
 
-    predictions_1 = forest1.predict(X, hierShrinkageLambda=0)
+    predictions_1 = forest1.predict(X, hier_shrinkage_lambda=0)
     predictions_2 = forest1.predict(X)
     assert np.array_equal(predictions_1, predictions_2)
 
 
 def test_lambdalarge_predictions(forest2: RandomForest):
     X, y = get_data()
-    predictions = forest2.predict(X, hierShrinkageLambda=1e13)
+    predictions = forest2.predict(X, hier_shrinkage_lambda=1e13)
     tot_prediction_diffs = predictions - np.mean(y)
     assert np.allclose(tot_prediction_diffs, np.zeros(len(y)))
 
@@ -63,16 +63,16 @@ def test_small_tree_shrinkage():
         else:
             expectedPredictions[i] = 2
 
-    hierShrinkageLambda = 2
-    weightLeftPath = fdata["values"][0] * (1 - 1 / (1 + hierShrinkageLambda / fdata["average_count"][0])) + fdata[
+    hier_shrinkage_lambda = 2
+    weightLeftPath = fdata["values"][0] * (1 - 1 / (1 + hier_shrinkage_lambda / fdata["average_count"][0])) + fdata[
         "values"
-    ][1] / (1 + hierShrinkageLambda / fdata["average_count"][0])
-    weightRightPath = fdata["values"][0] * (1 - 1 / (1 + hierShrinkageLambda / fdata["average_count"][0])) + fdata[
+    ][1] / (1 + hier_shrinkage_lambda / fdata["average_count"][0])
+    weightRightPath = fdata["values"][0] * (1 - 1 / (1 + hier_shrinkage_lambda / fdata["average_count"][0])) + fdata[
         "values"
-    ][2] / (1 + hierShrinkageLambda / fdata["average_count"][0])
+    ][2] / (1 + hier_shrinkage_lambda / fdata["average_count"][0])
     expectedPredictions[expectedPredictions == 1] = weightLeftPath
     expectedPredictions[expectedPredictions == 2] = weightRightPath
-    shrinked_pred = forest.predict(X, hierShrinkageLambda=hierShrinkageLambda)
+    shrinked_pred = forest.predict(X, hier_shrinkage_lambda=hier_shrinkage_lambda)
     assert np.array_equal(shrinked_pred, expectedPredictions)
 
 
@@ -81,7 +81,7 @@ def test_shrink_weight_matrix():
     X, y = get_data()
     forest.fit(X, y)
 
-    shrink_preds = forest.predict(X, return_weight_matrix=True, hierShrinkageLambda=10)
+    shrink_preds = forest.predict(X, return_weight_matrix=True, hier_shrinkage_lambda=10)
     # now we reconstruct predictions from the weight matrix and check they match
     weight_preds = shrink_preds["weightMatrix"].dot(y)
     assert np.allclose(weight_preds, shrink_preds["predictions"])

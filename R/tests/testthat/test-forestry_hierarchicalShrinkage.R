@@ -18,7 +18,12 @@ test_that("Tests hierarchical shrinkage works as expected", {
     expect_equal(length(rf@R_forest[[i]]$split_count),num_nodes)
     expect_equal(length(rf@R_forest[[i]]$weights),num_nodes)
   }
-
+  context("Check negative lambda are rejected")
+  expect_error(
+    predict(rf,x,hierShrinkageLambda = -1),
+    "The value of the hierarchical shrinkage parameter must be positive"
+  )
+  
   context("Check output predictions when using hierarchical shrinkage for small tree")
 
   test_idx <- sample(nrow(iris), 100)

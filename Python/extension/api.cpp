@@ -261,8 +261,8 @@ extern "C" {
         std::vector<double>& predictions,
         std::vector<double>& weight_matrix,
         std::vector<double>& coefs,
-        bool hierShrinkage,
-        double lambdaShrinkage
+        bool hier_shrinkage,
+        double lambda_shrinkage
     ) {   
     
     
@@ -314,8 +314,8 @@ extern "C" {
                 exact,
                 false,
                 nullptr,
-                hierShrinkage,
-                lambdaShrinkage
+                hier_shrinkage,
+                lambda_shrinkage
             );
     
             size_t idx = 0;
@@ -361,8 +361,8 @@ extern "C" {
                 exact,
                 use_weights,
                 weights,
-                hierShrinkage,
-                lambdaShrinkage
+                hier_shrinkage,
+                lambda_shrinkage
             );
     
         }
@@ -386,8 +386,8 @@ extern "C" {
         std::vector<double>& predictions,
         std::vector<double>& weight_matrix,
         std::vector<size_t> training_idx,
-        bool hierShrinkage,
-        double lambdaShrinkage
+        bool hier_shrinkage,
+        double lambda_shrinkage
     ) {
         if (verbose)
             std::cout << forest_pt << std::endl;
@@ -425,8 +425,8 @@ extern "C" {
                 doubleOOB,
                 exact,
                 training_idx_use,
-                hierShrinkage,
-                lambdaShrinkage
+                hier_shrinkage,
+                lambda_shrinkage
             );
     
             size_t idx = 0;
@@ -446,8 +446,8 @@ extern "C" {
                 doubleOOB,
                 exact,
                 training_idx_use,
-                hierShrinkage,
-                lambdaShrinkage
+                hier_shrinkage,
+                lambda_shrinkage
             );
         }
     

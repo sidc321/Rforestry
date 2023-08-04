@@ -1426,10 +1426,9 @@ predict.forestry <- function(object,
     # hierarchical shrinkage factor must be positive
     if (hierShrinkageLambda < 0){
       stop("The value of the hierarchical shrinkage parameter must be positive")
-    } else {
-      hierShrinkage = TRUE
-      lambdaShrinkage = hierShrinkageLambda
     }
+    hierShrinkage = TRUE
+    lambdaShrinkage = hierShrinkageLambda
   } else {
     hierShrinkage=FALSE
     lambdaShrinkage=0
@@ -1770,10 +1769,9 @@ getOOBpreds <- function(object,
     # hierarchical shrinkage factor must be positive
     if (hierShrinkageLambda < 0){
       stop("The value of the hierarchical shrinkage parameter must be positive")
-    } else {
-      hierShrinkage = TRUE
-      lambdaShrinkage = hierShrinkageLambda
     }
+    hierShrinkage = TRUE
+    lambdaShrinkage = hierShrinkageLambda
   } else {
     hierShrinkage = FALSE
     lambdaShrinkage = 0
