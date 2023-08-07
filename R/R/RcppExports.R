@@ -9,16 +9,16 @@ rcpp_cppBuildInterface <- function(x, y, catCols, linCols, numRows, numColumns, 
     .Call(`_Rforestry_rcpp_cppBuildInterface`, x, y, catCols, linCols, numRows, numColumns, ntree, replace, sampsize, mtry, splitratio, OOBhonest, doubleBootstrap, nodesizeSpl, nodesizeAvg, nodesizeStrictSpl, nodesizeStrictAvg, minSplitGain, maxDepth, interactionDepth, seed, nthread, verbose, middleSplit, maxObs, featureWeights, featureWeightsVariables, deepFeatureWeights, deepFeatureWeightsVariables, observationWeights, customSplitSample, customAvgSample, customExcludeSample, monotonicConstraints, groupMemberships, minTreesPerFold, foldSize, monotoneAvg, hasNas, naDirection, linear, overfitPenalty, doubleTree, existing_dataframe_flag, existing_dataframe)
 }
 
-rcpp_cppPredictInterface <- function(forest, x, aggregation, seed, nthread, exact, returnWeightMatrix, use_weights, use_hold_out_idx, tree_weights, hold_out_idx) {
-    .Call(`_Rforestry_rcpp_cppPredictInterface`, forest, x, aggregation, seed, nthread, exact, returnWeightMatrix, use_weights, use_hold_out_idx, tree_weights, hold_out_idx)
+rcpp_cppPredictInterface <- function(forest, x, aggregation, seed, nthread, exact, returnWeightMatrix, use_weights, use_hold_out_idx, tree_weights, hold_out_idx, hierShrinkage = FALSE, lambdaShrinkage = 0) {
+    .Call(`_Rforestry_rcpp_cppPredictInterface`, forest, x, aggregation, seed, nthread, exact, returnWeightMatrix, use_weights, use_hold_out_idx, tree_weights, hold_out_idx, hierShrinkage, lambdaShrinkage)
 }
 
 rcpp_OBBPredictInterface <- function(forest) {
     .Call(`_Rforestry_rcpp_OBBPredictInterface`, forest)
 }
 
-rcpp_OBBPredictionsInterface <- function(forest, x, existing_df, doubleOOB, returnWeightMatrix, exact, use_training_idx, training_idx) {
-    .Call(`_Rforestry_rcpp_OBBPredictionsInterface`, forest, x, existing_df, doubleOOB, returnWeightMatrix, exact, use_training_idx, training_idx)
+rcpp_OBBPredictionsInterface <- function(forest, x, existing_df, doubleOOB, returnWeightMatrix, exact, use_training_idx, training_idx, hierShrinkage, lambdaShrinkage) {
+    .Call(`_Rforestry_rcpp_OBBPredictionsInterface`, forest, x, existing_df, doubleOOB, returnWeightMatrix, exact, use_training_idx, training_idx, hierShrinkage, lambdaShrinkage)
 }
 
 rcpp_getObservationSizeInterface <- function(df) {

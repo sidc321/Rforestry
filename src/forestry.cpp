@@ -382,7 +382,9 @@ std::unique_ptr< std::vector<double> > forestry::predict(
   size_t nthread,
   bool exact,
   bool use_weights,
-  std::vector<size_t>* tree_weights
+  std::vector<size_t>* tree_weights,
+  bool hierShrinkage,
+  double lambdaShrinkage
 ){
 
   size_t numObservations = (*xNew)[0].size();
@@ -480,7 +482,11 @@ std::unique_ptr< std::vector<double> > forestry::predict(
                   getlinear(),
                   getNaDirection(),
                   seed + i,
-                  getMinNodeSizeToSplitAvg()
+                  getMinNodeSizeToSplitAvg(),
+                  NULL,
+                  hierShrinkage,
+                  lambdaShrinkage,
+                  std::numeric_limits<double>::infinity()
               );
 
             } else {
@@ -494,7 +500,11 @@ std::unique_ptr< std::vector<double> > forestry::predict(
                   getlinear(),
                   getNaDirection(),
                   seed + i,
-                  getMinNodeSizeToSplitAvg()
+                  getMinNodeSizeToSplitAvg(),
+                  NULL,
+                  hierShrinkage,
+                  lambdaShrinkage,
+                  std::numeric_limits<double>::infinity()
               );
 
             }
@@ -650,7 +660,9 @@ std::vector<double> forestry::predictOOB(
     std::vector<size_t>* treeCounts,
     bool doubleOOB,
     bool exact,
-    std::vector<size_t> &training_idx
+    std::vector<size_t> &training_idx,
+    bool hierShrinkage,
+    double lambdaShrinkage
 ) {
 
   bool use_training_idx = !training_idx.empty();
@@ -711,7 +723,9 @@ std::vector<double> forestry::predictOOB(
                       getMinNodeSizeToSplitAvg(),
                       xNew,
                       weightMatrix,
-                      training_idx
+                      training_idx,
+                      hierShrinkage,
+                      lambdaShrinkage
                   );
                   #if DOPARELLEL
                   std::lock_guard<std::mutex> lock(threadLock);
@@ -821,7 +835,9 @@ std::vector<double> forestry::predictOOB(
 }
 
 void forestry::calculateOOBError(
-    bool doubleOOB
+    bool doubleOOB,
+    bool hierShrinkage,
+    double lambdaShrinkage
 ) {
 
   size_t numObservations = getTrainingData()->getNumRows();
@@ -879,7 +895,9 @@ void forestry::calculateOOBError(
               getMinNodeSizeToSplitAvg(),
               nullptr,
               NULL,
-              training_idx
+              training_idx,
+              hierShrinkage,
+              lambdaShrinkage
             );
 
             #if DOPARELLEL
@@ -972,6 +990,8 @@ void forestry::reconstructTrees(
     std::unique_ptr< std::vector<size_t> > & categoricalFeatureColsRcpp,
     std::unique_ptr< std::vector<unsigned int> > & tree_seeds,
     std::unique_ptr< std::vector< std::vector<int> >  > & var_ids,
+    std::unique_ptr< std::vector< std::vector<int> >  > & average_counts,
+    std::unique_ptr< std::vector< std::vector<int> >  > & split_counts,
     std::unique_ptr< std::vector< std::vector<double> >  > & split_vals,
     std::unique_ptr< std::vector< std::vector<int> >  > & naLeftCounts,
     std::unique_ptr< std::vector< std::vector<int> >  > & naRightCounts,
@@ -1030,6 +1050,8 @@ void forestry::reconstructTrees(
                 (*tree_seeds)[i],
                 (*categoricalFeatureColsRcpp),
                 (*var_ids)[i],
+                (*average_counts)[i],
+                (*split_counts)[i],
                 (*split_vals)[i],
                 (*naLeftCounts)[i],
                 (*naRightCounts)[i],

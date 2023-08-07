@@ -40,16 +40,20 @@ void RFNode::setLeafNode(
 
 void RFNode::setSplitNode(
   size_t splitFeature,
+  size_t averagingSampleIndexSize,
+  size_t splittingSampleIndexSize,
   double splitValue,
   std::unique_ptr< RFNode > leftChild,
   std::unique_ptr< RFNode > rightChild,
   size_t naLeftCount,
   size_t naRightCount,
   size_t nodeId,
-  int naDefaultDirection
+  int naDefaultDirection,
+  double predictWeight
 ) {
   // Split node constructor
-  _splitCount = 0;
+  _averageCount= averagingSampleIndexSize;
+  _splitCount= splittingSampleIndexSize;
   _splitFeature = splitFeature;
   _splitValue = splitValue;
   // Give the ownership of the child pointer to the RFNode object
@@ -58,6 +62,7 @@ void RFNode::setSplitNode(
   _naLeftCount = naLeftCount;
   _naRightCount = naRightCount;
   _naDefaultDirection = naDefaultDirection;
+  _predictWeight = predictWeight;
   _nodeId = nodeId;
 }
 
@@ -166,9 +171,20 @@ void RFNode::predict(
   double lambda,
   unsigned int seed,
   size_t nodesizeStrictAvg,
-  std::vector<size_t>* OOBIndex
+  std::vector<size_t>* OOBIndex,
+  bool hierShrinkage,
+  double lambdaShrinkage,
+  double parentAverageCount
 ) {
-
+  double predictedMean;
+  // Calculate the mean of current node
+  if (getAverageCount() == 0) {
+    predictedMean = std::numeric_limits<double>::quiet_NaN();
+  } else if (!std::isnan(getPredictWeight())) {
+      predictedMean = getPredictWeight();
+  } else {
+    predictedMean = (*trainingData).partitionMean(getAveragingIndex());
+  }
   // If the node is a leaf, aggregate all its averaging data samples
   if (is_leaf()) {
 
@@ -182,23 +198,18 @@ void RFNode::predict(
                      lambda);
       } else {
 
-        double predictedMean;
-        // Calculate the mean of current node
-        if (getAverageCount() == 0) {
-          predictedMean = std::numeric_limits<double>::quiet_NaN();
-        } else if (!std::isnan(getPredictWeight())) {
-            predictedMean = getPredictWeight();
-        } else {
-          predictedMean = (*trainingData).partitionMean(getAveragingIndex());
-        }
-
         // Give all updateIndex the mean of the node as prediction values
+        // Weight by shrinkage factor if shrinkage is turned on
         for (
           std::vector<size_t>::iterator it = (*updateIndex).begin();
           it != (*updateIndex).end();
           ++it
         ) {
+          if(hierShrinkage){
+            outputPrediction[*it] += predictedMean/(1+lambdaShrinkage/parentAverageCount);
+          } else{
             outputPrediction[*it] = predictedMean;
+          }
         }
     }
 
@@ -222,8 +233,13 @@ void RFNode::predict(
         }
 
         for (size_t i = 0; i<idx_in_leaf.size(); i++) {
-          (*weightMatrix)(idx, idx_in_leaf[i] - 1) +=
-          (double) 1.0 / ((double) idx_in_leaf.size());
+          if(hierShrinkage){
+            (*weightMatrix)(idx, idx_in_leaf[i] - 1) +=
+            (double) 1.0 / ((double) idx_in_leaf.size()) * (double) 1.0 /(1+lambdaShrinkage/parentAverageCount);
+          }else{
+            (*weightMatrix)(idx, idx_in_leaf[i] - 1) +=
+            (double) 1.0 / ((double) idx_in_leaf.size());
+          }
         }
       }
     }
@@ -243,6 +259,42 @@ void RFNode::predict(
 
   // If not a leaf then we need to separate the prediction tasks
   } else {
+
+    // shrink predictions (and weight) on non-leaf nodes if hierarchical shrinkage is on
+    if(hierShrinkage){
+      for (
+          std::vector<size_t>::iterator it = (*updateIndex).begin();
+          it != (*updateIndex).end();
+          ++it
+        ) {
+        double current_level_weight =  1/(1+lambdaShrinkage / getAverageCount());
+        double parent_level_weight = 1/(1+lambdaShrinkage/parentAverageCount);
+        outputPrediction[*it] += predictedMean * (parent_level_weight-current_level_weight);
+
+        // need to update the weights outside leaf node if shrinkage applied
+        if(weightMatrix){
+          // If weightMatrix is not a NULL pointer, then we want to update it,
+          // because we have choosen aggregation = "weightmatrix".
+          std::vector<size_t> idx_in_leaf =
+                    (*trainingData).get_all_row_idx(predictionAveragingIndices);
+
+
+            // The following will lock the access to weightMatrix
+          std::lock_guard<std::mutex> lock(mutex_weightMatrix);
+
+          // Set the row which we update in the weightMatrix
+          size_t idx = *it;
+          if (OOBIndex) {
+            idx = (*OOBIndex)[*it];
+          }
+
+          for (size_t i = 0; i<idx_in_leaf.size(); i++) {
+            (*weightMatrix)(idx, idx_in_leaf[i] - 1) +=
+            (double) 1.0 / ((double) idx_in_leaf.size()) * (parent_level_weight-current_level_weight);
+          }
+        }   
+      }
+    }
 
     // Separate prediction tasks to two children
     std::vector<size_t>* leftPartitionIndex = new std::vector<size_t>();
@@ -497,7 +549,10 @@ void RFNode::predict(
           lambda,
           seed,
           nodesizeStrictAvg,
-          OOBIndex
+          OOBIndex,
+          hierShrinkage,
+          lambdaShrinkage,
+          getAverageCount()
       );
     }
 
@@ -516,7 +571,10 @@ void RFNode::predict(
           lambda,
           seed,
           nodesizeStrictAvg,
-          OOBIndex
+          OOBIndex,
+          hierShrinkage,
+          lambdaShrinkage,
+          getAverageCount()
         );
     }
 
@@ -615,18 +673,11 @@ void RFNode::getPath(
 }
 
 bool RFNode::is_leaf() {
-  int ave_ct = getAverageCount();
-  return !(ave_ct == 0);
+  return !(_leftChild||_rightChild);
 }
 
 size_t RFNode::getAverageCountAlways() {
-  if(is_leaf()) {
-    return _averageCount;
-  }
-  else {
-    return (*getRightChild()).getAverageCountAlways() +
-      (*getLeftChild()).getAverageCountAlways();
-  }
+  return _averageCount;
 }
 
 void RFNode::printSubtree(int indentSpace) {
@@ -676,24 +727,28 @@ void RFNode::write_node_info(
 ){
   if (is_leaf()) {
     // If it is a leaf: set everything to be 0
-    treeInfo->var_id.push_back(-getAverageCount());
-    treeInfo->var_id.push_back(-getSplitCount());
+    treeInfo->var_id.push_back(-1);
+    treeInfo->average_count.push_back(getAverageCount());
+    treeInfo->split_count.push_back(getSplitCount()); // not used
     treeInfo->split_val.push_back(0);
     treeInfo->naLeftCount.push_back(-1);
     treeInfo->naRightCount.push_back(-1);
     treeInfo->naDefaultDirection.push_back(0);
 
-    treeInfo->num_avg_samples.push_back(getAverageCount());
-    treeInfo->num_spl_samples.push_back(getSplitCount());
+    // treeInfo->num_avg_samples.push_back(getAverageCount()); //not used??
     treeInfo->values.push_back(getPredictWeight());
   } else {
     // If it is a usual node: remember split var and split value and recursively
     // call write_node_info on the left and the right child.
     treeInfo->var_id.push_back(getSplitFeature() + 1);
+    treeInfo->average_count.push_back(getAverageCount());
+    treeInfo->split_count.push_back(getSplitCount());
     treeInfo->split_val.push_back(getSplitValue());
     treeInfo->naLeftCount.push_back(getNaLeftCount());
     treeInfo->naRightCount.push_back(getNaRightCount());
     treeInfo->naDefaultDirection.push_back(getNaDefaultDirection());
+
+    treeInfo->values.push_back(getPredictWeight());
 
     getLeftChild()->write_node_info(treeInfo, trainingData);
     getRightChild()->write_node_info(treeInfo, trainingData);

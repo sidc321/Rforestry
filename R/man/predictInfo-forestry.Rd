@@ -17,7 +17,7 @@ observation, must be one of `average`,`oob`, and `doubleOOB`.}
 }
 \value{
 A list with four entries. `weightMatrix` is a matrix specifying the
- weight given to training observatio i when prediction on observation j.
+ weight given to training observation i when prediction on observation j.
  `avgIndices` gives the indices which are in the averaging set for each new
  observation. `avgWeights` gives the weights corresponding to each averaging
  observation returned in `avgIndices`. `obsInfo` gives the full observation vectors

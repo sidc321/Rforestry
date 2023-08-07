@@ -110,7 +110,9 @@ extern "C" {
         bool verbose,
         std::vector<double>& predictions,
         std::vector<double>& weight_matrix,
-        std::vector<size_t> training_idx
+        std::vector<size_t> training_idx,
+        bool hier_shrinkage,
+        double lambda_shrinkage
     );
     void predict_forest(
         void* forest_pt,
@@ -126,7 +128,9 @@ extern "C" {
         size_t num_test_rows,
         std::vector<double>& predictions,
         std::vector<double>& weight_matrix,
-        std::vector<double>& coefs
+        std::vector<double>& coefs,
+        bool hier_shrinkage = false,
+        double lambda_shrinkage = 0
     );
     void fill_tree_info(
         void* forest_ptr,

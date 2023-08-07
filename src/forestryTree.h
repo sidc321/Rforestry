@@ -67,7 +67,10 @@ public:
     bool naDirection = false,
     unsigned int seed = 44,
     size_t nodesizeStrictAvg = 1,
-    std::vector<size_t>* OOBIndex = NULL
+    std::vector<size_t>* OOBIndex = NULL,
+    bool hierShrinkage=false,
+    double lambdaShrinkage=0,
+    double parentAverageCount=std::numeric_limits<double>::infinity()
   );
 
   std::unique_ptr<tree_info> getTreeInfo(
@@ -90,6 +93,8 @@ public:
       unsigned int seed,
       std::vector<size_t> categoricalFeatureColsRcpp,
       std::vector<int> var_ids,
+      std::vector<int> average_counts,
+      std::vector<int> split_counts,
       std::vector<double> split_vals,
       std::vector<int> naLeftCounts,
       std::vector<int> naRightCounts,
@@ -102,6 +107,8 @@ public:
   void recursive_reconstruction(
       RFNode* currentNode,
       std::vector<int> * var_ids,
+      std::vector<int> * average_counts,
+      std::vector<int> * split_counts,
       std::vector<double> * split_vals,
       std::vector<int> * naLeftCounts,
       std::vector<int> * naRightCounts,
@@ -204,7 +211,9 @@ public:
     size_t nodesizeStrictAvg,
     std::vector< std::vector<double> >* xNew,
     arma::Mat<double>* weightMatrix,
-    const std::vector<size_t>& training_idx
+    const std::vector<size_t>& training_idx,
+    bool hierShrinkage,
+    double lambdaShrinkage
   );
 
   size_t getMtry() {

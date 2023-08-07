@@ -1312,6 +1312,8 @@ forestry <- function(x,
 #'   matrix of the weights given to each training observation when making each
 #'   prediction. When getting the weight matrix, aggregation must be one of
 #'   `average`, `oob`, and `doubleOOB`.
+#' @param hierShrinkageLambda The shrinkage parameter to use for hierarchical shrinkage.
+#'   By default, this is set to 0 (equal to zero shrinkage). 
 #' @param ... additional arguments.
 #' @return A vector of predicted responses.
 #' @export
@@ -1325,6 +1327,7 @@ predict.forestry <- function(object,
                              exact = NULL,
                              trees = NULL,
                              weightMatrix = FALSE,
+                             hierShrinkageLambda = NULL,
                              ...) {
 
   if (is.null(newdata) && !(aggregation == "oob" || aggregation == "doubleOOB")) {
@@ -1418,6 +1421,19 @@ predict.forestry <- function(object,
     stop("trees must contain indices which are integers between 1 and ntree")
   }
 
+  # hierarchical shrinkage is not set so we set our two internal parameters for Hs
+  if (!is.null(hierShrinkageLambda)){
+    # hierarchical shrinkage factor must be positive
+    if (hierShrinkageLambda < 0){
+      stop("The value of the hierarchical shrinkage parameter must be positive")
+    }
+    hierShrinkage = TRUE
+    lambdaShrinkage = hierShrinkageLambda
+  } else {
+    hierShrinkage=FALSE
+    lambdaShrinkage=0
+  }
+
   # If trees are being used, we need to convert them into a weight vector
   if (!is.null(trees)) {
     tree_weights <- rep(0, object@ntree)
@@ -1463,7 +1479,9 @@ predict.forestry <- function(object,
                                use_weights = use_weights,
                                use_hold_out_idx = TRUE,
                                tree_weights = tree_weights,
-                               hold_out_idx = (holdOutIdx-1)) # Change to 0 indexed for C++
+                               hold_out_idx = (holdOutIdx-1), # Change to 0 indexed for C++
+                               hierShrinkage = hierShrinkage,
+                               lambdaShrinkage = lambdaShrinkage)
     }, error = function(err) {
       print(err)
       return(NULL)
@@ -1490,7 +1508,9 @@ predict.forestry <- function(object,
                                    weightMatrix,
                                    exact,
                                    useTrainingIndices,
-                                   trainingIndices
+                                   trainingIndices,
+                                   hierShrinkage,
+                                   lambdaShrinkage
       )
     }, error = function(err) {
       print(err)
@@ -1527,7 +1547,9 @@ predict.forestry <- function(object,
                                    weightMatrix,
                                    exact,
                                    useTrainingIndices,
-                                   trainingIndices
+                                   trainingIndices,
+                                   hierShrinkage,
+                                   lambdaShrinkage
       )
     }, error = function(err) {
       print(err)
@@ -1547,7 +1569,9 @@ predict.forestry <- function(object,
                                use_weights = use_weights,
                                use_hold_out_idx = FALSE,
                                tree_weights = tree_weights,
-                               hold_out_idx = c(-1))
+                               hold_out_idx = c(-1),
+                               hierShrinkage = hierShrinkage,
+                               lambdaShrinkage = lambdaShrinkage)
     }, error = function(err) {
       print(err)
       return(NULL)
@@ -1621,11 +1645,14 @@ predict.forestry <- function(object,
 #' MSE over the entire forest.
 #' @param object A `forestry` object.
 #' @param noWarning flag to not display warnings
+#' @param hierShrinkageLambda The shrinkage parameter to use for hierarchical shrinkage.
+#'  By default, this is set to 0 (equal to zero shrinkage).
 #' @aliases getOOB,forestry-method
 #' @return The OOB error of the forest.
 #' @export
 getOOB <- function(object,
-                   noWarning) {
+                   noWarning,
+                   hierShrinkageLambda = NULL) {
     # TODO (all): find a better threshold for throwing such warning. 25 is
     # currently set up arbitrarily.
   forest_checker(object)
@@ -1642,7 +1669,7 @@ getOOB <- function(object,
     }
 
     rcppOOB <- tryCatch({
-      preds <- predict(object, aggregation = "oob")
+      preds <- predict(object, aggregation = "oob", hierShrinkageLambda = hierShrinkageLambda)
       # Only calc mse on non missing predictions
       y_true <- object@processed_dta$y[which(!is.nan(preds))]
 
@@ -1675,6 +1702,8 @@ getOOB <- function(object,
 #'  must have been trained with doubleBootstrap = TRUE for this to be used. Default
 #'  is FALSE.
 #' @param noWarning Flag to not display warnings.
+#' @param hierShrinkageLambda The shrinkage parameter to use for hierarchical shrinkage.
+#'  By default, this is set to 0 (equal to zero shrinkage).
 #' @return The vector of all training observations, with their out of bag
 #'  predictions. Note each observation is out of bag for different trees, and so
 #'  the predictions will be more or less stable based on the observation. Some
@@ -1685,7 +1714,8 @@ getOOB <- function(object,
 getOOBpreds <- function(object,
                         newdata = NULL,
                         doubleOOB = FALSE,
-                        noWarning = FALSE
+                        noWarning = FALSE,
+                        hierShrinkageLambda = NULL
                         ) {
 
   if (!object@replace &&
@@ -1733,6 +1763,19 @@ getOOBpreds <- function(object,
     # Else we take the data the forest was trained with
     processed_x <- object@processed_dta$processed_x
   }
+  
+  # hierarchical shrinkage is not set so we set our two internal parameters for Hs
+  if (!is.null(hierShrinkageLambda)){
+    # hierarchical shrinkage factor must be positive
+    if (hierShrinkageLambda < 0){
+      stop("The value of the hierarchical shrinkage parameter must be positive")
+    }
+    hierShrinkage = TRUE
+    lambdaShrinkage = hierShrinkageLambda
+  } else {
+    hierShrinkage = FALSE
+    lambdaShrinkage = 0
+  }
 
   if (object@scale) {
     # Cycle through all continuous features and center / scale
@@ -1750,7 +1793,9 @@ getOOBpreds <- function(object,
                                                    FALSE,
                                                    TRUE,
                                                    FALSE,
-                                                   c(-1))
+                                                   c(-1),
+                                                   hierShrinkage,
+                                                   lambdaShrinkage)
 
     # If we have scaled the observations, we want to rescale the predictions
     if (object@scale) {
@@ -1883,7 +1928,7 @@ getVI <- function(object,
 #' @param aggregation Specifies which aggregation version is used to predict for the
 #' observation, must be one of `average`,`oob`, and `doubleOOB`.
 #' @return A list with four entries. `weightMatrix` is a matrix specifying the
-#'  weight given to training observatio i when prediction on observation j.
+#'  weight given to training observation i when prediction on observation j.
 #'  `avgIndices` gives the indices which are in the averaging set for each new
 #'  observation. `avgWeights` gives the weights corresponding to each averaging
 #'  observation returned in `avgIndices`. `obsInfo` gives the full observation vectors

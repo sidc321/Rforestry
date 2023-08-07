@@ -422,7 +422,9 @@ Rcpp::List rcpp_cppPredictInterface(
   bool use_weights,
   bool use_hold_out_idx,
   Rcpp::NumericVector tree_weights,
-  Rcpp::IntegerVector hold_out_idx
+  Rcpp::IntegerVector hold_out_idx,
+  bool hierShrinkage = false,
+  double lambdaShrinkage = 0
 ){
   try {
 
@@ -543,7 +545,9 @@ Rcpp::List rcpp_cppPredictInterface(
                                                        threads_to_use,
                                                        exact,
                                                        false,
-                                                       NULL);
+                                                       NULL,
+                                                       hierShrinkage,
+                                                       lambdaShrinkage);
     } else {
       // If the weights are zero, we just return NaN's
       if (use_weights &&
@@ -561,7 +565,9 @@ Rcpp::List rcpp_cppPredictInterface(
                                 threads_to_use,
                                 exact,
                                 use_weights,
-                                use_weights ? testForestTreeWeights : NULL);
+                                use_weights ? testForestTreeWeights : NULL,
+                                hierShrinkage,
+                                lambdaShrinkage);
       }
     }
 
@@ -614,7 +620,9 @@ Rcpp::List rcpp_OBBPredictionsInterface(
     bool returnWeightMatrix,
     bool exact,
     bool use_training_idx,
-    Rcpp::IntegerVector training_idx
+    Rcpp::IntegerVector training_idx,
+    bool hierShrinkage,
+    double lambdaShrinkage
 ){
   // Then we predict with the feature.new data
   if (existing_df) {
@@ -645,7 +653,9 @@ Rcpp::List rcpp_OBBPredictionsInterface(
                                         &treeCounts,
                                         doubleOOB,
                                         exact,
-                                        training_idx_cpp);
+                                        training_idx_cpp,
+                                        hierShrinkage,
+                                        lambdaShrinkage);
         Rcpp::NumericVector wrapped_preds = Rcpp::wrap(OOBpreds);
 
         return Rcpp::List::create(Rcpp::Named("predictions") = wrapped_preds,
@@ -658,7 +668,9 @@ Rcpp::List rcpp_OBBPredictionsInterface(
                                         NULL,
                                         doubleOOB,
                                         exact,
-                                        training_idx_cpp);
+                                        training_idx_cpp,
+                                        hierShrinkage,
+                                        lambdaShrinkage);
         Rcpp::NumericVector wrapped_preds = Rcpp::wrap(OOBpreds);
 
         return Rcpp::List::create(Rcpp::Named("predictions") = wrapped_preds);
@@ -736,6 +748,8 @@ Rcpp::List rcpp_CppToR_translator(
 
     for(size_t i=0; i!=forest_dta->size(); i++){
       Rcpp::IntegerVector var_id = Rcpp::wrap(((*forest_dta)[i]).var_id);
+      Rcpp::IntegerVector average_count = Rcpp::wrap(((*forest_dta)[i]).average_count);
+      Rcpp::IntegerVector split_count = Rcpp::wrap(((*forest_dta)[i]).split_count);
       Rcpp::NumericVector split_val = Rcpp::wrap(((*forest_dta)[i]).split_val);
       Rcpp::IntegerVector averagingSampleIndex =
 	      Rcpp::wrap(((*forest_dta)[i]).averagingSampleIndex);
@@ -759,6 +773,8 @@ Rcpp::List rcpp_CppToR_translator(
         Rcpp::List list_i =
         Rcpp::List::create(
 			   Rcpp::Named("var_id") = var_id,
+         Rcpp::Named("average_count") = average_count,
+         Rcpp::Named("split_count") = split_count,
 			   Rcpp::Named("split_val") = split_val,
 			   Rcpp::Named("averagingSampleIndex") = averagingSampleIndex,
 			   Rcpp::Named("splittingSampleIndex") = splittingSampleIndex,
@@ -831,6 +847,12 @@ Rcpp::List rcpp_reconstructree(
   std::unique_ptr< std::vector< std::vector<int> > > var_ids(
       new std::vector< std::vector<int> >
   );
+  std::unique_ptr< std::vector< std::vector<int> > > average_counts(
+      new std::vector< std::vector<int> >
+  );
+  std::unique_ptr< std::vector< std::vector<int> > > split_counts(
+      new std::vector< std::vector<int> >
+  );
   std::unique_ptr< std::vector< std::vector<double> > > split_vals(
       new  std::vector< std::vector<double> >
   );
@@ -861,6 +883,8 @@ Rcpp::List rcpp_reconstructree(
 
   // Reserve space for each of the vectors equal to R_forest.size()
   var_ids->reserve(R_forest.size());
+  average_counts->reserve(R_forest.size());
+  split_counts->reserve(R_forest.size());
   split_vals->reserve(R_forest.size());
   averagingSampleIndex->reserve(R_forest.size());
   splittingSampleIndex->reserve(R_forest.size());
@@ -877,32 +901,38 @@ Rcpp::List rcpp_reconstructree(
     var_ids->push_back(
         Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[0])
       );
+    average_counts->push_back(
+        Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[1])
+      );
+    split_counts->push_back(
+        Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[2])
+      );
     split_vals->push_back(
-        Rcpp::as< std::vector<double> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[1])
+        Rcpp::as< std::vector<double> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[3])
       );
     averagingSampleIndex->push_back(
-        Rcpp::as< std::vector<size_t> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[2])
+        Rcpp::as< std::vector<size_t> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[4])
       );
     splittingSampleIndex->push_back(
-        Rcpp::as< std::vector<size_t> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[3])
+        Rcpp::as< std::vector<size_t> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[5])
       );
     excludedSampleIndex->push_back(
-        Rcpp::as< std::vector<size_t> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[4])
+        Rcpp::as< std::vector<size_t> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[6])
     );
     naLeftCounts->push_back(
-        Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[5])
-    );
-    naRightCounts->push_back(
-        Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[6])
-    );
-    naDefaultDirections->push_back(
         Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[7])
     );
+    naRightCounts->push_back(
+        Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[8])
+    );
+    naDefaultDirections->push_back(
+        Rcpp::as< std::vector<int> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[9])
+    );
     tree_seeds->push_back(
-        Rcpp::as< unsigned int > ((Rcpp::as<Rcpp::List>(R_forest[i]))[8])
+        Rcpp::as< unsigned int > ((Rcpp::as<Rcpp::List>(R_forest[i]))[10])
     );
     predictWeights->push_back(
-            Rcpp::as< std::vector<double> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[9])
+            Rcpp::as< std::vector<double> > ((Rcpp::as<Rcpp::List>(R_forest[i]))[11])
     );
   }
 
@@ -1048,6 +1078,8 @@ Rcpp::List rcpp_reconstructree(
   testFullForest->reconstructTrees(categoricalFeatureColsRcpp_copy,
                                    tree_seeds,
                                    var_ids,
+                                   average_counts,
+                                   split_counts,
                                    split_vals,
                                    naLeftCounts,
                                    naRightCounts,

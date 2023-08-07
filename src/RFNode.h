@@ -25,13 +25,16 @@ public:
 
   void setSplitNode(
       size_t splitFeature,
+      size_t averagingSampleIndexSize,
+      size_t splittingSampleIndexSize,
       double splitValue,
       std::unique_ptr< RFNode > leftChild,
       std::unique_ptr< RFNode > rightChild,
       size_t naLeftCount,
       size_t naRightCount,
       size_t nodeId,
-      int naDefaultDirection
+      int naDefaultDirection,
+      double predictWeight
   );
 
   void setRidgeCoefficients(
@@ -63,7 +66,10 @@ public:
     double lambda,
     unsigned int seed,
     size_t nodesizeStrictAvg,
-    std::vector<size_t>* OOBIndex = NULL
+    std::vector<size_t>* OOBIndex = NULL,
+    bool hierShrinkage=false,
+    double lambdaShrinkage=0,
+    double parentAverageCount=0
   );
 
   void getPath(

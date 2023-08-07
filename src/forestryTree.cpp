@@ -240,7 +240,10 @@ void forestryTree::predict(
     bool naDirection,
     unsigned int seed,
     size_t nodesizeStrictAvg,
-    std::vector<size_t>* OOBIndex
+    std::vector<size_t>* OOBIndex,
+    bool hierShrinkage,
+    double lambdaShrinkage,
+    double parentAverageCount
 ){
   // If we are estimating the average in each leaf:
   struct rangeGenerator {
@@ -265,7 +268,10 @@ void forestryTree::predict(
                        getOverfitPenalty(),
                        seed,
                        nodesizeStrictAvg,
-                       OOBIndex);
+                       OOBIndex,
+                       hierShrinkage,
+                       lambdaShrinkage,
+                       parentAverageCount);
   //std::cout << "Seed is" << seed << ".\n";
 }
 
@@ -918,13 +924,16 @@ void forestryTree::recursivePartition(
                  true);
     (*rootNode).setSplitNode(
         bestSplitFeature,
+        averagingSampleIndex->size(),
+        splittingSampleIndex->size(),
         bestSplitValue,
         std::move(leftChild),
         std::move(rightChild),
         naLeftCount,
         naRightCount,
         node_id,
-        bestSplitNaDir
+        bestSplitNaDir,
+        trainingData->partitionMean(averagingSampleIndex)
     );
   }
 }
@@ -1534,7 +1543,9 @@ void forestryTree::getOOBPrediction(
     size_t nodesizeStrictAvg,
     std::vector< std::vector<double> >* xNew,
     arma::Mat<double>* weightMatrix,
-    const std::vector<size_t>& training_idx
+    const std::vector<size_t>& training_idx,
+    bool hierShrinkage,
+    double lambdaShrinkage
 ){
 
   std::vector<size_t> OOBIndex;
@@ -1648,7 +1659,10 @@ void forestryTree::getOOBPrediction(
     getNaDirection(),
     44,
     nodesizeStrictAvg,
-    use_training_idx ? &indexInTrain : &OOBIndex
+    use_training_idx ? &indexInTrain : &OOBIndex,
+    hierShrinkage,
+    lambdaShrinkage,
+    std::numeric_limits<double>::infinity()
   );
 
   // Now take only the OOB entries in the predictions
@@ -1714,6 +1728,8 @@ void forestryTree::reconstruct_tree(
     unsigned int seed,
     std::vector<size_t> categoricalFeatureColsRcpp,
     std::vector<int> var_ids,
+    std::vector<int> average_counts,
+    std::vector<int> split_counts,
     std::vector<double> split_vals,
     std::vector<int> naLeftCounts,
     std::vector<int> naRightCounts,
@@ -1764,6 +1780,8 @@ void forestryTree::reconstruct_tree(
   recursive_reconstruction(
     _root.get(),
     &var_ids,
+    &average_counts,
+    &split_counts,
     &split_vals,
     &naLeftCounts,
     &naRightCounts,
@@ -1778,6 +1796,8 @@ void forestryTree::reconstruct_tree(
 void forestryTree::recursive_reconstruction(
   RFNode* currentNode,
   std::vector<int> * var_ids,
+  std::vector<int> *average_counts,
+  std::vector<int> *split_counts,
   std::vector<double> * split_vals,
   std::vector<int> * naLeftCounts,
   std::vector<int> * naRightCounts,
@@ -1786,6 +1806,10 @@ void forestryTree::recursive_reconstruction(
 ) {
   int var_id = (*var_ids)[0];
     (*var_ids).erase((*var_ids).begin());
+  int average_count = (*average_counts)[0];
+    (*average_counts).erase((*average_counts).begin());
+  int split_count = (*split_counts)[0];
+    (*split_counts).erase((*split_counts).begin());
   double  split_val = (*split_vals)[0];
     (*split_vals).erase((*split_vals).begin());
 
@@ -1795,24 +1819,17 @@ void forestryTree::recursive_reconstruction(
     (*naRightCounts).erase((*naRightCounts).begin());
     int naDefaultDirection = (*naDefaultDirections)[0];
     (*naDefaultDirections).erase((*naDefaultDirections).begin());
+  double predictionWeight = (*weights)[0];
+    (*weights).erase((*weights).begin());
 
   if(var_id < 0){
-    // This is a terminal node
-    int nAve = std::abs((int) var_id);
-    // Pull second entry in var_ids if it is a leaf node
-    int nSpl = std::abs((int) (*var_ids)[0]);
-    (*var_ids).erase((*var_ids).begin());
-
-    // Pull the prediction weight for the node
-    double predictionWeight = (*weights)[0];
-    weights->erase(weights->begin());
 
     size_t node_id;
     assignNodeId(node_id,
                  false);
     (*currentNode).setLeafNode(
-        nAve,
-        nSpl,
+        average_count,
+        split_count,
         node_id,
         predictionWeight
     );
@@ -1830,6 +1847,8 @@ void forestryTree::recursive_reconstruction(
     recursive_reconstruction(
       leftChild.get(),
       var_ids,
+      average_counts,
+      split_counts,
       split_vals,
       naLeftCounts,
       naRightCounts,
@@ -1840,6 +1859,8 @@ void forestryTree::recursive_reconstruction(
     recursive_reconstruction(
       rightChild.get(),
       var_ids,
+      average_counts,
+      split_counts,
       split_vals,
       naLeftCounts,
       naRightCounts,
@@ -1852,13 +1873,16 @@ void forestryTree::recursive_reconstruction(
                  true);
     (*currentNode).setSplitNode(
         (size_t) var_id - 1,
+        (size_t) average_count,
+        (size_t) split_count,
         split_val,
         std::move(leftChild),
         std::move(rightChild),
         naLeftCount,
         naRightCount,
         node_id,
-        naDefaultDirection
+        naDefaultDirection,
+        predictionWeight
     );
 
     return;

@@ -16,6 +16,7 @@
   exact = NULL,
   trees = NULL,
   weightMatrix = FALSE,
+  hierShrinkageLambda = NULL,
   ...
 )
 }
@@ -109,6 +110,9 @@ note we must have exact = TRUE, and aggregation = "average" to use tree indices.
 matrix of the weights given to each training observation when making each
 prediction. When getting the weight matrix, aggregation must be one of
 `average`, `oob`, and `doubleOOB`.}
+
+\item{hierShrinkageLambda}{The shrinkage parameter to use for hierarchical shrinkage.
+By default, this is set to 0 (equal to zero shrinkage).}
 
 \item{...}{additional arguments.}
 }
