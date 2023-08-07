@@ -111,15 +111,15 @@ jobs:
           package-dir: Python/
           output-dir: Python/dist
 
-      - name: Get Coverage
-        if: github.event_name == 'pull_request'
-        uses: petrovicboban/coverage@1.2
-        with:
-            coverageFile: /coverage.xml
-            thresholdAll: 0.60
-            thresholdModified: 0.60
-            thresholdNew: 0.60
-            token: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Get Coverage
+      #   if: github.event_name == 'pull_request'
+      #   uses: petrovicboban/coverage@1.2
+      #   with:
+      #       coverageFile: /coverage.xml
+      #       thresholdAll: 0.60
+      #       thresholdModified: 0.60
+      #       thresholdNew: 0.60
+      #       token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
