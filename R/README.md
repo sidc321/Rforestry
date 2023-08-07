@@ -17,7 +17,7 @@ git clone --recursive https://github.com/forestry-labs/Rforestry.git
 Open RStudio:
 1. "Create a project" -> "Existing Directory" -> select `Rforestry/R` folder.
 2. Install R dependances: open "Console" tab (bottom left corner), execute command:
-```
+```r
 install.packages(c("devtools","visNetwork","glmnet","onehot","pROC","RcppArmadillo","RcppThread","mvtnorm"))
 ```
 3. Build and test R package: open "Build" tab (top right corner), click "Install", then click "Test".
