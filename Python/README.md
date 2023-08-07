@@ -13,10 +13,28 @@ Several features are specific to this library and allow for the training of tree
  - Monotonic Constraints: the ability to specify a constraint on the decision tree or random forest model that forces the prediction of the model to be monotonic
  - Custom Bootstrap sampling methods: several different methods to determine how the samples for each tree in a forest are selected. This can be useful when the observations are not i.i.d. and the sampling scheme can exploit patterns in the data. This also interacts with honesty.
  - Linear aggregation: rather than using the average training outcome to predict for new observations, one can run a Ridge regression within each terminal node and use this for the predictions of that tree. Tree construction is modified according to an algorithm proposed in Linear Aggregation in Tree-based Estimators (https://www.tandfonline.com/doi/full/10.1080/10618600.2022.2026780) to select recursive splitting points that are optimal for downstream Ridge regression aggregation.
- 
+
 These are some of the current interesting features, and more will be added in the future.
 
 For full documentation, see the documentation site (https://random-forestry.readthedocs.io/en/latest/) and for the source code, see the github repo (https://github.com/forestry-labs/Rforestry).
+
+
+## Developer Installation
+
+1. Install [CMake](https://cmake.org/download/). MacOS users: install it via [Homebrew](https://brew.sh): `brew install cmake`
+2. Install [Anaconda](https://docs.continuum.io/free/anaconda/install/mac-os/)
+3. Open console (or Anaconda command prompt under Windows), clone this git repository **with submodules**, create Anaconda environment, build, install and test the package:
+```bash
+git clone --recursive https://github.com/forestry-labs/Rforestry.git
+cd Rforestry/Python
+
+conda create -n rforestry python pandas build pytest pytest-xdist pytest-sugar pytest-cov
+conda activate rforestry
+
+python -m build --sdist
+pip install dist/random-forestry-*.tar.gz
+pytest tests/
+```
 
 
 ### Python Package Usage
